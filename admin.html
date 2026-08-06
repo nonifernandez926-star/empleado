@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de administración</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="contenedor">
+    <!-- LOGIN -->
+    <div id="vista-login" class="tarjeta">
+      <h1>Ingresá a tu panel</h1>
+      <label>Código de administración</label>
+      <input type="text" id="input-codigo-admin" placeholder="ADM-XXXX-XXXX-XXXX">
+      <button class="btn" id="btn-login" style="margin-top:16px;">Ingresar</button>
+      <div id="login-error"></div>
+    </div>
+
+    <!-- PANEL -->
+    <div id="vista-panel" style="display:none;">
+      <div class="tarjeta">
+        <h1 id="nombre-negocio-panel">Mi negocio</h1>
+        <p>Estado de suscripción: <strong id="estado-suscripcion"></strong></p>
+        <p id="aviso-vencida" class="error-msg" style="display:none;">Tu asistente está pausado. Renueva tu suscripción para volver a activarlo.</p>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Estadísticas</h2>
+        <table class="tabla-stats" id="tabla-stats"></table>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Información del negocio</h2>
+        <div id="campos-edicion"></div>
+        <button class="btn" id="btn-guardar-info" style="margin-top:16px;">Guardar cambios</button>
+        <div id="guardado-msg"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Compartir tu asistente</h2>
+        <p>Este es el enlace que podés compartir con tus clientes (redes sociales, WhatsApp, tu web):</p>
+        <div class="codigo-box" id="link-chat"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

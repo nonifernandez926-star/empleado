@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear mi asistente — Registro</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Creá tu asistente virtual</h1>
+
+    <!-- PASO 1: selección de rubro -->
+    <div id="paso-rubro" class="tarjeta">
+      <h2>Paso 1: elegí el rubro de tu negocio</h2>
+      <div id="grid-categorias" class="grid-categorias"><p>Cargando rubros...</p></div>
+    </div>
+
+    <!-- PASO 2: formulario dinámico (oculto hasta elegir subrubro) -->
+    <div id="paso-formulario" class="tarjeta" style="display:none;">
+      <div class="mensaje-info">
+        La información que ingreses será el conocimiento principal de tu asistente inteligente. Cada respuesta que brinde a tus clientes dependerá directamente de estos datos: cuanto más completa y precisa sea la información, mejor va a responder.
+      </div>
+      <h2 id="titulo-subrubro">Paso 2: contanos sobre tu negocio</h2>
+      <form id="form-negocio">
+        <div id="campos-dinamicos"></div>
+
+        <h3>Horarios de atención</h3>
+        <div id="dias-horario" class="dias-horario"></div>
+
+        <h3>Personalidad de tu asistente</h3>
+        <label>Estilo de comunicación</label>
+        <select id="personalidad-estilo">
+          <option value="amable_carismatico">Amable y carismático</option>
+          <option value="profesional_cercano">Profesional cercano</option>
+          <option value="juvenil_energetico">Juvenil y energético</option>
+          <option value="elegante_exclusivo">Elegante y exclusivo</option>
+          <option value="tranquilo_confiable">Tranquilo y confiable</option>
+        </select>
+
+        <label>Describí cómo querés que sea tu asistente (opcional)</label>
+        <textarea id="personalidad-libre" placeholder="Ej: quiero que atienda como una persona del local, simpático y cercano, pero profesional."></textarea>
+
+        <button type="submit" class="btn" style="margin-top:24px;">Crear mi asistente (modo prueba gratis)</button>
+      </form>
+    </div>
+
+    <!-- RESULTADO -->
+    <div id="resultado" class="tarjeta" style="display:none;"></div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/registro.js"></script>
+</body>
+</html>
