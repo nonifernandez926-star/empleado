@@ -10,14 +10,22 @@
   <div class="contenedor">
     <h1>Creá tu asistente virtual</h1>
 
-    <!-- PASO 1: selección de rubro -->
-    <div id="paso-rubro" class="tarjeta">
-      <h2>Paso 1: elegí el rubro de tu negocio</h2>
+    <!-- PASO 1: selección de rubro principal (categoría) -->
+    <div id="paso-categoria" class="tarjeta">
+      <h2>Paso 1: elegí el rubro principal de tu negocio</h2>
       <div id="grid-categorias" class="grid-categorias"><p>Cargando rubros...</p></div>
     </div>
 
-    <!-- PASO 2: formulario dinámico (oculto hasta elegir subrubro) -->
+    <!-- PASO 2: selección de subrubro dentro de la categoría elegida -->
+    <div id="paso-subrubro" class="tarjeta" style="display:none;">
+      <p><a href="#" id="link-volver-categoria">&larr; Cambiar rubro principal</a></p>
+      <h2 id="titulo-categoria">Paso 2: elegí el subrubro</h2>
+      <div id="grid-subrubros" class="grid-categorias"></div>
+    </div>
+
+    <!-- PASO 3: formulario dinámico (oculto hasta elegir subrubro) -->
     <div id="paso-formulario" class="tarjeta" style="display:none;">
+      <p><a href="#" id="link-volver-subrubro">&larr; Cambiar subrubro</a></p>
       <div class="mensaje-info">
         La información que ingreses será el conocimiento principal de tu asistente inteligente. Cada respuesta que brinde a tus clientes dependerá directamente de estos datos: cuanto más completa y precisa sea la información, mejor va a responder.
       </div>
