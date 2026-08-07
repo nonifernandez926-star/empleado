@@ -1,39 +1,77 @@
 const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+let categoriasData = [];
+let categoriaSeleccionada = null;
 let subrubroSeleccionado = null;
 
 async function cargarRubros() {
-  const res = await fetch(`${API_URL}/rubros`);
-  const categorias = await res.json();
   const grid = document.getElementById('grid-categorias');
-  grid.innerHTML = '';
+  try {
+    const res = await fetch(`${API_URL}/rubros`);
+    if (!res.ok) throw new Error('No se pudo obtener la lista de rubros');
+    categoriasData = await res.json();
 
-  categorias.forEach((cat) => {
-    cat.subrubros.forEach((sub) => {
+    grid.innerHTML = '';
+    categoriasData.forEach((cat) => {
       const div = document.createElement('div');
       div.className = 'opcion-rubro';
-      div.dataset.id = sub.id;
-      div.innerHTML = `<strong>${sub.nombre}</strong><small>${cat.categoria}</small>`;
-      div.addEventListener('click', () => seleccionarSubrubro(sub.id, div));
+      div.innerHTML = `<strong>${cat.categoria}</strong><small>${cat.subrubros.length} tipos de negocio</small>`;
+      div.addEventListener('click', () => seleccionarCategoria(cat, div));
       grid.appendChild(div);
     });
+  } catch (error) {
+    grid.innerHTML = `<div class="error-msg">No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo en unos segundos (el servidor puede tardar en despertar).</div>`;
+  }
+}
+
+function seleccionarCategoria(cat, elemento) {
+  document.querySelectorAll('#grid-categorias .opcion-rubro').forEach((el) => el.classList.remove('seleccionado'));
+  elemento.classList.add('seleccionado');
+  categoriaSeleccionada = cat;
+
+  document.getElementById('titulo-categoria').textContent = `Paso 2: elegí el subrubro dentro de ${cat.categoria}`;
+  const gridSub = document.getElementById('grid-subrubros');
+  gridSub.innerHTML = '';
+  cat.subrubros.forEach((sub) => {
+    const div = document.createElement('div');
+    div.className = 'opcion-rubro';
+    div.innerHTML = `<strong>${sub.nombre}</strong>`;
+    div.addEventListener('click', () => seleccionarSubrubro(sub.id, div));
+    gridSub.appendChild(div);
   });
+
+  document.getElementById('paso-subrubro').style.display = 'block';
+  document.getElementById('paso-formulario').style.display = 'none';
+  document.getElementById('paso-subrubro').scrollIntoView({ behavior: 'smooth' });
 }
 
 async function seleccionarSubrubro(subrubroId, elemento) {
-  document.querySelectorAll('.opcion-rubro').forEach((el) => el.classList.remove('seleccionado'));
+  document.querySelectorAll('#grid-subrubros .opcion-rubro').forEach((el) => el.classList.remove('seleccionado'));
   elemento.classList.add('seleccionado');
   subrubroSeleccionado = subrubroId;
 
   const res = await fetch(`${API_URL}/rubros/${subrubroId}/formulario`);
   const data = await res.json();
 
-  document.getElementById('titulo-subrubro').textContent = `Paso 2: contanos sobre tu ${data.subrubro.toLowerCase()}`;
+  document.getElementById('titulo-subrubro').textContent = `Paso 3: contanos sobre tu ${data.subrubro.toLowerCase()}`;
   renderizarCampos(data.campos);
   renderizarHorarios();
 
   document.getElementById('paso-formulario').style.display = 'block';
   document.getElementById('paso-formulario').scrollIntoView({ behavior: 'smooth' });
 }
+
+document.getElementById('link-volver-categoria').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('paso-subrubro').style.display = 'none';
+  document.getElementById('paso-formulario').style.display = 'none';
+  document.getElementById('paso-categoria').scrollIntoView({ behavior: 'smooth' });
+});
+
+document.getElementById('link-volver-subrubro').addEventListener('click', (e) => {
+  e.preventDefault();
+  document.getElementById('paso-formulario').style.display = 'none';
+  document.getElementById('paso-subrubro').scrollIntoView({ behavior: 'smooth' });
+});
 
 function renderizarCampos(campos) {
   const contenedor = document.getElementById('campos-dinamicos');
@@ -64,7 +102,7 @@ function renderizarCampos(campos) {
         break;
       case 'seleccionMultiple':
         inputHtml = `<div class="opciones-checkbox" id="campo-${campo.id}">
-          ${campo.opciones.map((o, i) => `
+          ${campo.opciones.map((o) => `
             <label><input type="checkbox" value="${o}" name="check-${campo.id}"> ${o}</label>
           `).join('')}
         </div>`;
