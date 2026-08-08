@@ -26,8 +26,9 @@ const negocioSchema = new mongoose.Schema({
   // Horarios
   horarios: { type: [horarioDiaSchema], default: [] },
 
-  // Fotos (Cloudinary)
-  fotos: [{ url: String, publicId: String }],
+  // Fotos (Cloudinary). categoria sirve para que el chat sepa cuáles mostrar
+  // cuando el cliente pide el menú (ej: 'menu', 'local', 'producto').
+  fotos: [{ url: String, publicId: String, categoria: { type: String, default: 'general' } }],
 
   // Personalidad del asistente
   personalidad: {
