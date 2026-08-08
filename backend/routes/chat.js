@@ -57,6 +57,10 @@ router.post('/:codigoPublico', async (req, res) => {
 
     const respuestaTexto = await generarRespuesta(negocio, historialReciente, mensaje, sesionClienteId);
 
+    // Si el mensaje parece pedir el menú/carta y hay fotos cargadas con esa categoría, las adjuntamos
+    const pideMenu = /men[uú]|carta|cat[aá]logo|qu[eé] tienen|qu[eé] productos|qu[eé] venden/i.test(mensaje);
+    const fotosMenu = pideMenu ? negocio.fotos.filter((f) => f.categoria === 'menu').map((f) => f.url) : [];
+
     conversacion.mensajes.push({ rol: 'cliente', contenido: mensaje });
     conversacion.mensajes.push({ rol: 'asistente', contenido: respuestaTexto.textoRespuesta });
     await conversacion.save();
@@ -69,6 +73,7 @@ router.post('/:codigoPublico', async (req, res) => {
     res.json({
       respuesta: respuestaTexto.textoRespuesta,
       pedidoCreado: respuestaTexto.pedidoCreado || null,
+      imagenes: fotosMenu,
     });
   } catch (error) {
     console.error(error);
