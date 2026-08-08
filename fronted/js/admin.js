@@ -34,6 +34,77 @@ async function mostrarPanel() {
 
   renderizarCamposEdicion();
   cargarEstadisticas();
+  cargarPedidos();
+}
+
+const ETIQUETAS_ESTADO = {
+  pendiente: 'Pendiente',
+  confirmado: 'Confirmado',
+  en_preparacion: 'En preparación',
+  listo: 'Listo',
+  entregado: 'Entregado',
+};
+
+async function cargarPedidos() {
+  const contenedor = document.getElementById('lista-pedidos');
+  try {
+    const res = await fetch(`${API_URL}/pedidos`, {
+      headers: { 'x-codigo-admin': codigoAdminActual },
+    });
+    const pedidos = await res.json();
+
+    if (!pedidos.length) {
+      contenedor.innerHTML = `<p class="ayuda">Todavía no llegó ningún pedido.</p>`;
+      return;
+    }
+
+    contenedor.innerHTML = pedidos.map((p) => `
+      <div class="pedido-card" data-id="${p._id}">
+        <div class="pedido-header">
+          <div>
+            <strong>${p.nombreCliente}</strong>
+            ${p.telefonoCliente ? ` — ${p.telefonoCliente}` : ''}
+            <div class="pedido-fecha">${new Date(p.createdAt).toLocaleString('es-AR')}</div>
+          </div>
+          <span class="badge-estado badge-${p.estado}">${ETIQUETAS_ESTADO[p.estado] || p.estado}</span>
+        </div>
+        <ul class="pedido-items">
+          ${p.items.map((i) => `<li>${i.cantidad}x ${i.producto}${i.precioUnitario ? ` — $${i.precioUnitario * i.cantidad}` : ''}</li>`).join('')}
+        </ul>
+        ${p.total ? `<div class="pedido-detalle"><strong>Total: $${p.total}</strong></div>` : ''}
+        <div class="pedido-detalle">${p.tipoEntrega === 'delivery' ? `🛵 Delivery — ${p.direccionEntrega || 'sin dirección'}` : '🏠 Retira en el local'}</div>
+        <div class="pedido-detalle">💳 ${p.formaPago}</div>
+        ${p.observaciones ? `<div class="pedido-detalle">📝 ${p.observaciones}</div>` : ''}
+
+        <label style="margin-top:10px;">Cambiar estado</label>
+        <select class="select-estado-pedido" data-id="${p._id}">
+          ${Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) =>
+            `<option value="${valor}" ${valor === p.estado ? 'selected' : ''}>${etiqueta}</option>`
+          ).join('')}
+        </select>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.select-estado-pedido').forEach((select) => {
+      select.addEventListener('change', async (e) => {
+        const id = e.target.dataset.id;
+        const nuevoEstado = e.target.value;
+        try {
+          const res = await fetch(`${API_URL}/pedidos/${id}/estado`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'x-codigo-admin': codigoAdminActual },
+            body: JSON.stringify({ estado: nuevoEstado }),
+          });
+          if (!res.ok) throw new Error('Error al actualizar');
+          cargarPedidos(); // recargamos para actualizar el badge
+        } catch (error) {
+          alert('No se pudo actualizar el estado del pedido, intentá de nuevo.');
+        }
+      });
+    });
+  } catch (error) {
+    contenedor.innerHTML = `<div class="error-msg">No se pudieron cargar los pedidos.</div>`;
+  }
 }
 
 document.getElementById('btn-guardar-disponibilidad').addEventListener('click', async () => {
