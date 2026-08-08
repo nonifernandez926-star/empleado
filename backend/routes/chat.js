@@ -55,10 +55,10 @@ router.post('/:codigoPublico', async (req, res) => {
       contenido: m.contenido,
     }));
 
-    const respuestaTexto = await generarRespuesta(negocio, historialReciente, mensaje);
+    const respuestaTexto = await generarRespuesta(negocio, historialReciente, mensaje, sesionClienteId);
 
     conversacion.mensajes.push({ rol: 'cliente', contenido: mensaje });
-    conversacion.mensajes.push({ rol: 'asistente', contenido: respuestaTexto });
+    conversacion.mensajes.push({ rol: 'asistente', contenido: respuestaTexto.textoRespuesta });
     await conversacion.save();
 
     if (negocio.suscripcion.estado === 'prueba') {
@@ -66,7 +66,10 @@ router.post('/:codigoPublico', async (req, res) => {
       await negocio.save();
     }
 
-    res.json({ respuesta: respuestaTexto });
+    res.json({
+      respuesta: respuestaTexto.textoRespuesta,
+      pedidoCreado: respuestaTexto.pedidoCreado || null,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al generar la respuesta del asistente' });
