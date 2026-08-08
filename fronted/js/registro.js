@@ -6,7 +6,7 @@ let subrubroSeleccionado = null;
 async function cargarRubros() {
   const grid = document.getElementById('grid-categorias');
   try {
-    const res = await fetch(`${API_URL}/rubros`);
+    const res = await fetch(`${API_URL}/rubros`, { cache: 'no-store' });
     if (!res.ok) throw new Error('No se pudo obtener la lista de rubros');
     categoriasData = await res.json();
 
@@ -49,7 +49,7 @@ async function seleccionarSubrubro(subrubroId, elemento) {
   elemento.classList.add('seleccionado');
   subrubroSeleccionado = subrubroId;
 
-  const res = await fetch(`${API_URL}/rubros/${subrubroId}/formulario`);
+  const res = await fetch(`${API_URL}/rubros/${subrubroId}/formulario`, { cache: 'no-store' });
   const data = await res.json();
 
   document.getElementById('titulo-subrubro').textContent = `Paso 3: contanos sobre tu ${data.subrubro.toLowerCase()}`;
@@ -172,7 +172,7 @@ function recolectarHorarios() {
 document.getElementById('form-negocio').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const resDefinicion = await fetch(`${API_URL}/rubros/${subrubroSeleccionado}/formulario`);
+  const resDefinicion = await fetch(`${API_URL}/rubros/${subrubroSeleccionado}/formulario`, { cache: 'no-store' });
   const definicion = await resDefinicion.json();
 
   const payload = {
