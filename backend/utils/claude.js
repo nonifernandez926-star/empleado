@@ -54,6 +54,10 @@ Solo podés usar la información que aparece abajo en "INFORMACIÓN DEL NEGOCIO"
 
 ${mostrarPrecios === false ? 'Este negocio decidió NO informar precios por chat. Si preguntan precios, indicá que deben consultarlo directamente con el negocio.' : ''}
 
+${negocio.disponibilidadHoy ? `IMPORTANTE — DISPONIBILIDAD DE HOY:
+El negocio marcó que lo siguiente NO está disponible hoy (agotado, sin stock, etc.): "${negocio.disponibilidadHoy}"
+Nunca recomiendes ni tomes un pedido de algo que esté en esa lista. Si el cliente lo pide, avisale que hoy no está disponible y ofrecele una alternativa si tiene sentido.` : ''}
+
 PERSONALIDAD DEL ASISTENTE:
 ${descripcionPersonalidad(negocio.personalidad)}
 
