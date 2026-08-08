@@ -30,10 +30,28 @@ async function mostrarPanel() {
     document.getElementById('aviso-vencida').style.display = 'block';
   }
   document.getElementById('link-chat').textContent = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
+  document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
 
   renderizarCamposEdicion();
   cargarEstadisticas();
 }
+
+document.getElementById('btn-guardar-disponibilidad').addEventListener('click', async () => {
+  const disponibilidadHoy = document.getElementById('disponibilidad-hoy').value;
+  const msgDiv = document.getElementById('disponibilidad-msg');
+  try {
+    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-codigo-admin': codigoAdminActual },
+      body: JSON.stringify({ disponibilidadHoy }),
+    });
+    if (!res.ok) throw new Error('Error al guardar');
+
+    msgDiv.innerHTML = `<div class="exito">Disponibilidad actualizada. El asistente ya no va a recomendar lo que marcaste.</div>`;
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar. Intentá de nuevo.</div>`;
+  }
+});
 
 function renderizarCamposEdicion() {
   const contenedor = document.getElementById('campos-edicion');
