@@ -1,62 +1,117 @@
-const mongoose = require('mongoose');
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const Negocio = require('../models/Negocio');
+const { RUBROS } = require('../data/rubros');
+const { generarCodigoAdmin, generarCodigoPublico } = require('../utils/generarCodigo');
+const { requiereAdmin } = require('../middleware/auth');
+const { storage, cloudinary } = require('../config/cloudinary');
 
-const bloqueHorarioSchema = new mongoose.Schema({
-  apertura: { type: String, required: true }, // "09:00"
-  cierre: { type: String, required: true },   // "13:00"
-}, { _id: false });
+const upload = multer({ storage });
 
-const horarioDiaSchema = new mongoose.Schema({
-  dia: { type: String, enum: ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'], required: true },
-  activo: { type: Boolean, default: false },
-  bloques: { type: [bloqueHorarioSchema], default: [] }, // permite horario partido (ej: mañana y tarde)
-}, { _id: false });
+function validarSubrubro(subrubroId) {
+  for (const cat of RUBROS) {
+    const sub = cat.subrubros.find((s) => s.id === subrubroId);
+    if (sub) return { categoria: cat.categoria, subrubro: sub.nombre };
+  }
+  return null;
+}
 
-const negocioSchema = new mongoose.Schema({
-  // Identificación
-  codigoAdmin: { type: String, required: true, unique: true }, // ej: ADM-82KX-91PL-7QW (privado, del dueño)
-  codigoPublico: { type: String, required: true, unique: true }, // id público para el widget de chat
+// POST /api/negocios -> registra un negocio nuevo (queda en estado "prueba")
+router.post('/', async (req, res) => {
+  try {
+    const { subrubroId, formData, horarios, personalidad } = req.body;
 
-  // Clasificación
-  rubroCategoria: { type: String, required: true },
-  rubroSubrubro: { type: String, required: true },
+    const match = validarSubrubro(subrubroId);
+    if (!match) return res.status(400).json({ error: 'Subrubro inválido' });
 
-  // Datos del formulario (comunes + específicos del subrubro), guardados como mapa clave-valor
-  formData: { type: mongoose.Schema.Types.Mixed, default: {} },
+    let codigoAdmin, codigoPublico, existe;
+    do {
+      codigoAdmin = generarCodigoAdmin();
+      existe = await Negocio.findOne({ codigoAdmin });
+    } while (existe);
+    do {
+      codigoPublico = generarCodigoPublico();
+      existe = await Negocio.findOne({ codigoPublico });
+    } while (existe);
 
-  // Horarios
-  horarios: { type: [horarioDiaSchema], default: [] },
+    const negocio = await Negocio.create({
+      codigoAdmin,
+      codigoPublico,
+      rubroCategoria: match.categoria,
+      rubroSubrubro: match.subrubro,
+      formData: formData || {},
+      horarios: horarios || [],
+      personalidad: personalidad || {},
+      suscripcion: {
+        estado: 'prueba',
+        limiteMensajesPrueba: 30,
+        fechaInicio: new Date(),
+      },
+    });
 
-  // Fotos (Cloudinary)
-  fotos: [{ url: String, publicId: String }],
+    res.status(201).json({
+      mensaje: 'Negocio registrado. Guardá tu código de administración, es la única forma de acceder al panel.',
+      codigoAdmin: negocio.codigoAdmin,
+      codigoPublico: negocio.codigoPublico,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al registrar el negocio' });
+  }
+});
 
-  // Personalidad del asistente
-  personalidad: {
-    formalidad: { type: Number, min: 0, max: 10, default: 5 }, // 0 = formal, 10 = casual
-    energia: { type: Number, min: 0, max: 10, default: 5 },    // 0 = serio, 10 = divertido
-    conversacion: { type: Number, min: 0, max: 10, default: 5 }, // 0 = directo, 10 = conversador
-    estilo: {
-      type: String,
-      enum: ['profesional_cercano', 'amable_carismatico', 'juvenil_energetico', 'elegante_exclusivo', 'tranquilo_confiable'],
-      default: 'amable_carismatico',
-    },
-    descripcionLibre: { type: String, default: '' },
-  },
+// POST /api/negocios/fotos -> sube una foto a Cloudinary y la asocia al negocio autenticado
+router.post('/fotos', requiereAdmin, upload.single('foto'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
 
-  // Suscripción
-  suscripcion: {
-    estado: { type: String, enum: ['prueba', 'activa', 'vencida'], default: 'prueba' },
-    plan: { type: String, enum: ['basico', 'profesional', 'empresarial'], default: 'basico' },
-    mensajesUsadosPrueba: { type: Number, default: 0 },
-    limiteMensajesPrueba: { type: Number, default: 30 },
-    fechaInicio: { type: Date },
-    fechaVencimiento: { type: Date },
-  },
+    const categoria = req.body.categoria || 'general';
+    req.negocio.fotos.push({ url: req.file.path, publicId: req.file.filename, categoria });
+    await req.negocio.save();
 
-  // Disponibilidad del día: el dueño escribe acá lo que hoy no está disponible
-  // (se agotó, no hay stock, etc.) para que el asistente nunca lo recomiende ni lo tome en un pedido.
-  disponibilidadHoy: { type: String, default: '' },
+    res.json({ url: req.file.path, categoria });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al subir la foto' });
+  }
+});
 
-  activo: { type: Boolean, default: true },
-}, { timestamps: true });
+// DELETE /api/negocios/fotos/:publicId -> elimina una foto (de Cloudinary y del negocio)
+router.delete('/fotos/:publicId', requiereAdmin, async (req, res) => {
+  try {
+    const publicId = decodeURIComponent(req.params.publicId);
+    await cloudinary.uploader.destroy(publicId).catch(() => null); // si ya no existe en Cloudinary, seguimos igual
+    req.negocio.fotos = req.negocio.fotos.filter((f) => f.publicId !== publicId);
+    await req.negocio.save();
+    res.json({ mensaje: 'Foto eliminada' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar la foto' });
+  }
+});
 
-module.exports = mongoose.model('Negocio', negocioSchema);
+// GET /api/negocios/mi-negocio -> datos del negocio autenticado (para el panel admin)
+router.get('/mi-negocio', requiereAdmin, async (req, res) => {
+  res.json(req.negocio);
+});
+
+// PUT /api/negocios/mi-negocio -> actualiza info, horarios o personalidad
+router.put('/mi-negocio', requiereAdmin, async (req, res) => {
+  try {
+    const { formData, horarios, personalidad, disponibilidadHoy } = req.body;
+
+    if (formData) req.negocio.formData = { ...req.negocio.formData, ...formData };
+    if (horarios) req.negocio.horarios = horarios;
+    if (personalidad) req.negocio.personalidad = { ...req.negocio.personalidad.toObject(), ...personalidad };
+    if (disponibilidadHoy !== undefined) req.negocio.disponibilidadHoy = disponibilidadHoy;
+
+    await req.negocio.save();
+    res.json({ mensaje: 'Negocio actualizado correctamente', negocio: req.negocio });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar el negocio' });
+  }
+});
+
+module.exports = router;
