@@ -23,16 +23,16 @@ const CAMPOS_COMUNES = [
   { id: 'nombreNegocio', label: 'Nombre del negocio', tipo: 'texto', obligatorio: true },
   { id: 'descripcion', label: 'Descripción breve del negocio', tipo: 'textoLargo', obligatorio: true },
   { id: 'especialidad', label: '¿Cuál es la especialidad de tu negocio?', tipo: 'textoLargo', obligatorio: false },
-  { id: 'productoEstrella', label: '¿Cuál es tu producto o servicio estrella?', tipo: 'textoLargo', obligatorio: false },
+  { id: 'masSolicitado', label: '¿Cuál es el producto o servicio más solicitado por tus clientes?', tipo: 'textoLargo', obligatorio: false },
   { id: 'diferencial', label: '¿Qué los diferencia de otros negocios similares?', tipo: 'textoLargo', obligatorio: false },
-  { id: 'novedades', label: '¿Tienen productos o servicios nuevos? (opcional)', tipo: 'textoLargo', obligatorio: false },
-  { id: 'trabajosPersonalizados', label: '¿Realizan trabajos personalizados o aceptan pedidos especiales?', tipo: 'booleano', obligatorio: false },
-  { id: 'tipoClientes', label: '¿Qué tipo de clientes atienden habitualmente? (opcional)', tipo: 'texto', obligatorio: false },
-  { id: 'zonasCobertura', label: '¿Qué zonas cubren? (opcional)', tipo: 'texto', obligatorio: false },
-  { id: 'atencionDomicilio', label: '¿Ofrecen atención o entrega a domicilio?', tipo: 'booleano', obligatorio: false },
-  { id: 'requiereReserva', label: '¿Se necesita reservar o pedir turno?', tipo: 'booleano', obligatorio: false },
-  { id: 'tiempoEstimado', label: '¿Cuánto demora aproximadamente un pedido o servicio? (opcional)', tipo: 'texto', obligatorio: false },
-  { id: 'descuentosCantidad', label: '¿Hacen descuentos por cantidad o trabajan con pedidos grandes/eventos?', tipo: 'booleano', obligatorio: false },
+  { id: 'novedades', label: '¿Tienen algo nuevo para ofrecer? (opcional)', tipo: 'textoLargo', obligatorio: false },
+  { id: 'atencionPersonalizada', label: '¿Atienden casos, pedidos o consultas particulares/a medida?', tipo: 'booleano', obligatorio: false },
+  { id: 'tipoClientes', label: '¿A qué tipo de clientes atienden habitualmente? (opcional)', tipo: 'texto', obligatorio: false },
+  { id: 'zonasCobertura', label: '¿Qué zonas cubren, si aplica? (opcional)', tipo: 'texto', obligatorio: false },
+  { id: 'atencionDomicilio', label: '¿Ofrecen atención, entrega o servicio a domicilio?', tipo: 'booleano', obligatorio: false },
+  { id: 'requiereReserva', label: '¿Se necesita reservar, sacar turno o pedir cita previa?', tipo: 'booleano', obligatorio: false },
+  { id: 'tiempoEstimado', label: '¿Cuánto demora aproximadamente una consulta, pedido o servicio? (opcional)', tipo: 'texto', obligatorio: false },
+  { id: 'condicionesEspeciales', label: '¿Hacen descuentos, convenios, o atienden grupos/eventos grandes? (opcional)', tipo: 'textoLargo', obligatorio: false },
   { id: 'historia', label: 'Historia del negocio (opcional)', tipo: 'textoLargo', obligatorio: false },
   { id: 'direccion', label: 'Dirección', tipo: 'texto', obligatorio: true },
   { id: 'localidad', label: 'Localidad / Ciudad', tipo: 'texto', obligatorio: true },
@@ -273,6 +273,26 @@ const RUBROS = [
       { id: 'libreria', nombre: 'Librería', camposEspecificos: [
         { id: 'productos', label: 'Productos (útiles, libros, fotocopias, imprenta, etc.)', tipo: 'textoLargo', obligatorio: true },
       ]},
+      { id: 'kiosco', nombre: 'Kiosco / Almacén', camposEspecificos: [
+        { id: 'productos', label: 'Rubros de productos (golosinas, bebidas, almacén, etc.)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'perfumeria', nombre: 'Perfumería', camposEspecificos: [
+        { id: 'marcas', label: 'Marcas y líneas de productos que vende', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'bazar_regaleria', nombre: 'Bazar / Regalería', camposEspecificos: [
+        { id: 'productos', label: 'Tipo de productos que vende', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'jugueteria', nombre: 'Juguetería', camposEspecificos: [
+        { id: 'productos', label: 'Tipo de juguetes y edades', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'zapateria', nombre: 'Zapatería', camposEspecificos: [
+        { id: 'tipoCalzado', label: 'Tipo de calzado y marcas', tipo: 'textoLargo', obligatorio: true },
+        { id: 'numeracion', label: 'Numeración disponible', tipo: 'texto', obligatorio: false },
+      ]},
+      { id: 'optica', nombre: 'Óptica', camposEspecificos: [
+        { id: 'servicios', label: 'Servicios (armazones, lentes de contacto, exámenes de vista)', tipo: 'textoLargo', obligatorio: true },
+        { id: 'obrasSociales', label: 'Obras sociales aceptadas', tipo: 'textoLargo', obligatorio: false },
+      ]},
       { id: 'comercio_otros', nombre: 'Otros', camposEspecificos: CAMPOS_OTROS },
     ],
   },
@@ -286,11 +306,80 @@ const RUBROS = [
         { id: 'tipoOperaciones', label: 'Tipo de operaciones (venta, alquiler, temporario)', tipo: 'seleccionMultiple', obligatorio: true,
           opciones: ['Venta', 'Alquiler', 'Alquiler temporario', 'Tasaciones'] },
       ]},
+      { id: 'contador', nombre: 'Contador / Estudio contable', camposEspecificos: [
+        { id: 'servicios', label: 'Servicios (monotributo, sociedades, liquidaciones, etc.)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'diseno_grafico', nombre: 'Diseño gráfico', camposEspecificos: [
+        { id: 'servicios', label: 'Servicios (logos, redes, impresos, branding)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'marketing_digital', nombre: 'Marketing digital', camposEspecificos: [
+        { id: 'servicios', label: 'Servicios (redes sociales, publicidad, SEO, etc.)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'desarrollo_web', nombre: 'Desarrollo web / Programación', camposEspecificos: [
+        { id: 'servicios', label: 'Servicios (páginas web, apps, sistemas a medida)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'fotografo', nombre: 'Fotógrafo', camposEspecificos: [
+        { id: 'especialidad', label: 'Especialidad (eventos, retratos, productos, etc.)', tipo: 'textoLargo', obligatorio: true },
+        { id: 'trabajaEventos', label: '¿Trabaja en casamientos/eventos?', tipo: 'booleano', obligatorio: false },
+      ]},
+      { id: 'traductor', nombre: 'Traductor', camposEspecificos: [
+        { id: 'idiomas', label: 'Idiomas que traduce', tipo: 'textoLargo', obligatorio: true },
+        { id: 'traduccionPublica', label: '¿Hace traducciones públicas/certificadas?', tipo: 'booleano', obligatorio: false },
+      ]},
+      { id: 'servicios_otros', nombre: 'Otros', camposEspecificos: CAMPOS_OTROS },
+    ],
+  },
+  {
+    categoria: 'Educación',
+    subrubros: [
       { id: 'academia_cursos', nombre: 'Academia / Cursos', camposEspecificos: [
         { id: 'cursosOfrecidos', label: 'Cursos que ofrece', tipo: 'textoLargo', obligatorio: true },
         { id: 'modalidad', label: 'Modalidad', tipo: 'seleccionUnica', obligatorio: true, opciones: ['Presencial', 'Virtual', 'Híbrida'] },
+        { id: 'duracionCursos', label: 'Duración promedio de los cursos', tipo: 'texto', obligatorio: false },
       ]},
-      { id: 'servicios_otros', nombre: 'Otros', camposEspecificos: CAMPOS_OTROS },
+      { id: 'academia_idiomas', nombre: 'Academia de idiomas', camposEspecificos: [
+        { id: 'idiomas', label: 'Idiomas que enseña y niveles', tipo: 'textoLargo', obligatorio: true },
+        { id: 'modalidad', label: 'Modalidad', tipo: 'seleccionUnica', obligatorio: false, opciones: ['Presencial', 'Virtual', 'Híbrida'] },
+      ]},
+      { id: 'apoyo_escolar', nombre: 'Apoyo escolar / Clases particulares', camposEspecificos: [
+        { id: 'materias', label: 'Materias y niveles (primaria, secundaria, universitario)', tipo: 'textoLargo', obligatorio: true },
+        { id: 'modalidad', label: 'Modalidad', tipo: 'seleccionUnica', obligatorio: false, opciones: ['Presencial', 'Virtual', 'Ambas'] },
+      ]},
+      { id: 'jardin_maternal', nombre: 'Jardín maternal', camposEspecificos: [
+        { id: 'edadesAtendidas', label: 'Edades que atiende', tipo: 'texto', obligatorio: true },
+        { id: 'horarioExtendido', label: '¿Tiene horario extendido?', tipo: 'booleano', obligatorio: false },
+      ]},
+      { id: 'danza_musica', nombre: 'Instituto de danza / música', camposEspecificos: [
+        { id: 'disciplinas', label: 'Disciplinas o instrumentos que enseña', tipo: 'textoLargo', obligatorio: true },
+        { id: 'edadesAtendidas', label: 'Edades / niveles que atiende', tipo: 'texto', obligatorio: false },
+      ]},
+      { id: 'educacion_otros', nombre: 'Otros', camposEspecificos: CAMPOS_OTROS },
+    ],
+  },
+  {
+    categoria: 'Eventos y fiestas',
+    subrubros: [
+      { id: 'organizacion_eventos', nombre: 'Organización de eventos', camposEspecificos: [
+        { id: 'tipoEventos', label: 'Tipo de eventos que organiza (casamientos, cumpleaños, corporativos)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'alquiler_mobiliario', nombre: 'Alquiler de mobiliario', camposEspecificos: [
+        { id: 'productos', label: 'Qué alquila (mesas, sillas, vajilla, carpas, etc.)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'animacion_infantil', nombre: 'Animación infantil', camposEspecificos: [
+        { id: 'servicios', label: 'Servicios (personajes, juegos, shows)', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'dj_sonido', nombre: 'DJ / Sonido', camposEspecificos: [
+        { id: 'servicios', label: 'Servicios (sonido, luces, DJ) y tipo de eventos', tipo: 'textoLargo', obligatorio: true },
+      ]},
+      { id: 'catering_eventos', nombre: 'Catering para eventos', camposEspecificos: [
+        { id: 'menu', label: 'Opciones de menú para eventos', tipo: 'textoLargo', obligatorio: true },
+        { id: 'cantidadMinima', label: 'Cantidad mínima de personas', tipo: 'texto', obligatorio: false },
+      ]},
+      { id: 'salon_fiestas', nombre: 'Salón de fiestas', camposEspecificos: [
+        { id: 'capacidad', label: 'Capacidad del salón', tipo: 'texto', obligatorio: true },
+        { id: 'serviciosIncluidos', label: 'Qué incluye el alquiler (mobiliario, catering, decoración)', tipo: 'textoLargo', obligatorio: false },
+      ]},
+      { id: 'eventos_otros', nombre: 'Otros', camposEspecificos: CAMPOS_OTROS },
     ],
   },
 ];
