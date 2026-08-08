@@ -23,6 +23,17 @@ function agregarMensaje(texto, rol) {
   contenedorMensajes.scrollTop = contenedorMensajes.scrollHeight;
 }
 
+function agregarImagenes(urls) {
+  urls.forEach((url) => {
+    const div = document.createElement('div');
+    div.className = 'msg asistente';
+    div.style.padding = '4px';
+    div.innerHTML = `<img src="${url}" alt="Menú" style="max-width:100%; border-radius:10px; display:block;">`;
+    contenedorMensajes.appendChild(div);
+  });
+  contenedorMensajes.scrollTop = contenedorMensajes.scrollHeight;
+}
+
 async function enviarMensaje() {
   const texto = inputMensaje.value.trim();
   if (!texto || !codigoPublico) return;
@@ -44,6 +55,9 @@ async function enviarMensaje() {
       agregarMensaje(data.mensaje || 'Este asistente no está disponible en este momento.', 'asistente');
     } else {
       agregarMensaje(data.respuesta, 'asistente');
+      if (data.imagenes && data.imagenes.length) {
+        agregarImagenes(data.imagenes);
+      }
       if (data.pedidoCreado && data.pedidoCreado.exito) {
         agregarMensaje(`✅ Pedido registrado (N° ${data.pedidoCreado.pedidoId.slice(-6)})`, 'asistente');
       }
