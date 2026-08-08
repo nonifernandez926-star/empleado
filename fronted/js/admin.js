@@ -35,7 +35,75 @@ async function mostrarPanel() {
   renderizarCamposEdicion();
   cargarEstadisticas();
   cargarPedidos();
+  renderizarFotos();
 }
+
+function renderizarFotos() {
+  const grid = document.getElementById('grid-fotos');
+  const fotos = negocioActual.fotos || [];
+
+  if (!fotos.length) {
+    grid.innerHTML = `<p class="ayuda">Todavía no subiste ninguna foto.</p>`;
+    return;
+  }
+
+  grid.innerHTML = fotos.map((f) => `
+    <div style="position:relative;">
+      <img src="${f.url}" style="width:110px; height:110px; object-fit:cover; border-radius:10px;">
+      <div style="font-size:0.75rem; text-align:center; color:var(--gris-texto);">${f.categoria}</div>
+      <button class="btn-borrar-foto" data-public-id="${f.publicId}" style="position:absolute; top:2px; right:2px; background:rgba(220,38,38,0.9); color:white; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:0.8rem;">✕</button>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.btn-borrar-foto').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const publicId = btn.dataset.publicId;
+      try {
+        const res = await fetch(`${API_URL}/negocios/fotos/${encodeURIComponent(publicId)}`, {
+          method: 'DELETE',
+          headers: { 'x-codigo-admin': codigoAdminActual },
+        });
+        if (!res.ok) throw new Error('Error al borrar');
+        negocioActual.fotos = negocioActual.fotos.filter((f) => f.publicId !== publicId);
+        renderizarFotos();
+      } catch (error) {
+        alert('No se pudo borrar la foto.');
+      }
+    });
+  });
+}
+
+document.getElementById('btn-subir-foto').addEventListener('click', async () => {
+  const inputFoto = document.getElementById('input-foto');
+  const categoria = document.getElementById('select-categoria-foto').value;
+  const msgDiv = document.getElementById('foto-msg');
+
+  if (!inputFoto.files.length) {
+    msgDiv.innerHTML = `<div class="error-msg">Elegí una foto primero.</div>`;
+    return;
+  }
+
+  const formDataFoto = new FormData();
+  formDataFoto.append('foto', inputFoto.files[0]);
+  formDataFoto.append('categoria', categoria);
+
+  try {
+    const res = await fetch(`${API_URL}/negocios/fotos`, {
+      method: 'POST',
+      headers: { 'x-codigo-admin': codigoAdminActual },
+      body: formDataFoto,
+    });
+    if (!res.ok) throw new Error('Error al subir');
+
+    const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: { 'x-codigo-admin': codigoAdminActual } });
+    negocioActual = await resNegocio.json();
+    renderizarFotos();
+    inputFoto.value = '';
+    msgDiv.innerHTML = `<div class="exito">Foto subida correctamente.</div>`;
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo subir la foto. Intentá de nuevo.</div>`;
+  }
+});
 
 const ETIQUETAS_ESTADO = {
   pendiente: 'Pendiente',
