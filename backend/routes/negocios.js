@@ -1,101 +1,62 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const Negocio = require('../models/Negocio');
-const { RUBROS } = require('../data/rubros');
-const { generarCodigoAdmin, generarCodigoPublico } = require('../utils/generarCodigo');
-const { requiereAdmin } = require('../middleware/auth');
-const { storage, cloudinary } = require('../config/cloudinary');
+const mongoose = require('mongoose');
 
-const upload = multer({ storage });
+const bloqueHorarioSchema = new mongoose.Schema({
+  apertura: { type: String, required: true }, // "09:00"
+  cierre: { type: String, required: true },   // "13:00"
+}, { _id: false });
 
-function validarSubrubro(subrubroId) {
-  for (const cat of RUBROS) {
-    const sub = cat.subrubros.find((s) => s.id === subrubroId);
-    if (sub) return { categoria: cat.categoria, subrubro: sub.nombre };
-  }
-  return null;
-}
+const horarioDiaSchema = new mongoose.Schema({
+  dia: { type: String, enum: ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'], required: true },
+  activo: { type: Boolean, default: false },
+  bloques: { type: [bloqueHorarioSchema], default: [] }, // permite horario partido (ej: mañana y tarde)
+}, { _id: false });
 
-// POST /api/negocios -> registra un negocio nuevo (queda en estado "prueba")
-router.post('/', async (req, res) => {
-  try {
-    const { subrubroId, formData, horarios, personalidad } = req.body;
+const negocioSchema = new mongoose.Schema({
+  // Identificación
+  codigoAdmin: { type: String, required: true, unique: true }, // ej: ADM-82KX-91PL-7QW (privado, del dueño)
+  codigoPublico: { type: String, required: true, unique: true }, // id público para el widget de chat
 
-    const match = validarSubrubro(subrubroId);
-    if (!match) return res.status(400).json({ error: 'Subrubro inválido' });
+  // Clasificación
+  rubroCategoria: { type: String, required: true },
+  rubroSubrubro: { type: String, required: true },
 
-    let codigoAdmin, codigoPublico, existe;
-    do {
-      codigoAdmin = generarCodigoAdmin();
-      existe = await Negocio.findOne({ codigoAdmin });
-    } while (existe);
-    do {
-      codigoPublico = generarCodigoPublico();
-      existe = await Negocio.findOne({ codigoPublico });
-    } while (existe);
+  // Datos del formulario (comunes + específicos del subrubro), guardados como mapa clave-valor
+  formData: { type: mongoose.Schema.Types.Mixed, default: {} },
 
-    const negocio = await Negocio.create({
-      codigoAdmin,
-      codigoPublico,
-      rubroCategoria: match.categoria,
-      rubroSubrubro: match.subrubro,
-      formData: formData || {},
-      horarios: horarios || [],
-      personalidad: personalidad || {},
-      suscripcion: {
-        estado: 'prueba',
-        limiteMensajesPrueba: 30,
-        fechaInicio: new Date(),
-      },
-    });
+  // Horarios
+  horarios: { type: [horarioDiaSchema], default: [] },
 
-    res.status(201).json({
-      mensaje: 'Negocio registrado. Guardá tu código de administración, es la única forma de acceder al panel.',
-      codigoAdmin: negocio.codigoAdmin,
-      codigoPublico: negocio.codigoPublico,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al registrar el negocio' });
-  }
-});
+  // Fotos (Cloudinary)
+  fotos: [{ url: String, publicId: String }],
 
-// POST /api/negocios/fotos -> sube una foto a Cloudinary y la asocia al negocio autenticado
-router.post('/fotos', requiereAdmin, upload.single('foto'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No se recibió ninguna imagen' });
+  // Personalidad del asistente
+  personalidad: {
+    formalidad: { type: Number, min: 0, max: 10, default: 5 }, // 0 = formal, 10 = casual
+    energia: { type: Number, min: 0, max: 10, default: 5 },    // 0 = serio, 10 = divertido
+    conversacion: { type: Number, min: 0, max: 10, default: 5 }, // 0 = directo, 10 = conversador
+    estilo: {
+      type: String,
+      enum: ['profesional_cercano', 'amable_carismatico', 'juvenil_energetico', 'elegante_exclusivo', 'tranquilo_confiable'],
+      default: 'amable_carismatico',
+    },
+    descripcionLibre: { type: String, default: '' },
+  },
 
-    req.negocio.fotos.push({ url: req.file.path, publicId: req.file.filename });
-    await req.negocio.save();
+  // Suscripción
+  suscripcion: {
+    estado: { type: String, enum: ['prueba', 'activa', 'vencida'], default: 'prueba' },
+    plan: { type: String, enum: ['basico', 'profesional', 'empresarial'], default: 'basico' },
+    mensajesUsadosPrueba: { type: Number, default: 0 },
+    limiteMensajesPrueba: { type: Number, default: 30 },
+    fechaInicio: { type: Date },
+    fechaVencimiento: { type: Date },
+  },
 
-    res.json({ url: req.file.path });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al subir la foto' });
-  }
-});
+  // Disponibilidad del día: el dueño escribe acá lo que hoy no está disponible
+  // (se agotó, no hay stock, etc.) para que el asistente nunca lo recomiende ni lo tome en un pedido.
+  disponibilidadHoy: { type: String, default: '' },
 
-// GET /api/negocios/mi-negocio -> datos del negocio autenticado (para el panel admin)
-router.get('/mi-negocio', requiereAdmin, async (req, res) => {
-  res.json(req.negocio);
-});
+  activo: { type: Boolean, default: true },
+}, { timestamps: true });
 
-// PUT /api/negocios/mi-negocio -> actualiza info, horarios o personalidad
-router.put('/mi-negocio', requiereAdmin, async (req, res) => {
-  try {
-    const { formData, horarios, personalidad } = req.body;
-
-    if (formData) req.negocio.formData = { ...req.negocio.formData, ...formData };
-    if (horarios) req.negocio.horarios = horarios;
-    if (personalidad) req.negocio.personalidad = { ...req.negocio.personalidad.toObject(), ...personalidad };
-
-    await req.negocio.save();
-    res.json({ mensaje: 'Negocio actualizado correctamente', negocio: req.negocio });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al actualizar el negocio' });
-  }
-});
-
-module.exports = router;
+module.exports = mongoose.model('Negocio', negocioSchema);
