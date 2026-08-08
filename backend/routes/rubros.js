@@ -4,6 +4,7 @@ const { RUBROS, CAMPOS_COMUNES } = require('../data/rubros');
 
 // GET /api/rubros -> lista completa de categorías y subrubros (sin campos, para selects)
 router.get('/', (req, res) => {
+  res.set('Cache-Control', 'no-store');
   const lista = RUBROS.map((cat) => ({
     categoria: cat.categoria,
     subrubros: cat.subrubros.map((s) => ({ id: s.id, nombre: s.nombre })),
@@ -13,6 +14,7 @@ router.get('/', (req, res) => {
 
 // GET /api/rubros/:subrubroId/formulario -> campos comunes + específicos para armar el formulario dinámico
 router.get('/:subrubroId/formulario', (req, res) => {
+  res.set('Cache-Control', 'no-store');
   const { subrubroId } = req.params;
 
   for (const cat of RUBROS) {
