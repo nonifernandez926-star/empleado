@@ -52,6 +52,10 @@ const negocioSchema = new mongoose.Schema({
     fechaVencimiento: { type: Date },
   },
 
+  // Disponibilidad del día: el dueño escribe acá lo que hoy no está disponible
+  // (se agotó, no hay stock, etc.) para que el asistente nunca lo recomiende ni lo tome en un pedido.
+  disponibilidadHoy: { type: String, default: '' },
+
   activo: { type: Boolean, default: true },
 }, { timestamps: true });
 
