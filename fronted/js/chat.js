@@ -44,6 +44,9 @@ async function enviarMensaje() {
       agregarMensaje(data.mensaje || 'Este asistente no está disponible en este momento.', 'asistente');
     } else {
       agregarMensaje(data.respuesta, 'asistente');
+      if (data.pedidoCreado && data.pedidoCreado.exito) {
+        agregarMensaje(`✅ Pedido registrado (N° ${data.pedidoCreado.pedidoId.slice(-6)})`, 'asistente');
+      }
     }
   } catch (error) {
     agregarMensaje('Hubo un error de conexión. Intentá de nuevo.', 'asistente');
