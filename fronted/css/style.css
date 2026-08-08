@@ -147,3 +147,22 @@ table.tabla-stats { width: 100%; border-collapse: collapse; margin-top: 10px; }
 table.tabla-stats td { padding: 10px; border-bottom: 1px solid #eee; }
 table.tabla-stats td:first-child { color: var(--gris-texto); }
 table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
+
+/* Pedidos */
+.pedido-card { border: 1.5px solid #e5e7f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+.pedido-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+.pedido-header strong { font-size: 1.05rem; }
+.pedido-fecha { color: var(--gris-texto); font-size: 0.85rem; }
+.pedido-items { margin: 8px 0; padding-left: 18px; }
+.pedido-items li { margin-bottom: 2px; }
+.pedido-detalle { font-size: 0.9rem; color: var(--gris-texto); margin: 4px 0; }
+.badge-estado {
+  display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.badge-pendiente { background: #fef3c7; color: #92400e; }
+.badge-confirmado { background: #dbeafe; color: #1e40af; }
+.badge-en_preparacion { background: #ede9fe; color: #5b21b6; }
+.badge-listo { background: #d1fae5; color: #065f46; }
+.badge-entregado { background: #e5e7eb; color: #374151; }
+.pedido-card select { width: auto; display: inline-block; margin-top: 8px; }
