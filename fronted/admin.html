@@ -31,6 +31,22 @@
       </div>
 
       <div class="tarjeta">
+        <h2>Fotos del negocio</h2>
+        <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
+        <label>Elegir foto</label>
+        <input type="file" id="input-foto" accept="image/*">
+        <label>¿Qué es esta foto?</label>
+        <select id="select-categoria-foto">
+          <option value="menu">Menú / carta / productos</option>
+          <option value="local">Local / ambiente</option>
+          <option value="general">Otra</option>
+        </select>
+        <button class="btn" id="btn-subir-foto" style="margin-top:12px;">Subir foto</button>
+        <div id="foto-msg"></div>
+        <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
+      </div>
+
+      <div class="tarjeta">
         <h2>Pedidos</h2>
         <div id="lista-pedidos"><p class="ayuda">Cargando pedidos...</p></div>
       </div>
