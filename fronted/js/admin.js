@@ -29,6 +29,10 @@ async function mostrarPanel() {
   if (negocioActual.suscripcion.estado === 'vencida') {
     document.getElementById('aviso-vencida').style.display = 'block';
   }
+  if (negocioActual.suscripcion.fechaVencimiento) {
+    const fecha = new Date(negocioActual.suscripcion.fechaVencimiento).toLocaleDateString('es-AR');
+    document.getElementById('fecha-vencimiento').textContent = `Vence: ${fecha}`;
+  }
   document.getElementById('link-chat').textContent = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
 
@@ -36,6 +40,51 @@ async function mostrarPanel() {
   cargarEstadisticas();
   cargarPedidos();
   renderizarFotos();
+  cargarPlanes();
+}
+
+async function cargarPlanes() {
+  const grid = document.getElementById('grid-planes');
+  try {
+    const res = await fetch(`${API_URL}/suscripcion/planes`, { cache: 'no-store' });
+    const planes = await res.json();
+
+    grid.innerHTML = Object.entries(planes).map(([clave, plan]) => `
+      <div class="opcion-rubro" data-plan="${clave}">
+        <strong>${plan.label}</strong>
+        <small>$${plan.precio.toLocaleString('es-AR')} ARS</small>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('#grid-planes .opcion-rubro').forEach((div) => {
+      div.addEventListener('click', () => iniciarPago(div.dataset.plan));
+    });
+  } catch (error) {
+    grid.innerHTML = `<p class="ayuda">No se pudieron cargar los planes.</p>`;
+  }
+}
+
+async function iniciarPago(plan) {
+  const msgDiv = document.getElementById('pago-msg');
+  msgDiv.innerHTML = `<p class="ayuda">Generando link de pago...</p>`;
+
+  try {
+    const res = await fetch(`${API_URL}/suscripcion/crear-pago`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-codigo-admin': codigoAdminActual },
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      msgDiv.innerHTML = `<div class="error-msg">${data.error || 'No se pudo generar el pago.'}</div>`;
+      return;
+    }
+
+    window.location.href = data.initPoint; // redirige a Mercado Pago a completar el pago
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">Error de conexión, intentá de nuevo.</div>`;
+  }
 }
 
 function renderizarFotos() {
