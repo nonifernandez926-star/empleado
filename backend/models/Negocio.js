@@ -46,11 +46,12 @@ const negocioSchema = new mongoose.Schema({
   // Suscripción
   suscripcion: {
     estado: { type: String, enum: ['prueba', 'activa', 'vencida'], default: 'prueba' },
-    plan: { type: String, enum: ['basico', 'profesional', 'empresarial'], default: 'basico' },
+    plan: { type: String, enum: ['basico', '1_mes', '3_meses', '5_meses'], default: 'basico' },
     mensajesUsadosPrueba: { type: Number, default: 0 },
     limiteMensajesPrueba: { type: Number, default: 30 },
     fechaInicio: { type: Date },
     fechaVencimiento: { type: Date },
+    ultimoPagoId: { type: String }, // id del pago de Mercado Pago que activó/renovó la suscripción
   },
 
   // Disponibilidad del día: el dueño escribe acá lo que hoy no está disponible
