@@ -18,20 +18,32 @@ router.post('/:codigoPublico', async (req, res) => {
     const negocio = await Negocio.findOne({ codigoPublico, activo: true });
     if (!negocio) return res.status(404).json({ error: 'Asistente no encontrado' });
 
-    // Control de suscripción
-    if (negocio.suscripcion.estado === 'vencida') {
-      return res.status(402).json({
-        error: 'suscripcion_vencida',
-        mensaje: 'Este asistente está pausado temporalmente.',
-      });
-    }
+    // Modo dueño: estos códigos admin nunca pasan por control de suscripción (para probar sin pagar)
+    const codigosOwner = (process.env.CODIGOS_OWNER || '').split(',').map((c) => c.trim()).filter(Boolean);
+    const esModoOwner = codigosOwner.includes(negocio.codigoAdmin);
 
-    if (negocio.suscripcion.estado === 'prueba') {
-      if (negocio.suscripcion.mensajesUsadosPrueba >= negocio.suscripcion.limiteMensajesPrueba) {
+    if (!esModoOwner) {
+      // Si el plan pago ya venció, lo marcamos como vencido automáticamente
+      if (negocio.suscripcion.estado === 'activa' && negocio.suscripcion.fechaVencimiento && negocio.suscripcion.fechaVencimiento < new Date()) {
+        negocio.suscripcion.estado = 'vencida';
+        await negocio.save();
+      }
+
+      // Control de suscripción
+      if (negocio.suscripcion.estado === 'vencida') {
         return res.status(402).json({
-          error: 'limite_prueba_alcanzado',
-          mensaje: 'Se alcanzó el límite de mensajes de la prueba. El negocio debe activar su suscripción.',
+          error: 'suscripcion_vencida',
+          mensaje: 'Este asistente está pausado temporalmente.',
         });
+      }
+
+      if (negocio.suscripcion.estado === 'prueba') {
+        if (negocio.suscripcion.mensajesUsadosPrueba >= negocio.suscripcion.limiteMensajesPrueba) {
+          return res.status(402).json({
+            error: 'limite_prueba_alcanzado',
+            mensaje: 'Se alcanzó el límite de mensajes de la prueba. El negocio debe activar su suscripción.',
+          });
+        }
       }
     }
 
