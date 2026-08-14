@@ -20,7 +20,9 @@
     "@anthropic-ai/sdk": "^0.27.0",
     "nanoid": "^3.3.7",
     "express-rate-limit": "^7.4.0",
-    "mercadopago": "^2.0.9"
+    "mercadopago": "^2.0.9",
+    "google-auth-library": "^9.11.0",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
