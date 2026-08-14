@@ -49,6 +49,11 @@
         <label>Describí cómo querés que sea tu asistente (opcional)</label>
         <textarea id="personalidad-libre" placeholder="Ej: quiero que atienda como una persona del local, simpático y cercano, pero profesional."></textarea>
 
+        <h3>Vincular con Google (recomendado)</h3>
+        <p class="ayuda">Vinculá tu cuenta de Google para poder entrar a tu panel sin tener que guardar el código de administración. Es opcional: si no lo hacés, igual te vamos a dar un código para entrar.</p>
+        <div id="boton-google-registro" style="margin-bottom:10px;"></div>
+        <p class="ayuda" id="estado-google-registro"></p>
+
         <button type="submit" class="btn" style="margin-top:24px;">Crear mi asistente (modo prueba gratis)</button>
       </form>
     </div>
@@ -57,6 +62,7 @@
     <div id="resultado" class="tarjeta" style="display:none;"></div>
   </div>
 
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="js/config.js"></script>
   <script src="js/registro.js"></script>
 </body>
