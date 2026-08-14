@@ -4,6 +4,7 @@ const multer = require('multer');
 const Negocio = require('../models/Negocio');
 const { RUBROS } = require('../data/rubros');
 const { generarCodigoAdmin, generarCodigoPublico } = require('../utils/generarCodigo');
+const { generarToken } = require('../utils/jwt');
 const { requiereAdmin } = require('../middleware/auth');
 const { storage, cloudinary } = require('../config/cloudinary');
 
@@ -18,12 +19,28 @@ function validarSubrubro(subrubroId) {
 }
 
 // POST /api/negocios -> registra un negocio nuevo (queda en estado "prueba")
+// Si viene "googleIdToken" en el body, vincula el negocio a esa cuenta de Google
+// para que el dueño pueda iniciar sesión con Google en el futuro.
 router.post('/', async (req, res) => {
   try {
-    const { subrubroId, formData, horarios, personalidad } = req.body;
+    const { subrubroId, formData, horarios, personalidad, googleIdToken } = req.body;
 
     const match = validarSubrubro(subrubroId);
     if (!match) return res.status(400).json({ error: 'Subrubro inválido' });
+
+    let googleId = null;
+    let emailPropietario = null;
+    if (googleIdToken) {
+      try {
+        const { verificarIdTokenGoogle } = require('./auth');
+        const datosGoogle = await verificarIdTokenGoogle(googleIdToken);
+        googleId = datosGoogle.googleId;
+        emailPropietario = datosGoogle.email;
+      } catch (error) {
+        console.error('No se pudo verificar el token de Google al registrar:', error);
+        // seguimos igual sin vincular Google, el dueño se queda con el código admin como respaldo
+      }
+    }
 
     let codigoAdmin, codigoPublico, existe;
     do {
@@ -38,6 +55,8 @@ router.post('/', async (req, res) => {
     const negocio = await Negocio.create({
       codigoAdmin,
       codigoPublico,
+      googleId,
+      emailPropietario,
       rubroCategoria: match.categoria,
       rubroSubrubro: match.subrubro,
       formData: formData || {},
@@ -50,11 +69,18 @@ router.post('/', async (req, res) => {
       },
     });
 
-    res.status(201).json({
-      mensaje: 'Negocio registrado. Guardá tu código de administración, es la única forma de acceder al panel.',
+    const respuesta = {
+      mensaje: 'Negocio registrado. Guardá tu código de administración como respaldo, aunque hayas vinculado Google.',
       codigoAdmin: negocio.codigoAdmin,
       codigoPublico: negocio.codigoPublico,
-    });
+    };
+
+    if (googleId) {
+      respuesta.token = generarToken(negocio._id.toString());
+      respuesta.googleVinculado = true;
+    }
+
+    res.status(201).json(respuesta);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al registrar el negocio' });
