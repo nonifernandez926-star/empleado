@@ -11,6 +11,8 @@
     <!-- LOGIN -->
     <div id="vista-login" class="tarjeta">
       <h1>Ingresá a tu panel</h1>
+      <div id="boton-google-login" style="margin-bottom:16px;"></div>
+      <p class="ayuda" style="text-align:center; margin:14px 0;">— o con tu código —</p>
       <label>Código de administración</label>
       <input type="text" id="input-codigo-admin" placeholder="ADM-XXXX-XXXX-XXXX">
       <button class="btn" id="btn-login" style="margin-top:16px;">Ingresar</button>
@@ -30,6 +32,17 @@
         <h2>Activar / renovar suscripción</h2>
         <div id="grid-planes" class="grid-categorias"><p class="ayuda">Cargando planes...</p></div>
         <div id="pago-msg"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>📊 Resumen de hoy</h2>
+        <div id="resumen-diario"><p class="ayuda">Cargando resumen...</p></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>❓ Preguntas que el asistente no pudo responder</h2>
+        <p class="ayuda">Cargá esta información en "Información del negocio" para que el asistente pueda responderlas la próxima vez.</p>
+        <div id="preguntas-sin-respuesta"><p class="ayuda">Cargando...</p></div>
       </div>
 
       <div class="tarjeta">
@@ -81,6 +94,7 @@
     </div>
   </div>
 
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="js/config.js"></script>
   <script src="js/admin.js"></script>
 </body>
