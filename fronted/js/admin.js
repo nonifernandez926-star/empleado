@@ -384,8 +384,26 @@ async function cargarPedidos() {
             `<option value="${valor}" ${valor === p.estado ? 'selected' : ''}>${etiqueta}</option>`
           ).join('')}
         </select>
+        ${p.estado === 'entregado' ? `<button class="btn-eliminar-pedido" data-id="${p._id}" style="margin-top:10px; margin-left:8px; background:#fee2e2; color:#dc2626; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:0.85rem;">🗑️ Eliminar pedido</button>` : ''}
       </div>
     `).join('');
+
+    document.querySelectorAll('.btn-eliminar-pedido').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Eliminar este pedido? No se puede deshacer.')) return;
+        const id = btn.dataset.id;
+        try {
+          const res = await fetch(`${API_URL}/pedidos/${id}`, {
+            method: 'DELETE',
+            headers: headersAuth(),
+          });
+          if (!res.ok) throw new Error('Error al eliminar');
+          cargarPedidos();
+        } catch (error) {
+          alert('No se pudo eliminar el pedido, intentá de nuevo.');
+        }
+      });
+    });
 
     document.querySelectorAll('.select-estado-pedido').forEach((select) => {
       select.addEventListener('change', async (e) => {
