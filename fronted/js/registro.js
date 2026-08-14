@@ -2,6 +2,20 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 's
 let categoriasData = [];
 let categoriaSeleccionada = null;
 let subrubroSeleccionado = null;
+let googleIdTokenCapturado = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.google && GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.startsWith('TU_CLIENT_ID')) {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (respuesta) => {
+        googleIdTokenCapturado = respuesta.credential;
+        document.getElementById('estado-google-registro').textContent = '✅ Cuenta de Google vinculada correctamente.';
+      },
+    });
+    google.accounts.id.renderButton(document.getElementById('boton-google-registro'), { theme: 'outline', size: 'large', width: 280 });
+  }
+});
 
 async function cargarRubros() {
   const grid = document.getElementById('grid-categorias');
@@ -183,6 +197,7 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
       estilo: document.getElementById('personalidad-estilo').value,
       descripcionLibre: document.getElementById('personalidad-libre').value,
     },
+    googleIdToken: googleIdTokenCapturado || undefined,
   };
 
   const resultadoDiv = document.getElementById('resultado');
@@ -197,10 +212,15 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
 
     if (!res.ok) throw new Error(data.error || 'Error al crear el asistente');
 
+    if (data.token) {
+      localStorage.setItem('jwtToken', data.token); // así entra directo al panel sin loguearse de nuevo
+    }
+
     resultadoDiv.style.display = 'block';
     resultadoDiv.innerHTML = `
       <div class="exito">¡Tu asistente fue creado en modo prueba!</div>
-      <p>Guardá estos dos códigos, no se pueden recuperar después:</p>
+      ${data.googleVinculado ? '<p>Tu cuenta de Google ya está vinculada, vas a poder entrar a tu panel directamente.</p>' : ''}
+      <p>Guardá estos dos códigos como respaldo, no se pueden recuperar después:</p>
       <p><strong>Código de administración</strong> (privado, es tu llave para el panel):</p>
       <div class="codigo-box">${data.codigoAdmin}</div>
       <p><strong>Código público</strong> (para probar el chat):</p>
