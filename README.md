@@ -125,6 +125,19 @@ Abrí `backend/data/rubros.js` y agregá un objeto nuevo dentro del array
 falta tocar ningún otro archivo — el formulario del frontend se genera
 solo a partir de esos datos.
 
+## Cómo configurar el login con Google
+
+1. Andá a https://console.cloud.google.com/apis/credentials
+2. Creá un proyecto nuevo (o usá uno existente)
+3. "Crear credenciales" → "ID de cliente de OAuth" → tipo de aplicación **"Aplicación web"**
+4. En "Orígenes autorizados de JavaScript" agregá la URL de tu sitio en Netlify (ej: `https://empleado-digital.netlify.app`) y `http://localhost` si vas a probar local
+5. Creá la credencial y copiá el **Client ID** (termina en `.apps.googleusercontent.com`)
+6. Pegalo en dos lugares:
+   - `frontend/js/config.js` → variable `GOOGLE_CLIENT_ID`
+   - Render → variable de entorno `GOOGLE_CLIENT_ID`
+
+El código admin sigue funcionando siempre como respaldo, así que no hay riesgo de quedarte afuera del panel si algo falla con Google.
+
 ## Próximos pasos sugeridos (fase 2)
 
 1. Integrar Mercado Pago para el cobro real de la suscripción.
