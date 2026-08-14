@@ -73,7 +73,7 @@ router.post('/:codigoPublico', async (req, res) => {
     const pideMenu = /men[uú]|carta|cat[aá]logo|qu[eé] tienen|qu[eé] productos|qu[eé] venden/i.test(mensaje);
     const fotosMenu = pideMenu ? negocio.fotos.filter((f) => f.categoria === 'menu').map((f) => f.url) : [];
 
-    conversacion.mensajes.push({ rol: 'cliente', contenido: mensaje });
+    conversacion.mensajes.push({ rol: 'cliente', contenido: mensaje, sinRespuesta: !!respuestaTexto.sinRespuesta });
     conversacion.mensajes.push({ rol: 'asistente', contenido: respuestaTexto.textoRespuesta });
     await conversacion.save();
 
