@@ -1,5 +1,76 @@
 let codigoAdminActual = null;
+let jwtTokenActual = null;
 let negocioActual = null;
+
+// Devuelve los headers correctos según cómo se haya logueado el dueño (Google o código admin)
+function headersAuth(extra = {}) {
+  if (jwtTokenActual) {
+    return { ...extra, Authorization: `Bearer ${jwtTokenActual}` };
+  }
+  return { ...extra, 'x-codigo-admin': codigoAdminActual };
+}
+
+// --- Login con Google ---
+function alRecibirRespuestaGoogle(respuesta) {
+  procesarLoginGoogle(respuesta.credential);
+}
+
+async function procesarLoginGoogle(idToken) {
+  const errorDiv = document.getElementById('login-error');
+  errorDiv.innerHTML = '';
+  try {
+    const res = await fetch(`${API_URL}/auth/google/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.error === 'sin_negocio_vinculado') {
+        errorDiv.innerHTML = `<div class="error-msg">Esta cuenta de Google todavía no tiene un negocio creado. <a href="registro.html">Crear mi negocio</a></div>`;
+      } else {
+        errorDiv.innerHTML = `<div class="error-msg">No se pudo iniciar sesión con Google.</div>`;
+      }
+      return;
+    }
+
+    jwtTokenActual = data.token;
+    localStorage.setItem('jwtToken', data.token); // sesión persistente: no hay que loguearse cada vez
+
+    const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
+    negocioActual = await resNegocio.json();
+    mostrarPanel();
+  } catch (error) {
+    errorDiv.innerHTML = `<div class="error-msg">Error de conexión, intentá de nuevo.</div>`;
+  }
+}
+
+// Si ya había una sesión de Google guardada, entramos directo sin pedir login de nuevo
+async function intentarSesionGuardada() {
+  const tokenGuardado = localStorage.getItem('jwtToken');
+  if (!tokenGuardado) return;
+
+  jwtTokenActual = tokenGuardado;
+  try {
+    const res = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
+    if (!res.ok) throw new Error('Sesión vencida');
+    negocioActual = await res.json();
+    mostrarPanel();
+  } catch (error) {
+    jwtTokenActual = null;
+    localStorage.removeItem('jwtToken');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  intentarSesionGuardada();
+
+  if (window.google && GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.startsWith('TU_CLIENT_ID')) {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: alRecibirRespuestaGoogle });
+    google.accounts.id.renderButton(document.getElementById('boton-google-login'), { theme: 'outline', size: 'large', width: 300 });
+  }
+});
 
 document.getElementById('btn-login').addEventListener('click', async () => {
   const codigo = document.getElementById('input-codigo-admin').value.trim();
@@ -14,6 +85,7 @@ document.getElementById('btn-login').addEventListener('click', async () => {
 
     negocioActual = await res.json();
     codigoAdminActual = codigo;
+    jwtTokenActual = null;
     mostrarPanel();
   } catch (error) {
     errorDiv.innerHTML = `<div class="error-msg">Código inválido, revisalo e intentá de nuevo.</div>`;
@@ -41,6 +113,119 @@ async function mostrarPanel() {
   cargarPedidos();
   renderizarFotos();
   cargarPlanes();
+  cargarResumenDiario();
+  cargarPreguntasSinRespuesta();
+  iniciarNotificacionesPedidos();
+}
+
+async function cargarResumenDiario() {
+  const contenedor = document.getElementById('resumen-diario');
+  try {
+    const res = await fetch(`${API_URL}/estadisticas/resumen`, { headers: headersAuth(), cache: 'no-store' });
+    const r = await res.json();
+
+    contenedor.innerHTML = `
+      <div class="resumen-grid">
+        <div class="resumen-item"><div class="valor">${r.conversacionesHoy}</div><div class="etiqueta">Conversaciones hoy</div></div>
+        <div class="resumen-item"><div class="valor">${r.pedidosHoy}</div><div class="etiqueta">Pedidos hoy</div></div>
+        ${r.facturacionHoy ? `<div class="resumen-item"><div class="valor">$${r.facturacionHoy.toLocaleString('es-AR')}</div><div class="etiqueta">Facturado hoy (${r.pedidosConTotal} pedidos con precio)</div></div>` : ''}
+        ${r.productoMasPedido ? `<div class="resumen-item"><div class="valor">${r.productoMasPedido.cantidad}x</div><div class="etiqueta">${r.productoMasPedido.nombre} (el más pedido hoy)</div></div>` : ''}
+        ${r.horaPico ? `<div class="resumen-item"><div class="valor">${r.horaPico}</div><div class="etiqueta">Horario con más actividad</div></div>` : ''}
+      </div>
+      ${r.preguntasSinRespuestaHoy.length ? `<p class="ayuda" style="margin-top:14px;">Hoy hubo ${r.preguntasSinRespuestaHoy.length} pregunta(s) que el asistente no pudo responder. Mirá la sección de abajo para verlas.</p>` : ''}
+    `;
+  } catch (error) {
+    contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el resumen.</p>`;
+  }
+}
+
+async function cargarPreguntasSinRespuesta() {
+  const contenedor = document.getElementById('preguntas-sin-respuesta');
+  try {
+    const res = await fetch(`${API_URL}/estadisticas/preguntas-sin-respuesta`, { headers: headersAuth(), cache: 'no-store' });
+    const preguntas = await res.json();
+
+    if (!preguntas.length) {
+      contenedor.innerHTML = `<p class="ayuda">Todavía no hay preguntas sin responder. 🎉</p>`;
+      return;
+    }
+
+    contenedor.innerHTML = preguntas.map((p) => `
+      <div class="pregunta-item">
+        "${p.texto}"
+        <div class="pregunta-fecha">${new Date(p.fecha).toLocaleString('es-AR')}</div>
+      </div>
+    `).join('');
+  } catch (error) {
+    contenedor.innerHTML = `<p class="ayuda">No se pudieron cargar las preguntas.</p>`;
+  }
+}
+
+// Notificación de pedido nuevo mientras el panel está abierto: revisa cada 20s si hay
+// un pedido más reciente que el último que vimos, y avisa con sonido + notificación del navegador.
+let ultimoPedidoIdVisto = null;
+let tituloOriginal = document.title;
+
+function reproducirSonidoAviso() {
+  try {
+    const contexto = new (window.AudioContext || window.webkitAudioContext)();
+    const oscilador = contexto.createOscillator();
+    const ganancia = contexto.createGain();
+    oscilador.connect(ganancia);
+    ganancia.connect(contexto.destination);
+    oscilador.frequency.value = 880;
+    ganancia.gain.setValueAtTime(0.15, contexto.currentTime);
+    oscilador.start();
+    oscilador.stop(contexto.currentTime + 0.25);
+  } catch (error) {
+    // si el navegador bloquea audio sin interacción previa, no pasa nada grave
+  }
+}
+
+function mostrarNotificacionFlotante(texto) {
+  const div = document.createElement('div');
+  div.className = 'notif-flotante';
+  div.textContent = texto;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 6000);
+
+  document.title = '🔔 ¡Nuevo pedido! - ' + tituloOriginal;
+  setTimeout(() => { document.title = tituloOriginal; }, 8000);
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Nuevo pedido', { body: texto });
+  }
+}
+
+function iniciarNotificacionesPedidos() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${API_URL}/pedidos`, { headers: headersAuth(), cache: 'no-store' });
+      const pedidos = await res.json();
+      if (!pedidos.length) return;
+
+      const masReciente = pedidos[0]; // vienen ordenados del más nuevo al más viejo
+
+      if (ultimoPedidoIdVisto === null) {
+        ultimoPedidoIdVisto = masReciente._id; // primera carga: solo guardamos referencia, no avisamos
+        return;
+      }
+
+      if (masReciente._id !== ultimoPedidoIdVisto) {
+        ultimoPedidoIdVisto = masReciente._id;
+        reproducirSonidoAviso();
+        mostrarNotificacionFlotante(`Pedido nuevo de ${masReciente.nombreCliente}`);
+        cargarPedidos();
+        cargarResumenDiario();
+      }
+    } catch (error) {
+      // si falla la revisión, lo intentamos de nuevo en el próximo intervalo
+    }
+  }, 20000);
 }
 
 async function cargarPlanes() {
@@ -71,7 +256,7 @@ async function iniciarPago(plan) {
   try {
     const res = await fetch(`${API_URL}/suscripcion/crear-pago`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-codigo-admin': codigoAdminActual },
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ plan }),
     });
     const data = await res.json();
@@ -110,7 +295,7 @@ function renderizarFotos() {
       try {
         const res = await fetch(`${API_URL}/negocios/fotos/${encodeURIComponent(publicId)}`, {
           method: 'DELETE',
-          headers: { 'x-codigo-admin': codigoAdminActual },
+          headers: headersAuth(),
         });
         if (!res.ok) throw new Error('Error al borrar');
         negocioActual.fotos = negocioActual.fotos.filter((f) => f.publicId !== publicId);
@@ -139,12 +324,12 @@ document.getElementById('btn-subir-foto').addEventListener('click', async () => 
   try {
     const res = await fetch(`${API_URL}/negocios/fotos`, {
       method: 'POST',
-      headers: { 'x-codigo-admin': codigoAdminActual },
+      headers: headersAuth(),
       body: formDataFoto,
     });
     if (!res.ok) throw new Error('Error al subir');
 
-    const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: { 'x-codigo-admin': codigoAdminActual } });
+    const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
     negocioActual = await resNegocio.json();
     renderizarFotos();
     inputFoto.value = '';
@@ -166,7 +351,7 @@ async function cargarPedidos() {
   const contenedor = document.getElementById('lista-pedidos');
   try {
     const res = await fetch(`${API_URL}/pedidos`, {
-      headers: { 'x-codigo-admin': codigoAdminActual },
+      headers: headersAuth(),
     });
     const pedidos = await res.json();
 
@@ -209,7 +394,7 @@ async function cargarPedidos() {
         try {
           const res = await fetch(`${API_URL}/pedidos/${id}/estado`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'x-codigo-admin': codigoAdminActual },
+            headers: headersAuth({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ estado: nuevoEstado }),
           });
           if (!res.ok) throw new Error('Error al actualizar');
@@ -230,7 +415,7 @@ document.getElementById('btn-guardar-disponibilidad').addEventListener('click', 
   try {
     const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-codigo-admin': codigoAdminActual },
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ disponibilidadHoy }),
     });
     if (!res.ok) throw new Error('Error al guardar');
@@ -266,7 +451,7 @@ document.getElementById('btn-guardar-info').addEventListener('click', async () =
   try {
     const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-codigo-admin': codigoAdminActual },
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ formData }),
     });
     if (!res.ok) throw new Error('Error al guardar');
@@ -279,7 +464,7 @@ document.getElementById('btn-guardar-info').addEventListener('click', async () =
 
 async function cargarEstadisticas() {
   const res = await fetch(`${API_URL}/estadisticas`, {
-    headers: { 'x-codigo-admin': codigoAdminActual },
+    headers: headersAuth(),
   });
   const stats = await res.json();
 
