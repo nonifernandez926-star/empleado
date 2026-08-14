@@ -1,12 +1,14 @@
 const params = new URLSearchParams(window.location.search);
 const codigoPublico = params.get('codigo');
 
-// Generamos (o recuperamos) un id anónimo de sesión para este cliente en este navegador
+// Generamos (o recuperamos) un id anónimo para este cliente en este navegador/dispositivo.
+// Usamos localStorage (no sessionStorage) para que persista aunque cierre la pestaña o el navegador,
+// así el asistente puede "recordarlo" si vuelve otro día.
 function obtenerSesionCliente() {
-  let id = sessionStorage.getItem('sesionClienteId');
+  let id = localStorage.getItem('sesionClienteId');
   if (!id) {
     id = 'sesion-' + Math.random().toString(36).slice(2) + Date.now();
-    sessionStorage.setItem('sesionClienteId', id);
+    localStorage.setItem('sesionClienteId', id);
   }
   return id;
 }
