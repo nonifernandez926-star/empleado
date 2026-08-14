@@ -12,8 +12,12 @@ const horarioDiaSchema = new mongoose.Schema({
 }, { _id: false });
 
 const negocioSchema = new mongoose.Schema({
+  // Vinculación con cuenta de Google, para poder iniciar sesión sin el código admin
+  googleId: { type: String, index: true, sparse: true },
+  emailPropietario: { type: String },
+
   // Identificación
-  codigoAdmin: { type: String, required: true, unique: true }, // ej: ADM-82KX-91PL-7QW (privado, del dueño)
+  codigoAdmin: { type: String, required: true, unique: true }, // ej: ADM-82KX-91PL-7QW (privado, del dueño, sirve como respaldo)
   codigoPublico: { type: String, required: true, unique: true }, // id público para el widget de chat
 
   // Clasificación
