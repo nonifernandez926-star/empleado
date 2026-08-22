@@ -8,9 +8,6 @@ const rubrosRoutes = require('./routes/rubros');
 const negociosRoutes = require('./routes/negocios');
 const chatRoutes = require('./routes/chat');
 const estadisticasRoutes = require('./routes/estadisticas');
-const pedidosRoutes = require('./routes/pedidos');
-const suscripcionRoutes = require('./routes/suscripcion');
-const authRoutes = require('./routes/auth');
 
 const app = express();
 
@@ -29,9 +26,6 @@ app.use('/api/rubros', rubrosRoutes);
 app.use('/api/negocios', negociosRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
-app.use('/api/pedidos', pedidosRoutes);
-app.use('/api/suscripcion', suscripcionRoutes);
-app.use('/api/auth', authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
