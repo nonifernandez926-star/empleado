@@ -140,4 +140,22 @@ router.put('/mi-negocio', requiereAdmin, async (req, res) => {
   }
 });
 
+// GET /api/negocios/publico/:codigoPublico -> info básica y pública para mostrar en el header del chat (nombre, logo)
+router.get('/publico/:codigoPublico', async (req, res) => {
+  try {
+    const negocio = await Negocio.findOne({ codigoPublico: req.params.codigoPublico, activo: true });
+    if (!negocio) return res.status(404).json({ error: 'Negocio no encontrado' });
+
+    const logo = negocio.fotos.find((f) => f.categoria === 'logo');
+
+    res.json({
+      nombreNegocio: negocio.formData?.nombreNegocio || 'Negocio',
+      logoUrl: logo ? logo.url : null,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al obtener el negocio' });
+  }
+});
+
 module.exports = router;
