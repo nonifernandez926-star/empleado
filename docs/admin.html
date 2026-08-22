@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de administración</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="contenedor">
+    <!-- LOGIN -->
+    <div id="vista-login" class="tarjeta">
+      <h1>Ingresá a tu panel</h1>
+      <div id="boton-google-login" style="margin-bottom:16px;"></div>
+      <p class="ayuda" style="text-align:center; margin:14px 0;">— o con tu código —</p>
+      <label>Código de administración</label>
+      <input type="text" id="input-codigo-admin" placeholder="ADM-XXXX-XXXX-XXXX">
+      <button class="btn" id="btn-login" style="margin-top:16px;">Ingresar</button>
+      <div id="login-error"></div>
+    </div>
+
+    <!-- PANEL -->
+    <div id="vista-panel" style="display:none;">
+      <div class="tarjeta">
+        <h1 id="nombre-negocio-panel">Mi negocio</h1>
+        <p>Estado de suscripción: <strong id="estado-suscripcion"></strong></p>
+        <p id="fecha-vencimiento" class="ayuda"></p>
+        <p id="aviso-vencida" class="error-msg" style="display:none;">Tu asistente está pausado. Renueva tu suscripción para volver a activarlo.</p>
+      </div>
+
+      <div class="tarjeta" id="tarjeta-planes">
+        <h2>Activar / renovar suscripción</h2>
+        <div id="grid-planes" class="grid-categorias"><p class="ayuda">Cargando planes...</p></div>
+        <div id="pago-msg"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>📊 Resumen de hoy</h2>
+        <div id="resumen-diario"><p class="ayuda">Cargando resumen...</p></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>❓ Preguntas que el asistente no pudo responder</h2>
+        <p class="ayuda">Cargá esta información en "Información del negocio" para que el asistente pueda responderlas la próxima vez.</p>
+        <div id="preguntas-sin-respuesta"><p class="ayuda">Cargando...</p></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Estadísticas</h2>
+        <table class="tabla-stats" id="tabla-stats"></table>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Fotos del negocio</h2>
+        <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
+        <label>Elegir foto</label>
+        <input type="file" id="input-foto" accept="image/*">
+        <label>¿Qué es esta foto?</label>
+        <select id="select-categoria-foto">
+          <option value="menu">Menú / carta / productos</option>
+          <option value="local">Local / ambiente</option>
+          <option value="general">Otra</option>
+        </select>
+        <button class="btn" id="btn-subir-foto" style="margin-top:12px;">Subir foto</button>
+        <div id="foto-msg"></div>
+        <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Pedidos</h2>
+        <div id="lista-pedidos"><p class="ayuda">Cargando pedidos...</p></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Disponibilidad de hoy</h2>
+        <p class="ayuda">Escribí acá lo que hoy no está disponible (se agotó, sin stock, etc.). El asistente no lo va a recomendar ni tomar pedidos de eso. Se puede editar todos los días.</p>
+        <textarea id="disponibilidad-hoy" placeholder="Ej: hoy no hay pizza de rúcula, se agotaron las empanadas de pollo"></textarea>
+        <button class="btn" id="btn-guardar-disponibilidad" style="margin-top:12px;">Guardar disponibilidad</button>
+        <div id="disponibilidad-msg"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Información del negocio</h2>
+        <div id="campos-edicion"></div>
+        <button class="btn" id="btn-guardar-info" style="margin-top:16px;">Guardar cambios</button>
+        <div id="guardado-msg"></div>
+      </div>
+
+      <div class="tarjeta">
+        <h2>Compartir tu asistente</h2>
+        <p>Este es el enlace que podés compartir con tus clientes (redes sociales, WhatsApp, tu web):</p>
+        <div class="codigo-box" id="link-chat"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="js/config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
