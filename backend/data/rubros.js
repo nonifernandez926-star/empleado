@@ -22,6 +22,7 @@ const CAMPOS_COMUNES = [
   { id: 'metodosPago', label: 'Metodos de pago aceptados', tipo: 'seleccionMultiple', obligatorio: true,
     opciones: ['Efectivo', 'Tarjeta debito', 'Tarjeta credito', 'Transferencia', 'Mercado Pago', 'Otro'] },
   { id: 'mostrarPrecios', label: 'El asistente debe informar precios a los clientes?', tipo: 'booleano', obligatorio: true },
+  { id: 'aliasCbu', label: 'Alias o CBU para recibir transferencias (opcional, solo si aceptas pagos por transferencia)', tipo: 'texto', obligatorio: false },
   { id: 'promociones', label: 'Promociones o descuentos vigentes (opcional)', tipo: 'textoLargo', obligatorio: false },
   { id: 'politicas', label: 'Politicas de cambios, cancelaciones o devoluciones (opcional)', tipo: 'textoLargo', obligatorio: false },
   { id: 'preguntasFrecuentes', label: 'Preguntas frecuentes y sus respuestas (opcional)', tipo: 'textoLargo', obligatorio: false },
