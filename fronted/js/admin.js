@@ -378,6 +378,18 @@ async function cargarPedidos() {
         <div class="pedido-detalle">💳 ${p.formaPago}</div>
         ${p.observaciones ? `<div class="pedido-detalle">📝 ${p.observaciones}</div>` : ''}
 
+        ${p.comprobante && p.comprobante.url ? `
+          <div class="comprobante-box">
+            <div class="pedido-detalle"><strong>${p.pagoVerificado ? '✅ Pago verificado por vos' : '⏳ Pago declarado — falta que revises si llegó'}</strong></div>
+            <a href="${p.comprobante.url}" target="_blank" rel="noopener">
+              <img src="${p.comprobante.url}" alt="Comprobante" class="comprobante-miniatura">
+            </a>
+            <button class="btn-verificar-pago" data-id="${p._id}" data-verificado="${p.pagoVerificado ? 'false' : 'true'}">
+              ${p.pagoVerificado ? 'Desmarcar verificación' : '✅ Confirmar que la plata llegó'}
+            </button>
+          </div>
+        ` : ''}
+
         <label style="margin-top:10px;">Cambiar estado</label>
         <select class="select-estado-pedido" data-id="${p._id}">
           ${Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) =>
@@ -419,6 +431,24 @@ async function cargarPedidos() {
           cargarPedidos(); // recargamos para actualizar el badge
         } catch (error) {
           alert('No se pudo actualizar el estado del pedido, intentá de nuevo.');
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-verificar-pago').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const nuevoValor = btn.dataset.verificado === 'true';
+        try {
+          const res = await fetch(`${API_URL}/pedidos/${id}/pago-verificado`, {
+            method: 'PUT',
+            headers: headersAuth({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ verificado: nuevoValor }),
+          });
+          if (!res.ok) throw new Error('Error al actualizar');
+          cargarPedidos();
+        } catch (error) {
+          alert('No se pudo actualizar, intentá de nuevo.');
         }
       });
     });
