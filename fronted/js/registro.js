@@ -93,6 +93,19 @@ function renderizarCampos(campos) {
 
   campos.forEach((campo) => {
     const wrapper = document.createElement('div');
+
+    // Caso especial: el campo "menu" no se completa con texto, se reemplaza por carga de fotos
+    if (campo.id === 'menu') {
+      wrapper.innerHTML = `
+        <label>Fotos de tu menú (subí 1 o 2)</label>
+        <p class="ayuda">En vez de escribir el menú, subí fotos claras de tu carta. El asistente se las va a mostrar a los clientes cuando pregunten qué tenés.</p>
+        <input type="file" id="input-menu-foto-1" accept="image/*">
+        <input type="file" id="input-menu-foto-2" accept="image/*" style="margin-top:8px;">
+      `;
+      contenedor.appendChild(wrapper);
+      return;
+    }
+
     const requerido = campo.obligatorio ? 'required' : '';
     const etiquetaOpcional = campo.obligatorio ? '' : ' (opcional)';
 
@@ -183,6 +196,33 @@ function recolectarHorarios() {
   });
 }
 
+async function subirUnaFoto(codigoAdmin, archivo, categoria) {
+  if (!archivo) return;
+  const formDataFoto = new FormData();
+  formDataFoto.append('foto', archivo);
+  formDataFoto.append('categoria', categoria);
+  try {
+    await fetch(`${API_URL}/negocios/fotos`, {
+      method: 'POST',
+      headers: { 'x-codigo-admin': codigoAdmin },
+      body: formDataFoto,
+    });
+  } catch (error) {
+    // si falla una foto, no bloqueamos el registro; el dueño puede volver a subirla desde el panel
+    console.error('No se pudo subir una foto:', error);
+  }
+}
+
+async function subirFotosDelRegistro(codigoAdmin) {
+  const logo = document.getElementById('input-logo')?.files[0];
+  const menuFoto1 = document.getElementById('input-menu-foto-1')?.files[0];
+  const menuFoto2 = document.getElementById('input-menu-foto-2')?.files[0];
+
+  await subirUnaFoto(codigoAdmin, logo, 'logo');
+  await subirUnaFoto(codigoAdmin, menuFoto1, 'menu');
+  await subirUnaFoto(codigoAdmin, menuFoto2, 'menu');
+}
+
 document.getElementById('form-negocio').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -215,6 +255,9 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
     if (data.token) {
       localStorage.setItem('jwtToken', data.token); // así entra directo al panel sin loguearse de nuevo
     }
+
+    // Subimos el logo y las fotos del menú, si el dueño cargó alguna, usando el código admin recién generado
+    await subirFotosDelRegistro(data.codigoAdmin);
 
     resultadoDiv.style.display = 'block';
     resultadoDiv.innerHTML = `
