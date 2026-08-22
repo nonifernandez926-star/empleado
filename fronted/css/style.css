@@ -133,7 +133,7 @@ textarea { min-height: 90px; resize: vertical; }
 }
 
 /* Chat widget */
-body:has(.chat-widget) { margin: 0; padding: 0; height: 100dvh; overflow: hidden; }
+html:has(.chat-widget), body:has(.chat-widget) { margin: 0; padding: 0; height: 100%; overflow: hidden; }
 .chat-widget {
   max-width: 480px;
   width: 100%;
@@ -143,14 +143,35 @@ body:has(.chat-widget) { margin: 0; padding: 0; height: 100dvh; overflow: hidden
   flex-direction: column;
   background: var(--blanco);
 }
-.chat-header { background: var(--azul); color: var(--blanco); padding: 16px 20px; font-weight: 600; flex-shrink: 0; }
-.chat-mensajes { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--gris-claro); }
-.msg { max-width: 82%; padding: 10px 14px; border-radius: 14px; font-size: 0.95rem; }
-.msg.cliente { align-self: flex-end; background: var(--azul); color: white; border-bottom-right-radius: 4px; }
-.msg.asistente { align-self: flex-start; background: var(--blanco); color: var(--azul-oscuro); border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.chat-header {
+  background: var(--azul); color: var(--blanco); padding: 14px 18px;
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+.chat-header-logo {
+  width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+  overflow: hidden; flex-shrink: 0;
+}
+.chat-header-logo img { width: 100%; height: 100%; object-fit: cover; }
+.chat-header-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.chat-header-info strong { font-size: 0.95rem; line-height: 1.2; }
+.chat-header-info span { font-size: 0.82rem; opacity: 0.9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-header-estado { font-size: 0.75rem; display: flex; align-items: center; gap: 5px; opacity: 0.9; flex-shrink: 0; }
+.punto-conectado { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block; }
+
+.chat-mensajes { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--gris-claro); }
+.msg-fila { display: flex; flex-direction: column; max-width: 82%; }
+.msg-fila.cliente { align-self: flex-end; align-items: flex-end; }
+.msg-fila.asistente { align-self: flex-start; align-items: flex-start; }
+.msg { padding: 10px 14px; border-radius: 14px; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word; }
+.msg.cliente { background: var(--azul); color: white; border-bottom-right-radius: 4px; }
+.msg.asistente { background: var(--blanco); color: var(--azul-oscuro); border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.msg-hora { font-size: 0.72rem; color: var(--gris-texto); margin-top: 3px; padding: 0 4px; }
+
 .chat-input-area { display: flex; gap: 8px; padding: 14px; background: var(--blanco); border-top: 1px solid #eee; flex-shrink: 0; }
 .chat-input-area input { flex: 1; }
 .chat-input-area button { background: var(--azul); color: white; border: none; border-radius: 10px; padding: 0 18px; cursor: pointer; }
+#btn-adjuntar { background: transparent; color: var(--azul); font-size: 1.3rem; padding: 0 8px; }
 
 @media (min-width: 540px) {
   .chat-widget { height: 92vh; margin: 4vh auto; border-radius: var(--radio); overflow: hidden; box-shadow: var(--sombra); }
@@ -179,6 +200,14 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 .badge-listo { background: #d1fae5; color: #065f46; }
 .badge-entregado { background: #e5e7eb; color: #374151; }
 .pedido-card select { width: auto; display: inline-block; margin-top: 8px; }
+
+/* Comprobante de transferencia */
+.comprobante-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin: 10px 0; }
+.comprobante-miniatura { max-width: 160px; border-radius: 8px; display: block; margin: 8px 0; border: 1px solid #eee; }
+.btn-verificar-pago {
+  background: var(--exito); color: white; border: none; border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+}
 
 /* Resumen diario */
 .resumen-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
