@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat con el asistente</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="chat-widget">
+    <div class="chat-header">
+      <div class="chat-header-logo" id="chat-header-logo">💬</div>
+      <div class="chat-header-info">
+        <strong>Asistente virtual</strong>
+        <span id="chat-header-nombre">Cargando...</span>
+      </div>
+      <div class="chat-header-estado"><span class="punto-conectado"></span> Conectado</div>
+    </div>
+    <div class="chat-mensajes" id="chat-mensajes"></div>
+    <div class="chat-input-area">
+      <input type="file" id="input-comprobante" accept="image/*" style="display:none;">
+      <button id="btn-adjuntar" title="Adjuntar comprobante de pago" style="display:none;">📎</button>
+      <input type="text" id="input-mensaje" placeholder="Escribí tu mensaje...">
+      <button id="btn-enviar">Enviar</button>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/chat.js"></script>
+</body>
+</html>
