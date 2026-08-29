@@ -238,6 +238,7 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
       descripcionLibre: document.getElementById('personalidad-libre').value,
     },
     googleIdToken: googleIdTokenCapturado || undefined,
+    atencionSoloEnHorario: document.getElementById('atencion-solo-horario').checked,
   };
 
   const resultadoDiv = document.getElementById('resultado');
