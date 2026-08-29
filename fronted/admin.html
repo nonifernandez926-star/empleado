@@ -22,7 +22,17 @@
     <!-- PANEL -->
     <div id="vista-panel" style="display:none;">
       <div class="tarjeta">
-        <h1 id="nombre-negocio-panel">Mi negocio</h1>
+        <div class="panel-header-fila">
+          <h1 id="nombre-negocio-panel" style="margin:0;">Mi negocio</h1>
+          <div class="menu-opciones">
+            <button id="btn-menu-opciones" class="btn-tres-puntos" title="Más opciones">⋮</button>
+            <div id="dropdown-opciones" class="dropdown-opciones" style="display:none;">
+              <a href="#tarjeta-planes">⚙️ Configuración de suscripción</a>
+              <a href="#" id="link-ayuda">❓ Ayuda y soporte</a>
+              <a href="#" id="link-cerrar-sesion">🚪 Cerrar sesión</a>
+            </div>
+          </div>
+        </div>
         <p>Estado de suscripción: <strong id="estado-suscripcion"></strong></p>
         <p id="fecha-vencimiento" class="ayuda"></p>
         <p id="aviso-vencida" class="error-msg" style="display:none;">Tu asistente está pausado. Renueva tu suscripción para volver a activarlo.</p>
@@ -77,6 +87,13 @@
         <textarea id="disponibilidad-hoy" placeholder="Ej: hoy no hay pizza de rúcula, se agotaron las empanadas de pollo"></textarea>
         <button class="btn" id="btn-guardar-disponibilidad" style="margin-top:12px;">Guardar disponibilidad</button>
         <div id="disponibilidad-msg"></div>
+
+        <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:18px;">
+          <input type="checkbox" id="atencion-solo-horario-panel" style="width:auto;">
+          El asistente responde SOLO dentro de mi horario de atención
+        </label>
+        <button class="btn secundario" id="btn-guardar-horario-atencion" style="margin-top:10px;">Guardar</button>
+        <div id="horario-atencion-msg"></div>
       </div>
 
       <div class="tarjeta">
@@ -86,10 +103,22 @@
         <div id="guardado-msg"></div>
       </div>
 
-      <div class="tarjeta">
-        <h2>Compartir tu asistente</h2>
-        <p>Este es el enlace que podés compartir con tus clientes (redes sociales, WhatsApp, tu web):</p>
+      <div class="tarjeta" id="tarjeta-herramientas-mizona">
+        <h2>Herramientas para Mi Zona</h2>
+        <p class="ayuda" id="aviso-suscripcion-herramientas" style="display:none;">Estas herramientas se activan del todo cuando tu suscripción está paga — mientras tanto podés verlas y probarlas igual.</p>
+
+        <p><strong>QR de tu chat</strong></p>
+        <img id="qr-chat" alt="QR del chat" style="width:220px; height:220px; border:1px solid #eee; border-radius:10px;">
+        <p class="ayuda">Escaneá este código para abrir directo el chat con tu asistente.</p>
+
+        <p style="margin-top:18px;"><strong>Link de tu chat</strong></p>
         <div class="codigo-box" id="link-chat"></div>
+
+        <p style="margin-top:18px;"><strong>Código de vinculación con Mi Zona</strong></p>
+        <div class="codigo-box" id="codigo-vinculacion"></div>
+        <p class="ayuda">Usá este código cuando registres tu negocio en Mi Zona, para conectarlo con este asistente (funciona aunque uses una cuenta distinta allá).</p>
+
+        <a class="btn" id="btn-registrar-mizona" href="#" target="_blank" style="margin-top:14px; display:inline-block;">Registrá tu negocio en Mi Zona</a>
       </div>
     </div>
   </div>
