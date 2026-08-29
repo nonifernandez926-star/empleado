@@ -33,6 +33,14 @@ const pedidoSchema = new mongoose.Schema({
   pagoDeclarado: { type: Boolean, default: false }, // el cliente dijo que ya transfirió / mandó comprobante
   pagoVerificado: { type: Boolean, default: false }, // el DUEÑO confirmó manualmente que la plata llegó
 
+  // Estado detallado del pago (solo relevante si formaPago es transferencia):
+  // esperando_comprobante -> comprobante_recibido -> verificado | rechazado
+  estadoPago: {
+    type: String,
+    enum: ['no_aplica', 'esperando_comprobante', 'comprobante_recibido', 'verificado', 'rechazado'],
+    default: 'no_aplica',
+  },
+
   // Sin "cancelado": una vez que el asistente lo toma, el negocio lo gestiona hasta entregarlo.
   // Si algo no está disponible, se resuelve ANTES de tomar el pedido (ver disponibilidadHoy del negocio).
   estado: {
