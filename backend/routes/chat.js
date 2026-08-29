@@ -4,6 +4,35 @@ const Negocio = require('../models/Negocio');
 const Conversacion = require('../models/Conversacion');
 const { generarRespuesta } = require('../utils/claude');
 
+const DIAS_ORDEN = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+
+// Devuelve { abierto: boolean, proximaAperturaTexto: string } comparando la hora actual (Argentina)
+// contra los horarios cargados por el negocio.
+function chequearHorario(horarios) {
+  const ahora = new Date();
+  // Ajustamos a hora Argentina (UTC-3) sin depender de librerías externas
+  const ahoraArg = new Date(ahora.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+  const diaHoy = DIAS_ORDEN[ahoraArg.getDay()];
+  const minutosAhora = ahoraArg.getHours() * 60 + ahoraArg.getMinutes();
+
+  const horarioHoy = (horarios || []).find((h) => h.dia === diaHoy);
+  if (horarioHoy && horarioHoy.activo && horarioHoy.bloques && horarioHoy.bloques.length) {
+    const estaEnAlgunBloque = horarioHoy.bloques.some((b) => {
+      const [hA, mA] = (b.apertura || '00:00').split(':').map(Number);
+      const [hC, mC] = (b.cierre || '00:00').split(':').map(Number);
+      const minApertura = hA * 60 + mA;
+      const minCierre = hC * 60 + mC;
+      return minutosAhora >= minApertura && minutosAhora < minCierre;
+    });
+    if (estaEnAlgunBloque) return { abierto: true };
+  }
+
+  return {
+    abierto: false,
+    mensaje: 'En este momento estamos fuera de nuestro horario de atención. Podés dejar tu consulta y te respondemos apenas abramos, o volver a escribirnos dentro del horario.',
+  };
+}
+
 // POST /api/chat/:codigoPublico
 // body: { mensaje: string, sesionClienteId: string }
 router.post('/:codigoPublico', async (req, res) => {
@@ -44,6 +73,14 @@ router.post('/:codigoPublico', async (req, res) => {
             mensaje: 'Se alcanzó el límite de mensajes de la prueba. El negocio debe activar su suscripción.',
           });
         }
+      }
+    }
+
+    // Si el negocio pidió responder SOLO en su horario, chequeamos antes de gastar en Claude
+    if (negocio.atencionSoloEnHorario) {
+      const { abierto, mensaje: mensajeFueraDeHorario } = chequearHorario(negocio.horarios);
+      if (!abierto) {
+        return res.json({ respuesta: mensajeFueraDeHorario, pedidoCreado: null, imagenes: [] });
       }
     }
 
