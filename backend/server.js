@@ -11,6 +11,7 @@ const estadisticasRoutes = require('./routes/estadisticas');
 const pedidosRoutes = require('./routes/pedidos');
 const suscripcionRoutes = require('./routes/suscripcion');
 const authRoutes = require('./routes/auth');
+const vinculacionRoutes = require('./routes/vinculacion');
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/estadisticas', estadisticasRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/suscripcion', suscripcionRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/vinculacion', vinculacionRoutes);
 
 const PORT = process.env.PORT || 5000;
 
