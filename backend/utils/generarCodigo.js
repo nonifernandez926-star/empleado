@@ -14,4 +14,9 @@ function generarCodigoPublico() {
   return nanoidCorto();
 }
 
-module.exports = { generarCodigoAdmin, generarCodigoPublico };
+// Código para vincular este negocio con su perfil en Mi Zona (formato corto, fácil de tipear/pegar)
+function generarCodigoVinculacion() {
+  return `${generarSegmento()}-${generarSegmento()}-${generarSegmento()}`;
+}
+
+module.exports = { generarCodigoAdmin, generarCodigoPublico, generarCodigoVinculacion };
