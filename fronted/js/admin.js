@@ -70,6 +70,32 @@ window.addEventListener('DOMContentLoaded', () => {
     google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: alRecibirRespuestaGoogle });
     google.accounts.id.renderButton(document.getElementById('boton-google-login'), { theme: 'outline', size: 'large', width: 300 });
   }
+
+  // Menú de tres puntos: abrir/cerrar y sus opciones
+  const btnMenu = document.getElementById('btn-menu-opciones');
+  const dropdown = document.getElementById('dropdown-opciones');
+
+  btnMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', () => { dropdown.style.display = 'none'; });
+
+  document.getElementById('link-ayuda').addEventListener('click', (e) => {
+    e.preventDefault();
+    alert('¿Necesitás ayuda? Escribinos a soporte@tudominio.com o por WhatsApp al [tu número de soporte].');
+  });
+
+  document.getElementById('link-cerrar-sesion').addEventListener('click', (e) => {
+    e.preventDefault();
+    localStorage.removeItem('jwtToken');
+    jwtTokenActual = null;
+    codigoAdminActual = null;
+    negocioActual = null;
+    document.getElementById('vista-panel').style.display = 'none';
+    document.getElementById('vista-login').style.display = 'block';
+  });
 });
 
 document.getElementById('btn-login').addEventListener('click', async () => {
@@ -105,8 +131,14 @@ async function mostrarPanel() {
     const fecha = new Date(negocioActual.suscripcion.fechaVencimiento).toLocaleDateString('es-AR');
     document.getElementById('fecha-vencimiento').textContent = `Vence: ${fecha}`;
   }
-  document.getElementById('link-chat').textContent = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
+  const linkChat = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
+  document.getElementById('link-chat').textContent = linkChat;
+  document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
+  document.getElementById('codigo-vinculacion').textContent = negocioActual.codigoVinculacion || '(no disponible)';
+  document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
+  document.getElementById('aviso-suscripcion-herramientas').style.display = negocioActual.suscripcion.estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
+  document.getElementById('atencion-solo-horario-panel').checked = !!negocioActual.atencionSoloEnHorario;
 
   renderizarCamposEdicion();
   cargarEstadisticas();
@@ -347,6 +379,13 @@ const ETIQUETAS_ESTADO = {
   entregado: 'Entregado',
 };
 
+const ETIQUETAS_ESTADO_PAGO = {
+  esperando_comprobante: '⏳ Esperando que el cliente adjunte el comprobante',
+  comprobante_recibido: '📩 Comprobante recibido — falta que revises si llegó',
+  verificado: '✅ Pago verificado por vos',
+  rechazado: '🚫 Pago rechazado (no era válido)',
+};
+
 async function cargarPedidos() {
   const contenedor = document.getElementById('lista-pedidos');
   try {
@@ -378,15 +417,17 @@ async function cargarPedidos() {
         <div class="pedido-detalle">💳 ${p.formaPago}</div>
         ${p.observaciones ? `<div class="pedido-detalle">📝 ${p.observaciones}</div>` : ''}
 
+        ${ETIQUETAS_ESTADO_PAGO[p.estadoPago] ? `<div class="pedido-detalle"><strong>${ETIQUETAS_ESTADO_PAGO[p.estadoPago]}</strong></div>` : ''}
+
         ${p.comprobante && p.comprobante.url ? `
           <div class="comprobante-box">
-            <div class="pedido-detalle"><strong>${p.pagoVerificado ? '✅ Pago verificado por vos' : '⏳ Pago declarado — falta que revises si llegó'}</strong></div>
             <a href="${p.comprobante.url}" target="_blank" rel="noopener">
               <img src="${p.comprobante.url}" alt="Comprobante" class="comprobante-miniatura">
             </a>
             <button class="btn-verificar-pago" data-id="${p._id}" data-verificado="${p.pagoVerificado ? 'false' : 'true'}">
               ${p.pagoVerificado ? 'Desmarcar verificación' : '✅ Confirmar que la plata llegó'}
             </button>
+            ${p.estadoPago !== 'rechazado' ? `<button class="btn-rechazar-pago" data-id="${p._id}">🚫 Rechazar (no era válido)</button>` : ''}
           </div>
         ` : ''}
 
@@ -452,6 +493,23 @@ async function cargarPedidos() {
         }
       });
     });
+
+    document.querySelectorAll('.btn-rechazar-pago').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Marcar este comprobante como rechazado? (transferencia falsa, monto incorrecto, etc.)')) return;
+        const id = btn.dataset.id;
+        try {
+          const res = await fetch(`${API_URL}/pedidos/${id}/pago-rechazado`, {
+            method: 'PUT',
+            headers: headersAuth({ 'Content-Type': 'application/json' }),
+          });
+          if (!res.ok) throw new Error('Error al actualizar');
+          cargarPedidos();
+        } catch (error) {
+          alert('No se pudo actualizar, intentá de nuevo.');
+        }
+      });
+    });
   } catch (error) {
     contenedor.innerHTML = `<div class="error-msg">No se pudieron cargar los pedidos.</div>`;
   }
@@ -469,6 +527,24 @@ document.getElementById('btn-guardar-disponibilidad').addEventListener('click', 
     if (!res.ok) throw new Error('Error al guardar');
 
     msgDiv.innerHTML = `<div class="exito">Disponibilidad actualizada. El asistente ya no va a recomendar lo que marcaste.</div>`;
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar. Intentá de nuevo.</div>`;
+  }
+});
+
+document.getElementById('btn-guardar-horario-atencion').addEventListener('click', async () => {
+  const atencionSoloEnHorario = document.getElementById('atencion-solo-horario-panel').checked;
+  const msgDiv = document.getElementById('horario-atencion-msg');
+  try {
+    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
+      method: 'PUT',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ atencionSoloEnHorario }),
+    });
+    if (!res.ok) throw new Error('Error al guardar');
+
+    negocioActual.atencionSoloEnHorario = atencionSoloEnHorario;
+    msgDiv.innerHTML = `<div class="exito">Guardado.</div>`;
   } catch (error) {
     msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar. Intentá de nuevo.</div>`;
   }
