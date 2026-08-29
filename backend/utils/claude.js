@@ -181,6 +181,8 @@ async function ejecutarRegistrarPedido(negocioId, sesionClienteId, input) {
     ? items.reduce(function (acc, i) { return acc + i.precioUnitario * i.cantidad; }, 0)
     : undefined;
 
+  const esTransferencia = /transfer/i.test(input.formaPago || '');
+
   const pedido = await Pedido.create({
     negocioId: negocioId,
     sesionClienteId: sesionClienteId,
@@ -193,6 +195,7 @@ async function ejecutarRegistrarPedido(negocioId, sesionClienteId, input) {
     formaPago: input.formaPago,
     observaciones: input.observaciones,
     estado: 'pendiente',
+    estadoPago: esTransferencia ? 'esperando_comprobante' : 'no_aplica',
   });
 
   // Actualizamos (o creamos) el perfil de cliente recurrente para este negocio
