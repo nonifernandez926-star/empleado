@@ -201,12 +201,35 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 .badge-entregado { background: #e5e7eb; color: #374151; }
 .pedido-card select { width: auto; display: inline-block; margin-top: 8px; }
 
+/* Menú de tres puntos */
+.panel-header-fila { display: flex; justify-content: space-between; align-items: center; }
+.menu-opciones { position: relative; }
+.btn-tres-puntos {
+  background: transparent; border: none; font-size: 1.6rem; cursor: pointer;
+  color: var(--azul-oscuro); padding: 4px 10px; border-radius: 8px; line-height: 1;
+}
+.btn-tres-puntos:hover { background: var(--gris-claro); }
+.dropdown-opciones {
+  position: absolute; right: 0; top: 100%; background: var(--blanco);
+  border-radius: 10px; box-shadow: var(--sombra); min-width: 220px; z-index: 50;
+  padding: 6px; margin-top: 4px;
+}
+.dropdown-opciones a {
+  display: block; padding: 10px 12px; color: var(--azul-oscuro); text-decoration: none;
+  border-radius: 8px; font-size: 0.9rem;
+}
+.dropdown-opciones a:hover { background: var(--gris-claro); }
+
 /* Comprobante de transferencia */
 .comprobante-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin: 10px 0; }
 .comprobante-miniatura { max-width: 160px; border-radius: 8px; display: block; margin: 8px 0; border: 1px solid #eee; }
 .btn-verificar-pago {
   background: var(--exito); color: white; border: none; border-radius: 8px;
   padding: 8px 14px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+}
+.btn-rechazar-pago {
+  background: #fee2e2; color: var(--error); border: none; border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; font-size: 0.85rem; font-weight: 600; margin-left: 8px;
 }
 
 /* Resumen diario */
