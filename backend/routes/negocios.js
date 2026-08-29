@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const Negocio = require('../models/Negocio');
 const { RUBROS } = require('../data/rubros');
-const { generarCodigoAdmin, generarCodigoPublico } = require('../utils/generarCodigo');
+const { generarCodigoAdmin, generarCodigoPublico, generarCodigoVinculacion } = require('../utils/generarCodigo');
 const { generarToken } = require('../utils/jwt');
 const { requiereAdmin } = require('../middleware/auth');
 const { storage, cloudinary } = require('../config/cloudinary');
@@ -23,7 +23,7 @@ function validarSubrubro(subrubroId) {
 // para que el dueño pueda iniciar sesión con Google en el futuro.
 router.post('/', async (req, res) => {
   try {
-    const { subrubroId, formData, horarios, personalidad, googleIdToken } = req.body;
+    const { subrubroId, formData, horarios, personalidad, googleIdToken, atencionSoloEnHorario } = req.body;
 
     const match = validarSubrubro(subrubroId);
     if (!match) return res.status(400).json({ error: 'Subrubro inválido' });
@@ -42,7 +42,7 @@ router.post('/', async (req, res) => {
       }
     }
 
-    let codigoAdmin, codigoPublico, existe;
+    let codigoAdmin, codigoPublico, codigoVinculacion, existe;
     do {
       codigoAdmin = generarCodigoAdmin();
       existe = await Negocio.findOne({ codigoAdmin });
@@ -51,10 +51,15 @@ router.post('/', async (req, res) => {
       codigoPublico = generarCodigoPublico();
       existe = await Negocio.findOne({ codigoPublico });
     } while (existe);
+    do {
+      codigoVinculacion = generarCodigoVinculacion();
+      existe = await Negocio.findOne({ codigoVinculacion });
+    } while (existe);
 
     const negocio = await Negocio.create({
       codigoAdmin,
       codigoPublico,
+      codigoVinculacion,
       googleId,
       emailPropietario,
       rubroCategoria: match.categoria,
@@ -62,6 +67,7 @@ router.post('/', async (req, res) => {
       formData: formData || {},
       horarios: horarios || [],
       personalidad: personalidad || {},
+      atencionSoloEnHorario: !!atencionSoloEnHorario,
       suscripcion: {
         estado: 'prueba',
         limiteMensajesPrueba: 30,
@@ -125,12 +131,13 @@ router.get('/mi-negocio', requiereAdmin, async (req, res) => {
 // PUT /api/negocios/mi-negocio -> actualiza info, horarios o personalidad
 router.put('/mi-negocio', requiereAdmin, async (req, res) => {
   try {
-    const { formData, horarios, personalidad, disponibilidadHoy } = req.body;
+    const { formData, horarios, personalidad, disponibilidadHoy, atencionSoloEnHorario } = req.body;
 
     if (formData) req.negocio.formData = { ...req.negocio.formData, ...formData };
     if (horarios) req.negocio.horarios = horarios;
     if (personalidad) req.negocio.personalidad = { ...req.negocio.personalidad.toObject(), ...personalidad };
     if (disponibilidadHoy !== undefined) req.negocio.disponibilidadHoy = disponibilidadHoy;
+    if (atencionSoloEnHorario !== undefined) req.negocio.atencionSoloEnHorario = !!atencionSoloEnHorario;
 
     await req.negocio.save();
     res.json({ mensaje: 'Negocio actualizado correctamente', negocio: req.negocio });
