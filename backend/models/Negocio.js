@@ -18,6 +18,7 @@ const negocioSchema = new mongoose.Schema({
 
   // Identificación
   codigoAdmin: { type: String, required: true, unique: true }, // ej: ADM-82KX-91PL-7QW (privado, del dueño, sirve como respaldo)
+  codigoVinculacion: { type: String, unique: true, sparse: true }, // para vincular este negocio con su perfil en Mi Zona
   codigoPublico: { type: String, required: true, unique: true }, // id público para el widget de chat
 
   // Clasificación
@@ -61,6 +62,10 @@ const negocioSchema = new mongoose.Schema({
   // Disponibilidad del día: el dueño escribe acá lo que hoy no está disponible
   // (se agotó, no hay stock, etc.) para que el asistente nunca lo recomiende ni lo tome en un pedido.
   disponibilidadHoy: { type: String, default: '' },
+
+  // Si es true, el asistente SOLO responde con IA dentro del horario configurado;
+  // fuera de horario contesta un mensaje fijo (sin gastar en la API). Si es false, responde 24hs.
+  atencionSoloEnHorario: { type: Boolean, default: false },
 
   activo: { type: Boolean, default: true },
 }, { timestamps: true });
