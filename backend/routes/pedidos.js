@@ -31,6 +31,7 @@ router.post('/:id/comprobante', upload.single('foto'), async (req, res) => {
 
     pedido.comprobante = { url: req.file.path, publicId: req.file.filename, fecha: new Date() };
     pedido.pagoDeclarado = true;
+    pedido.estadoPago = 'comprobante_recibido';
     await pedido.save();
 
     res.json({ mensaje: 'Comprobante recibido, el negocio lo va a revisar', url: req.file.path });
@@ -48,9 +49,27 @@ router.put('/:id/pago-verificado', requiereAdmin, async (req, res) => {
     if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
 
     pedido.pagoVerificado = !!verificado;
+    pedido.estadoPago = verificado ? 'verificado' : (pedido.comprobante && pedido.comprobante.url ? 'comprobante_recibido' : 'esperando_comprobante');
     await pedido.save();
 
     res.json({ mensaje: 'Actualizado', pedido });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar el pago' });
+  }
+});
+
+// PUT /api/pedidos/:id/pago-rechazado -> el DUEÑO marca que el comprobante no era válido (transferencia falsa, monto incorrecto, etc.)
+router.put('/:id/pago-rechazado', requiereAdmin, async (req, res) => {
+  try {
+    const pedido = await Pedido.findOne({ _id: req.params.id, negocioId: req.negocio._id });
+    if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    pedido.pagoVerificado = false;
+    pedido.estadoPago = 'rechazado';
+    await pedido.save();
+
+    res.json({ mensaje: 'Pago marcado como rechazado', pedido });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar el pago' });
