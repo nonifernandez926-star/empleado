@@ -71,16 +71,10 @@ window.addEventListener('DOMContentLoaded', () => {
     google.accounts.id.renderButton(document.getElementById('boton-google-login'), { theme: 'outline', size: 'large', width: 300 });
   }
 
-  // Menú de tres puntos: abrir/cerrar y sus opciones
-  const btnMenu = document.getElementById('btn-menu-opciones');
-  const dropdown = document.getElementById('dropdown-opciones');
-
-  btnMenu.addEventListener('click', (e) => {
-    e.stopPropagation();
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  // Navegación inferior por pestañas
+  document.querySelectorAll('.app-navbar-item').forEach((btn) => {
+    btn.addEventListener('click', () => mostrarSeccion(btn.dataset.seccion));
   });
-
-  document.addEventListener('click', () => { dropdown.style.display = 'none'; });
 
   document.getElementById('link-ayuda').addEventListener('click', (e) => {
     e.preventDefault();
@@ -94,9 +88,22 @@ window.addEventListener('DOMContentLoaded', () => {
     codigoAdminActual = null;
     negocioActual = null;
     document.getElementById('vista-panel').style.display = 'none';
+    document.getElementById('contenedor-login').style.display = 'block';
     document.getElementById('vista-login').style.display = 'block';
   });
 });
+
+function mostrarSeccion(nombre) {
+  document.querySelectorAll('.app-seccion').forEach((sec) => { sec.style.display = 'none'; });
+  document.getElementById(`seccion-${nombre}`).style.display = 'block';
+
+  document.querySelectorAll('.app-navbar-item').forEach((btn) => {
+    btn.classList.toggle('activo', btn.dataset.seccion === nombre);
+  });
+
+  document.getElementById('vista-panel').scrollTop = 0;
+  document.querySelector('.app-contenido').scrollTop = 0;
+}
 
 document.getElementById('btn-login').addEventListener('click', async () => {
   const codigo = document.getElementById('input-codigo-admin').value.trim();
@@ -119,12 +126,18 @@ document.getElementById('btn-login').addEventListener('click', async () => {
 });
 
 async function mostrarPanel() {
-  document.getElementById('vista-login').style.display = 'none';
-  document.getElementById('vista-panel').style.display = 'block';
+  document.getElementById('contenedor-login').style.display = 'none';
+  document.getElementById('vista-panel').style.display = 'flex';
 
   document.getElementById('nombre-negocio-panel').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
-  document.getElementById('estado-suscripcion').textContent = negocioActual.suscripcion.estado.toUpperCase();
-  if (negocioActual.suscripcion.estado === 'vencida') {
+
+  const estado = negocioActual.suscripcion.estado;
+  const pill = document.getElementById('estado-suscripcion-pill');
+  pill.textContent = estado.toUpperCase();
+  pill.className = `pill-estado ${estado}`;
+  document.getElementById('estado-suscripcion').textContent = estado.toUpperCase();
+
+  if (estado === 'vencida') {
     document.getElementById('aviso-vencida').style.display = 'block';
   }
   if (negocioActual.suscripcion.fechaVencimiento) {
@@ -136,7 +149,7 @@ async function mostrarPanel() {
   document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
   document.getElementById('codigo-vinculacion').textContent = negocioActual.codigoVinculacion || '(no disponible)';
   document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
-  document.getElementById('aviso-suscripcion-herramientas').style.display = negocioActual.suscripcion.estado === 'activa' ? 'none' : 'block';
+  document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
   document.getElementById('atencion-solo-horario-panel').checked = !!negocioActual.atencionSoloEnHorario;
 
@@ -148,6 +161,26 @@ async function mostrarPanel() {
   cargarResumenDiario();
   cargarPreguntasSinRespuesta();
   iniciarNotificacionesPedidos();
+
+  mostrarSeccion('inicio');
+}
+
+function renderizarChartSemana(pedidosUltimos7Dias) {
+  const contenedor = document.getElementById('chart-pedidos-semana');
+  if (!pedidosUltimos7Dias || !pedidosUltimos7Dias.length) {
+    contenedor.innerHTML = `<p class="ayuda">Sin datos todavía.</p>`;
+    return;
+  }
+
+  const maximo = Math.max(...pedidosUltimos7Dias.map((d) => d.cantidad), 1);
+
+  contenedor.innerHTML = pedidosUltimos7Dias.map((d) => `
+    <div class="chart-barra-col">
+      <div class="chart-barra-valor">${d.cantidad}</div>
+      <div class="chart-barra" style="height:${Math.max((d.cantidad / maximo) * 100, 3)}%;"></div>
+      <div class="chart-barra-etiqueta">${d.etiqueta}</div>
+    </div>
+  `).join('');
 }
 
 async function cargarResumenDiario() {
@@ -166,6 +199,8 @@ async function cargarResumenDiario() {
       </div>
       ${r.preguntasSinRespuestaHoy.length ? `<p class="ayuda" style="margin-top:14px;">Hoy hubo ${r.preguntasSinRespuestaHoy.length} pregunta(s) que el asistente no pudo responder. Mirá la sección de abajo para verlas.</p>` : ''}
     `;
+
+    renderizarChartSemana(r.pedidosUltimos7Dias);
   } catch (error) {
     contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el resumen.</p>`;
   }
