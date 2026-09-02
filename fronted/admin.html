@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de administración</title>
+  <title>Mi Asistente — Panel</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="contenedor">
+  <div class="contenedor" id="contenedor-login">
     <!-- LOGIN -->
     <div id="vista-login" class="tarjeta">
       <h1>Ingresá a tu panel</h1>
@@ -18,109 +18,163 @@
       <button class="btn" id="btn-login" style="margin-top:16px;">Ingresar</button>
       <div id="login-error"></div>
     </div>
+  </div>
 
-    <!-- PANEL -->
-    <div id="vista-panel" style="display:none;">
-      <div class="tarjeta">
-        <div class="panel-header-fila">
-          <h1 id="nombre-negocio-panel" style="margin:0;">Mi negocio</h1>
-          <div class="menu-opciones">
-            <button id="btn-menu-opciones" class="btn-tres-puntos" title="Más opciones">⋮</button>
-            <div id="dropdown-opciones" class="dropdown-opciones" style="display:none;">
-              <a href="#tarjeta-planes">⚙️ Configuración de suscripción</a>
-              <a href="#" id="link-ayuda">❓ Ayuda y soporte</a>
-              <a href="#" id="link-cerrar-sesion">🚪 Cerrar sesión</a>
-            </div>
-          </div>
-        </div>
-        <p>Estado de suscripción: <strong id="estado-suscripcion"></strong></p>
-        <p id="fecha-vencimiento" class="ayuda"></p>
-        <p id="aviso-vencida" class="error-msg" style="display:none;">Tu asistente está pausado. Renueva tu suscripción para volver a activarlo.</p>
-      </div>
+  <!-- APP (aparece recién después de loguearse, con Google o con código) -->
+  <div id="vista-panel" class="app-shell" style="display:none;">
 
-      <div class="tarjeta" id="tarjeta-planes">
-        <h2>Activar / renovar suscripción</h2>
-        <div id="grid-planes" class="grid-categorias"><p class="ayuda">Cargando planes...</p></div>
-        <div id="pago-msg"></div>
-      </div>
-
-      <div class="tarjeta">
-        <h2>📊 Resumen de hoy</h2>
-        <div id="resumen-diario"><p class="ayuda">Cargando resumen...</p></div>
-      </div>
-
-      <div class="tarjeta">
-        <h2>❓ Preguntas que el asistente no pudo responder</h2>
-        <p class="ayuda">Cargá esta información en "Información del negocio" para que el asistente pueda responderlas la próxima vez.</p>
-        <div id="preguntas-sin-respuesta"><p class="ayuda">Cargando...</p></div>
-      </div>
-
-      <div class="tarjeta">
-        <h2>Estadísticas</h2>
-        <table class="tabla-stats" id="tabla-stats"></table>
-      </div>
-
-      <div class="tarjeta">
-        <h2>Fotos del negocio</h2>
-        <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
-        <label>Elegir foto</label>
-        <input type="file" id="input-foto" accept="image/*">
-        <label>¿Qué es esta foto?</label>
-        <select id="select-categoria-foto">
-          <option value="menu">Menú / carta / productos</option>
-          <option value="local">Local / ambiente</option>
-          <option value="general">Otra</option>
-        </select>
-        <button class="btn" id="btn-subir-foto" style="margin-top:12px;">Subir foto</button>
-        <div id="foto-msg"></div>
-        <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
-      </div>
-
-      <div class="tarjeta">
-        <h2>Pedidos</h2>
-        <div id="lista-pedidos"><p class="ayuda">Cargando pedidos...</p></div>
-      </div>
-
-      <div class="tarjeta">
-        <h2>Disponibilidad de hoy</h2>
-        <p class="ayuda">Escribí acá lo que hoy no está disponible (se agotó, sin stock, etc.). El asistente no lo va a recomendar ni tomar pedidos de eso. Se puede editar todos los días.</p>
-        <textarea id="disponibilidad-hoy" placeholder="Ej: hoy no hay pizza de rúcula, se agotaron las empanadas de pollo"></textarea>
-        <button class="btn" id="btn-guardar-disponibilidad" style="margin-top:12px;">Guardar disponibilidad</button>
-        <div id="disponibilidad-msg"></div>
-
-        <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:18px;">
-          <input type="checkbox" id="atencion-solo-horario-panel" style="width:auto;">
-          El asistente responde SOLO dentro de mi horario de atención
-        </label>
-        <button class="btn secundario" id="btn-guardar-horario-atencion" style="margin-top:10px;">Guardar</button>
-        <div id="horario-atencion-msg"></div>
-      </div>
-
-      <div class="tarjeta">
-        <h2>Información del negocio</h2>
-        <div id="campos-edicion"></div>
-        <button class="btn" id="btn-guardar-info" style="margin-top:16px;">Guardar cambios</button>
-        <div id="guardado-msg"></div>
-      </div>
-
-      <div class="tarjeta" id="tarjeta-herramientas-mizona">
-        <h2>Herramientas para Mi Zona</h2>
-        <p class="ayuda" id="aviso-suscripcion-herramientas" style="display:none;">Estas herramientas se activan del todo cuando tu suscripción está paga — mientras tanto podés verlas y probarlas igual.</p>
-
-        <p><strong>QR de tu chat</strong></p>
-        <img id="qr-chat" alt="QR del chat" style="width:220px; height:220px; border:1px solid #eee; border-radius:10px;">
-        <p class="ayuda">Escaneá este código para abrir directo el chat con tu asistente.</p>
-
-        <p style="margin-top:18px;"><strong>Link de tu chat</strong></p>
-        <div class="codigo-box" id="link-chat"></div>
-
-        <p style="margin-top:18px;"><strong>Código de vinculación con Mi Zona</strong></p>
-        <div class="codigo-box" id="codigo-vinculacion"></div>
-        <p class="ayuda">Usá este código cuando registres tu negocio en Mi Zona, para conectarlo con este asistente (funciona aunque uses una cuenta distinta allá).</p>
-
-        <a class="btn" id="btn-registrar-mizona" href="#" target="_blank" style="margin-top:14px; display:inline-block;">Registrá tu negocio en Mi Zona</a>
+    <!-- Barra superior -->
+    <div class="app-topbar">
+      <div class="app-topbar-info">
+        <strong id="nombre-negocio-panel">Mi negocio</strong>
+        <span id="estado-suscripcion-pill" class="pill-estado"></span>
       </div>
     </div>
+
+    <!-- Contenido de cada pestaña -->
+    <div class="app-contenido">
+
+      <!-- INICIO -->
+      <section id="seccion-inicio" class="app-seccion">
+        <p id="aviso-vencida" class="error-msg" style="display:none;">Tu asistente está pausado. Renová tu suscripción en la pestaña Ajustes para reactivarlo.</p>
+
+        <div class="tarjeta">
+          <h2>📊 Resumen de hoy</h2>
+          <div id="resumen-diario"><p class="ayuda">Cargando resumen...</p></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>📈 Pedidos — últimos 7 días</h2>
+          <div id="chart-pedidos-semana" class="chart-barras"><p class="ayuda">Cargando...</p></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>❓ Preguntas sin responder</h2>
+          <p class="ayuda">Cargá esta info en la pestaña "Negocio" para que el asistente pueda responderlas la próxima vez.</p>
+          <div id="preguntas-sin-respuesta"><p class="ayuda">Cargando...</p></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Estadísticas generales</h2>
+          <table class="tabla-stats" id="tabla-stats"></table>
+        </div>
+      </section>
+
+      <!-- PEDIDOS -->
+      <section id="seccion-pedidos" class="app-seccion" style="display:none;">
+        <div class="tarjeta">
+          <h2>Pedidos</h2>
+          <div id="lista-pedidos"><p class="ayuda">Cargando pedidos...</p></div>
+        </div>
+      </section>
+
+      <!-- HERRAMIENTAS -->
+      <section id="seccion-herramientas" class="app-seccion" style="display:none;">
+        <div class="tarjeta" id="tarjeta-herramientas-mizona">
+          <h2>Herramientas para Mi Zona</h2>
+          <p class="ayuda" id="aviso-suscripcion-herramientas" style="display:none;">Estas herramientas se activan del todo cuando tu suscripción está paga — mientras tanto podés verlas y probarlas igual.</p>
+
+          <p><strong>QR de tu chat</strong></p>
+          <img id="qr-chat" alt="QR del chat" style="width:220px; height:220px; border:1px solid #eee; border-radius:10px;">
+          <p class="ayuda">Escaneá este código para abrir directo el chat con tu asistente.</p>
+
+          <p style="margin-top:18px;"><strong>Link de tu chat</strong></p>
+          <div class="codigo-box" id="link-chat"></div>
+
+          <p style="margin-top:18px;"><strong>Código de vinculación con Mi Zona</strong></p>
+          <div class="codigo-box" id="codigo-vinculacion"></div>
+          <p class="ayuda">Usá este código cuando registres tu negocio en Mi Zona, para conectarlo con este asistente (funciona aunque uses una cuenta distinta allá).</p>
+
+          <a class="btn" id="btn-registrar-mizona" href="#" target="_blank" style="margin-top:14px; display:inline-block;">Registrá tu negocio en Mi Zona</a>
+        </div>
+      </section>
+
+      <!-- NEGOCIO -->
+      <section id="seccion-negocio" class="app-seccion" style="display:none;">
+        <div class="tarjeta">
+          <h2>Fotos del negocio</h2>
+          <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
+          <label>Elegir foto</label>
+          <input type="file" id="input-foto" accept="image/*">
+          <label>¿Qué es esta foto?</label>
+          <select id="select-categoria-foto">
+            <option value="menu">Menú / carta / productos</option>
+            <option value="logo">Logo del negocio</option>
+            <option value="local">Local / ambiente</option>
+            <option value="general">Otra</option>
+          </select>
+          <button class="btn" id="btn-subir-foto" style="margin-top:12px;">Subir foto</button>
+          <div id="foto-msg"></div>
+          <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Disponibilidad de hoy</h2>
+          <p class="ayuda">Escribí acá lo que hoy no está disponible (se agotó, sin stock, etc.). El asistente no lo va a recomendar ni tomar pedidos de eso.</p>
+          <textarea id="disponibilidad-hoy" placeholder="Ej: hoy no hay pizza de rúcula, se agotaron las empanadas de pollo"></textarea>
+          <button class="btn" id="btn-guardar-disponibilidad" style="margin-top:12px;">Guardar disponibilidad</button>
+          <div id="disponibilidad-msg"></div>
+
+          <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:18px;">
+            <input type="checkbox" id="atencion-solo-horario-panel" style="width:auto;">
+            El asistente responde SOLO dentro de mi horario de atención
+          </label>
+          <button class="btn secundario" id="btn-guardar-horario-atencion" style="margin-top:10px;">Guardar</button>
+          <div id="horario-atencion-msg"></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Información del negocio</h2>
+          <div id="campos-edicion"></div>
+          <button class="btn" id="btn-guardar-info" style="margin-top:16px;">Guardar cambios</button>
+          <div id="guardado-msg"></div>
+        </div>
+      </section>
+
+      <!-- AJUSTES -->
+      <section id="seccion-ajustes" class="app-seccion" style="display:none;">
+        <div class="tarjeta">
+          <h2>Mi suscripción</h2>
+          <p>Estado: <strong id="estado-suscripcion"></strong></p>
+          <p id="fecha-vencimiento" class="ayuda"></p>
+        </div>
+
+        <div class="tarjeta" id="tarjeta-planes">
+          <h2>Activar / renovar suscripción</h2>
+          <div id="grid-planes" class="grid-categorias"><p class="ayuda">Cargando planes...</p></div>
+          <div id="pago-msg"></div>
+        </div>
+
+        <div class="tarjeta">
+          <h2>Ayuda y soporte</h2>
+          <a href="#" id="link-ayuda" class="btn secundario" style="display:inline-block;">❓ Contactar soporte</a>
+        </div>
+
+        <div class="tarjeta">
+          <a href="#" id="link-cerrar-sesion" class="btn secundario" style="display:inline-block; color:var(--error); border-color:var(--error);">🚪 Cerrar sesión</a>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Navegación inferior -->
+    <nav class="app-navbar">
+      <button class="app-navbar-item activo" data-seccion="inicio">
+        <span class="app-navbar-icono">🏠</span><span>Inicio</span>
+      </button>
+      <button class="app-navbar-item" data-seccion="pedidos">
+        <span class="app-navbar-icono">📦</span><span>Pedidos</span>
+      </button>
+      <button class="app-navbar-item" data-seccion="herramientas">
+        <span class="app-navbar-icono">🧰</span><span>Herramientas</span>
+      </button>
+      <button class="app-navbar-item" data-seccion="negocio">
+        <span class="app-navbar-icono">🏪</span><span>Negocio</span>
+      </button>
+      <button class="app-navbar-item" data-seccion="ajustes">
+        <span class="app-navbar-icono">⚙️</span><span>Ajustes</span>
+      </button>
+    </nav>
   </div>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
