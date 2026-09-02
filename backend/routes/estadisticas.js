@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const Conversacion = require('../models/Conversacion');
@@ -76,6 +77,25 @@ router.get('/resumen', requiereAdmin, async (req, res) => {
       });
     });
 
+    // Pedidos por día de los últimos 7 días (para el gráfico de barras del panel)
+    const hace7Dias = new Date(inicioHoy);
+    hace7Dias.setDate(hace7Dias.getDate() - 6);
+    const pedidosSemana = await Pedido.find({ negocioId, createdAt: { $gte: hace7Dias, $lte: finHoy } });
+
+    const pedidosUltimos7Dias = [];
+    for (let i = 6; i >= 0; i--) {
+      const dia = new Date(inicioHoy);
+      dia.setDate(dia.getDate() - i);
+      const diaSiguiente = new Date(dia);
+      diaSiguiente.setDate(diaSiguiente.getDate() + 1);
+
+      const cantidad = pedidosSemana.filter((p) => p.createdAt >= dia && p.createdAt < diaSiguiente).length;
+      pedidosUltimos7Dias.push({
+        etiqueta: dia.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', ''),
+        cantidad,
+      });
+    }
+
     res.json({
       fecha: inicioHoy.toISOString().slice(0, 10),
       conversacionesHoy: conversacionesHoy.length,
@@ -85,6 +105,7 @@ router.get('/resumen', requiereAdmin, async (req, res) => {
       productoMasPedido: productoMasPedido ? { nombre: productoMasPedido[0], cantidad: productoMasPedido[1] } : null,
       horaPico,
       preguntasSinRespuestaHoy: preguntasSinRespuestaHoy.slice(-10).reverse(),
+      pedidosUltimos7Dias,
     });
   } catch (error) {
     console.error(error);
