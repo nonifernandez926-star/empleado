@@ -63,6 +63,27 @@ async function intentarSesionGuardada() {
   }
 }
 
+function cerrarSesion(e) {
+  if (e) e.preventDefault();
+  localStorage.removeItem('jwtToken');
+  jwtTokenActual = null;
+  codigoAdminActual = null;
+  negocioActual = null;
+  cerrarDrawer();
+  document.getElementById('vista-panel').style.display = 'none';
+  document.getElementById('contenedor-login').style.display = 'flex';
+  document.getElementById('vista-login').style.display = 'block';
+}
+
+function abrirDrawer() {
+  document.getElementById('drawer').classList.add('abierto');
+  document.getElementById('drawer-overlay').classList.add('abierto');
+}
+function cerrarDrawer() {
+  document.getElementById('drawer').classList.remove('abierto');
+  document.getElementById('drawer-overlay').classList.remove('abierto');
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   intentarSesionGuardada();
 
@@ -76,22 +97,92 @@ window.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => mostrarSeccion(btn.dataset.seccion));
   });
 
+  // Accesos rápidos de la pantalla de Inicio (mismas secciones que la navegación inferior)
+  document.querySelectorAll('.quick-item[data-seccion]').forEach((btn) => {
+    btn.addEventListener('click', () => mostrarSeccion(btn.dataset.seccion));
+  });
+
+  // Menú lateral (drawer): abrir/cerrar y navegar
+  document.getElementById('btn-abrir-menu').addEventListener('click', abrirDrawer);
+  document.getElementById('drawer-overlay').addEventListener('click', cerrarDrawer);
+  document.querySelectorAll('.drawer-nav-item[data-seccion]').forEach((btn) => {
+    btn.addEventListener('click', () => { mostrarSeccion(btn.dataset.seccion); cerrarDrawer(); });
+  });
+  document.getElementById('drawer-ayuda').addEventListener('click', () => {
+    cerrarDrawer();
+    document.getElementById('link-ayuda').click();
+  });
+  document.getElementById('drawer-soporte').addEventListener('click', () => {
+    cerrarDrawer();
+    document.getElementById('link-ayuda').click();
+  });
+  document.getElementById('drawer-cerrar-sesion').addEventListener('click', cerrarSesion);
+
+  // La campana lleva directo a Pedidos, filtrados por "Pendientes"
+  document.getElementById('btn-campana').addEventListener('click', () => {
+    mostrarSeccion('pedidos');
+    const tabPendientes = document.querySelector('#tabs-pedidos .tab-pill[data-filtro="pendiente"]');
+    if (tabPendientes) tabPendientes.click();
+  });
+
+  // El avatar abre el mismo menú lateral (accesos a ajustes, ayuda, cerrar sesión, etc.)
+  document.getElementById('avatar-topbar').addEventListener('click', abrirDrawer);
+
+  // Acordeones de "Herramientas" y "Ajustes": abrir/cerrar el panel de cada fila
+  document.querySelectorAll('.list-row[data-panel]').forEach((fila) => {
+    fila.addEventListener('click', () => {
+      const panel = document.getElementById(fila.dataset.panel);
+      const yaAbierto = panel.classList.contains('abierto');
+      // cerramos los demás paneles del mismo grupo de lista, para que quede como un acordeón prolijo
+      const tarjetaLista = fila.closest('.list-card');
+      if (tarjetaLista) {
+        tarjetaLista.querySelectorAll('.list-row-panel.abierto').forEach((p) => p.classList.remove('abierto'));
+        tarjetaLista.querySelectorAll('.list-row.abierta').forEach((f) => f.classList.remove('abierta'));
+      }
+      if (!yaAbierto) {
+        panel.classList.add('abierto');
+        fila.classList.add('abierta');
+      }
+    });
+  });
+
+  // Copiar enlace de chat / código de vinculación con un botón (en vez de seleccionar texto a mano)
+  document.getElementById('btn-copiar-link').addEventListener('click', () => copiarAlPortapapeles('link-chat', 'btn-copiar-link', '📋 Copiar enlace'));
+  document.getElementById('btn-copiar-codigo').addEventListener('click', () => copiarAlPortapapeles('codigo-vinculacion', 'btn-copiar-codigo', '📋 Copiar código'));
+
   document.getElementById('link-ayuda').addEventListener('click', (e) => {
     e.preventDefault();
     alert('¿Necesitás ayuda? Escribinos a soporte@tudominio.com o por WhatsApp al [tu número de soporte].');
   });
 
-  document.getElementById('link-cerrar-sesion').addEventListener('click', (e) => {
-    e.preventDefault();
-    localStorage.removeItem('jwtToken');
-    jwtTokenActual = null;
-    codigoAdminActual = null;
-    negocioActual = null;
-    document.getElementById('vista-panel').style.display = 'none';
-    document.getElementById('contenedor-login').style.display = 'block';
-    document.getElementById('vista-login').style.display = 'block';
+  document.getElementById('link-cerrar-sesion').addEventListener('click', cerrarSesion);
+
+  // Filtros por pestaña y buscador de la sección Pedidos
+  document.querySelectorAll('#tabs-pedidos .tab-pill').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#tabs-pedidos .tab-pill').forEach((t) => t.classList.remove('activo'));
+      tab.classList.add('activo');
+      filtroPedidoActual = tab.dataset.filtro;
+      renderizarPedidos();
+    });
+  });
+  document.getElementById('buscador-pedidos').addEventListener('input', (e) => {
+    busquedaPedidoActual = e.target.value.trim().toLowerCase();
+    renderizarPedidos();
   });
 });
+
+async function copiarAlPortapapeles(idOrigen, idBoton, textoOriginal) {
+  const texto = document.getElementById(idOrigen).textContent.trim();
+  const boton = document.getElementById(idBoton);
+  try {
+    await navigator.clipboard.writeText(texto);
+    boton.textContent = '✅ Copiado';
+  } catch (error) {
+    boton.textContent = '⚠️ No se pudo copiar, seleccioná el texto a mano';
+  }
+  setTimeout(() => { boton.textContent = textoOriginal; }, 2200);
+}
 
 function mostrarSeccion(nombre) {
   document.querySelectorAll('.app-seccion').forEach((sec) => { sec.style.display = 'none'; });
@@ -129,13 +220,23 @@ async function mostrarPanel() {
   document.getElementById('contenedor-login').style.display = 'none';
   document.getElementById('vista-panel').style.display = 'flex';
 
-  document.getElementById('nombre-negocio-panel').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
+  const nombreNegocio = negocioActual.formData?.nombreNegocio || 'Mi negocio';
+  document.getElementById('nombre-negocio-panel').textContent = nombreNegocio;
+  document.getElementById('drawer-nombre-negocio').textContent = nombreNegocio;
+  document.getElementById('saludo-nombre').textContent = `¡Hola, ${nombreNegocio}!`;
+
+  const inicial = nombreNegocio.trim().charAt(0).toUpperCase() || 'N';
+  document.getElementById('avatar-topbar').textContent = inicial;
+  document.getElementById('avatar-drawer').textContent = inicial;
 
   const estado = negocioActual.suscripcion.estado;
+  const ETIQUETAS_PLAN = { activa: 'Plan activo', prueba: 'Plan de prueba', vencida: 'Suscripción vencida' };
   const pill = document.getElementById('estado-suscripcion-pill');
   pill.textContent = estado.toUpperCase();
   pill.className = `pill-estado ${estado}`;
   document.getElementById('estado-suscripcion').textContent = estado.toUpperCase();
+  document.getElementById('drawer-estado-negocio').textContent = ETIQUETAS_PLAN[estado] || estado;
+  document.getElementById('ajustes-resumen-plan').textContent = ETIQUETAS_PLAN[estado] || estado;
 
   if (estado === 'vencida') {
     document.getElementById('aviso-vencida').style.display = 'block';
@@ -201,8 +302,24 @@ async function cargarResumenDiario() {
     `;
 
     renderizarChartSemana(r.pedidosUltimos7Dias);
+    actualizarBannerAnimo(r);
   } catch (error) {
     contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el resumen.</p>`;
+  }
+}
+
+function actualizarBannerAnimo(r) {
+  const emoji = document.getElementById('banner-animo-emoji');
+  const titulo = document.getElementById('banner-animo-titulo');
+  const texto = document.getElementById('banner-animo-texto');
+  if (!r.conversacionesHoy && !r.pedidosHoy) {
+    emoji.textContent = '👋';
+    titulo.textContent = 'Todavía no hay actividad hoy';
+    texto.textContent = 'Cuando tengas conversaciones o pedidos, los vas a ver acá.';
+  } else {
+    emoji.textContent = '🚀';
+    titulo.textContent = '¡Sigue así!';
+    texto.textContent = `Hoy ya tuviste ${r.conversacionesHoy} conversación(es) y ${r.pedidosHoy} pedido(s).`;
   }
 }
 
@@ -232,6 +349,22 @@ async function cargarPreguntasSinRespuesta() {
 // un pedido más reciente que el último que vimos, y avisa con sonido + notificación del navegador.
 let ultimoPedidoIdVisto = null;
 let tituloOriginal = document.title;
+
+// Estado de los filtros de la pestaña Pedidos (pestañas + buscador)
+let pedidosCache = [];
+let filtroPedidoActual = 'todos';
+let busquedaPedidoActual = '';
+
+function actualizarBadgeCampana(pedidos) {
+  const pendientes = pedidos.filter((p) => p.estado === 'pendiente').length;
+  const badge = document.getElementById('badge-campana');
+  if (pendientes > 0) {
+    badge.textContent = pendientes > 9 ? '9+' : pendientes;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
 
 function reproducirSonidoAviso() {
   try {
@@ -273,6 +406,7 @@ function iniciarNotificacionesPedidos() {
     try {
       const res = await fetch(`${API_URL}/pedidos`, { headers: headersAuth(), cache: 'no-store' });
       const pedidos = await res.json();
+      actualizarBadgeCampana(pedidos);
       if (!pedidos.length) return;
 
       const masReciente = pedidos[0]; // vienen ordenados del más nuevo al más viejo
@@ -427,14 +561,59 @@ async function cargarPedidos() {
     const res = await fetch(`${API_URL}/pedidos`, {
       headers: headersAuth(),
     });
-    const pedidos = await res.json();
+    pedidosCache = await res.json();
+    actualizarBadgeCampana(pedidosCache);
+    renderizarPedidos();
+  } catch (error) {
+    contenedor.innerHTML = `<div class="error-msg">No se pudieron cargar los pedidos.</div>`;
+  }
+}
 
-    if (!pedidos.length) {
-      contenedor.innerHTML = `<p class="ayuda">Todavía no llegó ningún pedido.</p>`;
-      return;
-    }
+// Grupos de estados que agrupa cada pestaña (la pestaña "en_preparacion" también
+// muestra "confirmado", porque para el dueño ambos significan "todavía no está listo")
+const GRUPOS_FILTRO_PEDIDOS = {
+  todos: null,
+  pendiente: ['pendiente'],
+  en_preparacion: ['confirmado', 'en_preparacion', 'listo'],
+  entregado: ['entregado'],
+};
 
-    contenedor.innerHTML = pedidos.map((p) => `
+function renderizarPedidos() {
+  const contenedor = document.getElementById('lista-pedidos');
+  const totalHoyCard = document.getElementById('total-hoy-card');
+
+  const gruposPermitidos = GRUPOS_FILTRO_PEDIDOS[filtroPedidoActual];
+  let pedidosFiltrados = pedidosCache.filter((p) => !gruposPermitidos || gruposPermitidos.includes(p.estado));
+
+  if (busquedaPedidoActual) {
+    pedidosFiltrados = pedidosFiltrados.filter((p) => {
+      const numero = String(p._id).slice(-4).toLowerCase();
+      return (p.nombreCliente || '').toLowerCase().includes(busquedaPedidoActual) || numero.includes(busquedaPedidoActual);
+    });
+  }
+
+  // Tarjeta de "Total hoy": se calcula siempre sobre TODOS los pedidos de hoy, sin importar el filtro activo
+  const hoy = new Date();
+  const pedidosDeHoy = pedidosCache.filter((p) => new Date(p.createdAt).toDateString() === hoy.toDateString());
+  if (pedidosDeHoy.length) {
+    const totalHoy = pedidosDeHoy.reduce((suma, p) => suma + (p.total || 0), 0);
+    document.getElementById('total-hoy-etiqueta').textContent = `${pedidosDeHoy.length} pedido(s) hoy`;
+    document.getElementById('total-hoy-monto').textContent = `$${totalHoy.toLocaleString('es-AR')}`;
+    totalHoyCard.style.display = 'flex';
+  } else {
+    totalHoyCard.style.display = 'none';
+  }
+
+  if (!pedidosCache.length) {
+    contenedor.innerHTML = `<p class="ayuda">Todavía no llegó ningún pedido.</p>`;
+    return;
+  }
+  if (!pedidosFiltrados.length) {
+    contenedor.innerHTML = `<p class="ayuda">No hay pedidos que coincidan con este filtro.</p>`;
+    return;
+  }
+
+  contenedor.innerHTML = pedidosFiltrados.map((p) => `
       <div class="pedido-card" data-id="${p._id}">
         <div class="pedido-header">
           <div>
@@ -545,9 +724,6 @@ async function cargarPedidos() {
         }
       });
     });
-  } catch (error) {
-    contenedor.innerHTML = `<div class="error-msg">No se pudieron cargar los pedidos.</div>`;
-  }
 }
 
 document.getElementById('btn-guardar-disponibilidad').addEventListener('click', async () => {
