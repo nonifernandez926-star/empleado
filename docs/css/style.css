@@ -172,6 +172,40 @@ textarea { min-height: 90px; resize: vertical; }
 .dia-fila { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .dia-fila .nombre-dia { width: 90px; font-weight: 600; text-transform: capitalize; }
 
+/* Filas de fotos (Negocio) y botón de subida punteado, estilo mockup */
+.foto-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--linea); }
+.foto-row:last-of-type { border-bottom: none; }
+.foto-row-icono {
+  width: 52px; height: 52px; border-radius: 50%; background: #e7edff; color: var(--azul);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.foto-row-texto { flex: 1; min-width: 0; }
+.foto-row-texto strong { display: block; font-size: 0.92rem; margin-bottom: 2px; }
+.foto-row-texto span { display: block; font-size: 0.8rem; color: var(--gris-texto); line-height: 1.35; }
+.upload-box {
+  flex-shrink: 0; width: 92px; border: 1.5px dashed #b9c4ff; border-radius: var(--radio-chico);
+  padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; text-align: center; color: var(--azul); background: #f7f9ff;
+}
+.upload-box-texto { font-size: 0.72rem; font-weight: 700; }
+.upload-box-caption { font-size: 0.62rem; color: var(--gris-texto); }
+@media (max-width: 380px) {
+  .foto-row { flex-wrap: wrap; }
+  .upload-box { width: 100%; flex-direction: row; justify-content: center; }
+}
+
+/* Subpantalla de edición dentro de una pestaña (ej: "Editar información") */
+.subpantalla-header {
+  display: flex; align-items: center; gap: 12px; padding: 4px 2px 18px;
+}
+.subpantalla-header strong { font-size: 1.1rem; }
+.app-topbar-btn-claro {
+  width: 36px; height: 36px; border-radius: 12px; background: var(--gris-claro); border: none;
+  color: var(--azul-oscuro); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+}
+.acciones-edicion { display: flex; gap: 10px; margin-top: 4px; }
+.acciones-edicion .btn { flex: 1; margin: 0; }
+
 .exito, .error-msg { padding: 12px 14px; border-radius: var(--radio-chico); margin-top: 14px; font-weight: 600; font-size: 0.9rem; }
 .exito { background: #dcfce7; color: var(--exito); }
 .error-msg { background: #fee2e2; color: var(--error); }
