@@ -97,11 +97,6 @@ window.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => mostrarSeccion(btn.dataset.seccion));
   });
 
-  // Accesos rápidos de la pantalla de Inicio (mismas secciones que la navegación inferior)
-  document.querySelectorAll('.quick-item[data-seccion]').forEach((btn) => {
-    btn.addEventListener('click', () => mostrarSeccion(btn.dataset.seccion));
-  });
-
   // Menú lateral (drawer): abrir/cerrar y navegar
   document.getElementById('btn-abrir-menu').addEventListener('click', abrirDrawer);
   document.getElementById('drawer-overlay').addEventListener('click', cerrarDrawer);
