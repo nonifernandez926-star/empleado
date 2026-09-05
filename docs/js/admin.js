@@ -183,6 +183,8 @@ function mostrarSeccion(nombre) {
   document.querySelectorAll('.app-seccion').forEach((sec) => { sec.style.display = 'none'; });
   document.getElementById(`seccion-${nombre}`).style.display = 'block';
 
+  if (nombre === 'negocio') cerrarEdicionNegocio();
+
   document.querySelectorAll('.app-navbar-item').forEach((btn) => {
     btn.classList.toggle('activo', btn.dataset.seccion === nombre);
   });
@@ -247,9 +249,7 @@ async function mostrarPanel() {
   document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
-  document.getElementById('atencion-solo-horario-panel').checked = !!negocioActual.atencionSoloEnHorario;
 
-  renderizarCamposEdicion();
   cargarEstadisticas();
   cargarPedidos();
   renderizarFotos();
@@ -257,6 +257,7 @@ async function mostrarPanel() {
   cargarResumenDiario();
   cargarPreguntasSinRespuesta();
   iniciarNotificacionesPedidos();
+  cargarDefinicionCampos();
 
   mostrarSeccion('inicio');
 }
@@ -503,38 +504,6 @@ function renderizarFotos() {
   });
 }
 
-document.getElementById('btn-subir-foto').addEventListener('click', async () => {
-  const inputFoto = document.getElementById('input-foto');
-  const categoria = document.getElementById('select-categoria-foto').value;
-  const msgDiv = document.getElementById('foto-msg');
-
-  if (!inputFoto.files.length) {
-    msgDiv.innerHTML = `<div class="error-msg">Elegí una foto primero.</div>`;
-    return;
-  }
-
-  const formDataFoto = new FormData();
-  formDataFoto.append('foto', inputFoto.files[0]);
-  formDataFoto.append('categoria', categoria);
-
-  try {
-    const res = await fetch(`${API_URL}/negocios/fotos`, {
-      method: 'POST',
-      headers: headersAuth(),
-      body: formDataFoto,
-    });
-    if (!res.ok) throw new Error('Error al subir');
-
-    const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
-    negocioActual = await resNegocio.json();
-    renderizarFotos();
-    inputFoto.value = '';
-    msgDiv.innerHTML = `<div class="exito">Foto subida correctamente.</div>`;
-  } catch (error) {
-    msgDiv.innerHTML = `<div class="error-msg">No se pudo subir la foto. Intentá de nuevo.</div>`;
-  }
-});
-
 const ETIQUETAS_ESTADO = {
   pendiente: 'Pendiente',
   confirmado: 'Confirmado',
@@ -721,72 +690,168 @@ function renderizarPedidos() {
     });
 }
 
-document.getElementById('btn-guardar-disponibilidad').addEventListener('click', async () => {
-  const disponibilidadHoy = document.getElementById('disponibilidad-hoy').value;
-  const msgDiv = document.getElementById('disponibilidad-msg');
+// Sube una foto apenas se elige el archivo, con la categoría fija de esa fila (logo / menu / producto)
+function activarSubidaAutomatica(inputId, categoria) {
+  document.getElementById(inputId).addEventListener('change', async (e) => {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    const msgDiv = document.getElementById('foto-msg');
+    msgDiv.innerHTML = `<p class="ayuda">Subiendo foto...</p>`;
+
+    const formDataFoto = new FormData();
+    formDataFoto.append('foto', archivo);
+    formDataFoto.append('categoria', categoria);
+
+    try {
+      const res = await fetch(`${API_URL}/negocios/fotos`, {
+        method: 'POST',
+        headers: headersAuth(),
+        body: formDataFoto,
+      });
+      if (!res.ok) throw new Error('Error al subir');
+
+      const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
+      negocioActual = await resNegocio.json();
+      renderizarFotos();
+      e.target.value = '';
+      msgDiv.innerHTML = `<div class="exito">Foto subida correctamente.</div>`;
+    } catch (error) {
+      msgDiv.innerHTML = `<div class="error-msg">No se pudo subir la foto. Intentá de nuevo.</div>`;
+    }
+  });
+}
+activarSubidaAutomatica('input-foto-logo', 'logo');
+activarSubidaAutomatica('input-foto-menu', 'menu');
+activarSubidaAutomatica('input-foto-producto', 'producto');
+
+// --- Edición de "Información del negocio" (nombre, descripción, etc. + horarios) ---
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+let definicionCamposNegocio = null; // { campos: [{id, label}, ...] }, para mostrar etiquetas lindas en vez de "nombreNegocio"
+
+async function cargarDefinicionCampos() {
   try {
-    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
-      method: 'PUT',
-      headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ disponibilidadHoy }),
-    });
-    if (!res.ok) throw new Error('Error al guardar');
+    // rubroSubrubro guarda el NOMBRE del subrubro (ej: "Restaurante"), no su id técnico,
+    // así que primero buscamos el id correspondiente en el listado de rubros.
+    const resLista = await fetch(`${API_URL}/rubros`, { cache: 'no-store' });
+    const lista = await resLista.json();
+    let subrubroId = null;
+    for (const cat of lista) {
+      const sub = cat.subrubros.find((s) => s.nombre === negocioActual.rubroSubrubro);
+      if (sub) { subrubroId = sub.id; break; }
+    }
+    if (!subrubroId) throw new Error('Subrubro no encontrado');
 
-    msgDiv.innerHTML = `<div class="exito">Disponibilidad actualizada. El asistente ya no va a recomendar lo que marcaste.</div>`;
+    const res = await fetch(`${API_URL}/rubros/${subrubroId}/formulario`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('No se pudo obtener la definición de campos');
+    definicionCamposNegocio = await res.json();
   } catch (error) {
-    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar. Intentá de nuevo.</div>`;
+    definicionCamposNegocio = null; // si falla, igual mostramos los campos con su nombre técnico como respaldo
   }
-});
+}
 
-document.getElementById('btn-guardar-horario-atencion').addEventListener('click', async () => {
-  const atencionSoloEnHorario = document.getElementById('atencion-solo-horario-panel').checked;
-  const msgDiv = document.getElementById('horario-atencion-msg');
-  try {
-    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
-      method: 'PUT',
-      headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ atencionSoloEnHorario }),
-    });
-    if (!res.ok) throw new Error('Error al guardar');
-
-    negocioActual.atencionSoloEnHorario = atencionSoloEnHorario;
-    msgDiv.innerHTML = `<div class="exito">Guardado.</div>`;
-  } catch (error) {
-    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar. Intentá de nuevo.</div>`;
-  }
-});
+function etiquetaLegible(clave) {
+  const campo = definicionCamposNegocio?.campos?.find((c) => c.id === clave);
+  if (campo) return campo.label;
+  // respaldo: "nombreNegocio" -> "Nombre Negocio"
+  return clave.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
+}
 
 function renderizarCamposEdicion() {
   const contenedor = document.getElementById('campos-edicion');
   contenedor.innerHTML = '';
 
   Object.entries(negocioActual.formData || {}).forEach(([clave, valor]) => {
-    const wrapper = document.createElement('div');
     const valorTexto = Array.isArray(valor) ? valor.join(', ') : (valor ?? '');
+    const wrapper = document.createElement('div');
     wrapper.innerHTML = `
-      <label>${clave}</label>
+      <label>${etiquetaLegible(clave)}</label>
       <textarea data-campo="${clave}">${valorTexto}</textarea>
     `;
     contenedor.appendChild(wrapper);
   });
 }
 
+function renderizarHorariosEdicion() {
+  const contenedor = document.getElementById('dias-horario-panel');
+  const horariosGuardados = negocioActual.horarios || [];
+
+  contenedor.innerHTML = DIAS_SEMANA.map((dia) => {
+    const guardado = horariosGuardados.find((h) => h.dia === dia);
+    const activo = guardado?.activo || false;
+    const bloque = guardado?.bloques?.[0] || {};
+    return `
+      <div class="dia-fila" data-dia="${dia}">
+        <label class="nombre-dia" style="margin:0;">
+          <input type="checkbox" class="dia-activo" style="width:auto;" ${activo ? 'checked' : ''}> ${dia}
+        </label>
+        <input type="text" class="dia-apertura" placeholder="09:00" style="width:90px;" value="${bloque.apertura || ''}" ${activo ? '' : 'disabled'}>
+        <span>a</span>
+        <input type="text" class="dia-cierre" placeholder="18:00" style="width:90px;" value="${bloque.cierre || ''}" ${activo ? '' : 'disabled'}>
+      </div>
+    `;
+  }).join('');
+
+  contenedor.querySelectorAll('.dia-activo').forEach((chk) => {
+    chk.addEventListener('change', (e) => {
+      const fila = e.target.closest('.dia-fila');
+      fila.querySelectorAll('input[type="text"]').forEach((i) => (i.disabled = !e.target.checked));
+    });
+  });
+}
+
+function recolectarHorariosEdicion() {
+  return Array.from(document.querySelectorAll('#dias-horario-panel .dia-fila')).map((fila) => {
+    const activo = fila.querySelector('.dia-activo').checked;
+    const apertura = fila.querySelector('.dia-apertura').value;
+    const cierre = fila.querySelector('.dia-cierre').value;
+    return { dia: fila.dataset.dia, activo, bloques: activo && apertura && cierre ? [{ apertura, cierre }] : [] };
+  });
+}
+
+function abrirEdicionNegocio() {
+  renderizarCamposEdicion();
+  renderizarHorariosEdicion();
+  document.getElementById('atencion-solo-horario-panel').checked = !!negocioActual.atencionSoloEnHorario;
+  document.getElementById('guardado-msg').innerHTML = '';
+  document.getElementById('negocio-vista').style.display = 'none';
+  document.getElementById('negocio-edicion').style.display = 'block';
+  document.querySelector('.app-contenido').scrollTop = 0;
+}
+
+function cerrarEdicionNegocio() {
+  document.getElementById('negocio-edicion').style.display = 'none';
+  document.getElementById('negocio-vista').style.display = 'block';
+}
+
+document.getElementById('btn-abrir-edicion-negocio').addEventListener('click', abrirEdicionNegocio);
+document.getElementById('btn-cerrar-edicion-negocio').addEventListener('click', cerrarEdicionNegocio);
+document.getElementById('btn-cancelar-edicion-negocio').addEventListener('click', cerrarEdicionNegocio);
+
 document.getElementById('btn-guardar-info').addEventListener('click', async () => {
   const formData = {};
   document.querySelectorAll('#campos-edicion textarea').forEach((el) => {
     formData[el.dataset.campo] = el.value;
   });
+  const horarios = recolectarHorariosEdicion();
+  const atencionSoloEnHorario = document.getElementById('atencion-solo-horario-panel').checked;
 
   const msgDiv = document.getElementById('guardado-msg');
   try {
     const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
       method: 'PUT',
       headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ formData }),
+      body: JSON.stringify({ formData, horarios, atencionSoloEnHorario }),
     });
     if (!res.ok) throw new Error('Error al guardar');
 
+    negocioActual.formData = { ...negocioActual.formData, ...formData };
+    negocioActual.horarios = horarios;
+    negocioActual.atencionSoloEnHorario = atencionSoloEnHorario;
+    document.getElementById('nombre-negocio-panel').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
+    document.getElementById('drawer-nombre-negocio').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
+
     msgDiv.innerHTML = `<div class="exito">Cambios guardados. Tu asistente ya responde con la información actualizada.</div>`;
+    setTimeout(cerrarEdicionNegocio, 900);
   } catch (error) {
     msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar. Intentá de nuevo.</div>`;
   }
