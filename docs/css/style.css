@@ -325,7 +325,7 @@ html:has(.chat-widget), body:has(.chat-widget) { margin: 0; padding: 0; height: 
   border: none; padding: 12px 10px; border-radius: var(--radio-chico); font-size: 0.92rem; font-weight: 600;
   color: var(--azul-oscuro); cursor: pointer;
 }
-.drawer-nav-item .icono { font-size: 1.1rem; width: 22px; text-align: center; }
+.drawer-nav-item .icono { display: inline-flex; align-items: center; justify-content: center; width: 22px; flex-shrink: 0; }
 .drawer-nav-item:hover, .drawer-nav-item.activo { background: var(--gris-claro); }
 .drawer-nav-item.activo { color: var(--azul); }
 .drawer-separador { height: 1px; background: var(--linea); margin: 8px 6px; }
@@ -437,7 +437,7 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
   display: flex; align-items: center; gap: 8px; background: var(--blanco); border: 1.5px solid var(--linea);
   border-radius: var(--radio-chico); padding: 4px 14px; margin-bottom: 14px;
 }
-.search-bar span { color: var(--gris-texto); }
+.search-bar span { color: var(--gris-texto); display: inline-flex; align-items: center; }
 .search-bar input { border: none; background: none; padding: 10px 0; flex: 1; }
 .search-bar input:focus { outline: none; }
 
