@@ -2,6 +2,17 @@ let codigoAdminActual = null;
 let jwtTokenActual = null;
 let negocioActual = null;
 
+// Iconos SVG chicos para usar dentro de las tarjetas de pedido (nada de emojis)
+const ICONOS_PEDIDO = {
+  moto: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M12 17.5H9l-2-6 2-3h5l2 5.5h2.5"/></svg>',
+  casa: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>',
+  tarjeta: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+  nota: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>',
+  check: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+  equis: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>',
+  tacho: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+};
+
 // Devuelve los headers correctos según cómo se haya logueado el dueño (Google o código admin)
 function headersAuth(extra = {}) {
   if (jwtTokenActual) {
@@ -597,7 +608,7 @@ function renderizarPedidos() {
         <div class="pedido-header">
           <div>
             <strong>${p.nombreCliente}</strong>
-            ${p.telefonoCliente ? ` — ${p.telefonoCliente}` : ''}
+            ${p.telefonoCliente ? `<span class="pedido-telefono"> · ${p.telefonoCliente}</span>` : ''}
             <div class="pedido-fecha">${new Date(p.createdAt).toLocaleString('es-AR')}</div>
           </div>
           <span class="badge-estado badge-${p.estado}">${ETIQUETAS_ESTADO[p.estado] || p.estado}</span>
@@ -605,10 +616,13 @@ function renderizarPedidos() {
         <ul class="pedido-items">
           ${p.items.map((i) => `<li>${i.cantidad}x ${i.producto}${i.precioUnitario ? ` — $${i.precioUnitario * i.cantidad}` : ''}</li>`).join('')}
         </ul>
-        ${p.total ? `<div class="pedido-detalle"><strong>Total: $${p.total}</strong></div>` : ''}
-        <div class="pedido-detalle">${p.tipoEntrega === 'delivery' ? `🛵 Delivery — ${p.direccionEntrega || 'sin dirección'}` : '🏠 Retira en el local'}</div>
-        <div class="pedido-detalle">💳 ${p.formaPago}</div>
-        ${p.observaciones ? `<div class="pedido-detalle">📝 ${p.observaciones}</div>` : ''}
+        ${p.total ? `<div class="pedido-total-linea">Total: <strong>$${p.total.toLocaleString('es-AR')}</strong></div>` : ''}
+
+        <div class="pedido-info-chips">
+          <span class="chip-info">${p.tipoEntrega === 'delivery' ? `${ICONOS_PEDIDO.moto} Delivery — ${p.direccionEntrega || 'sin dirección'}` : `${ICONOS_PEDIDO.casa} Retira en el local`}</span>
+          <span class="chip-info">${ICONOS_PEDIDO.tarjeta} ${p.formaPago}</span>
+        </div>
+        ${p.observaciones ? `<div class="pedido-detalle">${ICONOS_PEDIDO.nota} ${p.observaciones}</div>` : ''}
 
         ${ETIQUETAS_ESTADO_PAGO[p.estadoPago] ? `<div class="pedido-detalle"><strong>${ETIQUETAS_ESTADO_PAGO[p.estadoPago]}</strong></div>` : ''}
 
@@ -618,23 +632,27 @@ function renderizarPedidos() {
               <img src="${p.comprobante.url}" alt="Comprobante" class="comprobante-miniatura">
             </a>
             <button class="btn-verificar-pago" data-id="${p._id}" data-verificado="${p.pagoVerificado ? 'false' : 'true'}">
-              ${p.pagoVerificado ? 'Desmarcar verificación' : '✅ Confirmar que la plata llegó'}
+              ${p.pagoVerificado ? 'Desmarcar verificación' : `${ICONOS_PEDIDO.check} Confirmar que la plata llegó`}
             </button>
-            ${p.estadoPago !== 'rechazado' ? `<button class="btn-rechazar-pago" data-id="${p._id}">🚫 Rechazar (no era válido)</button>` : ''}
+            ${p.estadoPago !== 'rechazado' ? `<button class="btn-rechazar-pago" data-id="${p._id}">${ICONOS_PEDIDO.equis} Rechazar (no era válido)</button>` : ''}
           </div>
         ` : ''}
 
-        <label style="margin-top:10px;">Cambiar estado</label>
-        <select class="select-estado-pedido" data-id="${p._id}">
-          ${Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) =>
-            `<option value="${valor}" ${valor === p.estado ? 'selected' : ''}>${etiqueta}</option>`
-          ).join('')}
-        </select>
-        ${p.estado === 'entregado' ? `<button class="btn-eliminar-pedido" data-id="${p._id}" style="margin-top:10px; margin-left:8px; background:#fee2e2; color:#dc2626; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:0.85rem;">🗑️ Eliminar pedido</button>` : ''}
+        <div class="pedido-acciones">
+          <div class="pedido-select-estado">
+            <label>Cambiar estado</label>
+            <select class="select-estado-pedido" data-id="${p._id}">
+              ${Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) =>
+                `<option value="${valor}" ${valor === p.estado ? 'selected' : ''}>${etiqueta}</option>`
+              ).join('')}
+            </select>
+          </div>
+          ${p.estado === 'entregado' ? `<button class="btn-icono-eliminar" data-id="${p._id}" title="Eliminar pedido" aria-label="Eliminar pedido">${ICONOS_PEDIDO.tacho}</button>` : ''}
+        </div>
       </div>
     `).join('');
 
-    document.querySelectorAll('.btn-eliminar-pedido').forEach((btn) => {
+    document.querySelectorAll('.btn-icono-eliminar').forEach((btn) => {
       btn.addEventListener('click', async () => {
         if (!confirm('¿Eliminar este pedido? No se puede deshacer.')) return;
         const id = btn.dataset.id;
