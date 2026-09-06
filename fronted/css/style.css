@@ -32,6 +32,18 @@ button {
   margin: 0;
 }
 
+/* Refuerzo: ningún elemento tocable debe mostrar el resaltado gris/negro que pone
+   el navegador al tocar (algunos Android lo dejan "pegado" en la captura de pantalla),
+   ni bordes o sombras nativas en botones, links o selects. */
+button, a, select, .list-row, .tab-pill, .app-navbar-item, .drawer-nav-item, .quick-item {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.list-row, .tab-pill, .app-navbar-item, .drawer-nav-item, .app-topbar-btn, .app-topbar-btn-claro, .avatar-circle {
+  border: none !important;
+  box-shadow: none !important;
+}
+
 html, body { height: 100%; }
 
 body {
@@ -499,23 +511,38 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 .total-hoy-card .monto { font-size: 1.2rem; font-weight: 800; color: var(--azul); }
 
 /* Pedidos */
-.pedido-card { border: 1px solid var(--linea); border-radius: var(--radio-chico); padding: 16px; margin-bottom: 12px; background: var(--blanco); }
-.pedido-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
-.pedido-header strong { font-size: 1rem; }
-.pedido-fecha { color: var(--gris-texto); font-size: 0.82rem; }
-.pedido-items { margin: 8px 0; padding-left: 18px; }
-.pedido-items li { margin-bottom: 2px; }
-.pedido-detalle { font-size: 0.88rem; color: var(--gris-texto); margin: 4px 0; }
+.pedido-card { border: 1px solid var(--linea); border-radius: var(--radio); padding: 18px; margin-bottom: 14px; background: var(--blanco); box-shadow: var(--sombra-chica); }
+.pedido-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
+.pedido-header strong { font-size: 1.02rem; }
+.pedido-telefono { color: var(--gris-texto); font-size: 0.85rem; }
+.pedido-fecha { color: var(--gris-texto); font-size: 0.78rem; margin-top: 2px; }
+.pedido-items { margin: 4px 0 10px; padding-left: 18px; }
+.pedido-items li { margin-bottom: 3px; font-size: 0.92rem; }
+.pedido-total-linea { font-size: 0.92rem; padding-top: 8px; margin-bottom: 10px; border-top: 1px dashed var(--linea); }
+.pedido-info-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.chip-info {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--gris-claro); color: var(--gris-texto);
+  font-size: 0.78rem; font-weight: 600; padding: 6px 10px; border-radius: 999px;
+}
+.pedido-detalle { font-size: 0.85rem; color: var(--gris-texto); margin: 6px 0; display: flex; align-items: center; gap: 6px; }
 .badge-estado {
-  display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;
-  text-transform: uppercase; letter-spacing: 0.3px;
+  display: inline-block; padding: 5px 13px; border-radius: 999px; font-size: 0.68rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0;
 }
 .badge-pendiente { background: #fef3c7; color: #92400e; }
 .badge-confirmado { background: #dbeafe; color: #1e40af; }
 .badge-en_preparacion { background: #ede9fe; color: #5b21b6; }
 .badge-listo { background: #d1fae5; color: #065f46; }
 .badge-entregado { background: #e5e7eb; color: #374151; }
-.pedido-card select { width: auto; display: inline-block; margin-top: 8px; }
+
+.pedido-acciones { display: flex; align-items: flex-end; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--linea); }
+.pedido-select-estado { flex: 1; min-width: 0; }
+.pedido-select-estado label { margin: 0 0 6px; font-size: 0.78rem; }
+.pedido-select-estado select { margin: 0; }
+.btn-icono-eliminar {
+  width: 42px; height: 42px; border-radius: 12px; background: #fee2e2; color: var(--error);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+}
 
 /* Comprobante de transferencia */
 .comprobante-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radio-chico); padding: 12px; margin: 10px 0; }
