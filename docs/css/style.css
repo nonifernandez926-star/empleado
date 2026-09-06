@@ -18,6 +18,20 @@
 
 * { box-sizing: border-box; }
 
+/* Reset de botones: sin este reset, el navegador (sobre todo en Android) les pone
+   un borde nativo por default a los <button>, que es la causa de las líneas
+   negras/grises feas que aparecían alrededor de las filas de listas. */
+button {
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+  margin: 0;
+}
+
 html, body { height: 100%; }
 
 body {
