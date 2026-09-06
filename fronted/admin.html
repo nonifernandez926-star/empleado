@@ -137,6 +137,7 @@
         <p class="ayuda" id="aviso-suscripcion-herramientas" style="display:none; margin-bottom:14px;">Estas herramientas se activan del todo cuando tu suscripción está paga — mientras tanto podés verlas y probarlas igual.</p>
 
         <div class="list-card">
+          <div class="list-card-item">
           <button class="list-row" data-panel="panel-qr">
             <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="14" y="14" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="18.5" y="14" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="14" y="18.5" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="18.5" y="18.5" width="2.5" height="2.5" fill="currentColor" stroke="none"/></svg></div>
             <div class="list-row-texto">
@@ -149,7 +150,9 @@
             <img id="qr-chat" alt="QR del chat" style="width:200px; height:200px; border:1px solid var(--linea); border-radius:12px; display:block; margin:6px 0 10px;">
             <p class="ayuda">Escaneá este código para abrir directo el chat con tu asistente.</p>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <button class="list-row" data-panel="panel-link">
             <div class="list-row-icono ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9.5 14.5 14.5 9.5"/><path d="M11 7l1.5-1.5a4 4 0 0 1 5.66 5.66L16.5 12.5"/><path d="M13 17l-1.5 1.5a4 4 0 0 1-5.66-5.66L7.5 11.5"/></svg></div>
             <div class="list-row-texto">
@@ -162,9 +165,11 @@
             <div class="codigo-box" id="link-chat"></div>
             <button class="btn secundario ancho" id="btn-copiar-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar enlace</button>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <button class="list-row" data-panel="panel-codigo">
-            <div class="list-row-icono ic-naranja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="7.5" cy="15.5" r="5"/><path d="M11 12 20.5 2.5"/><path d="M16 7l2.5 2.5"/><path d="M13 10l2 2"/></svg></div>
+            <div class="list-row-icono ic-naranja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 8 4.5 12 9 16"/><path d="M15 8l4.5 4-4.5 4"/></svg></div>
             <div class="list-row-texto">
               <strong>Código de vinculación</strong>
               <span>Usá este código para vincular tu negocio en Mi Zona.</span>
@@ -176,7 +181,9 @@
             <button class="btn secundario ancho" id="btn-copiar-codigo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código</button>
             <p class="ayuda">Funciona aunque en Mi Zona uses una cuenta distinta a la de acá.</p>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <button class="list-row" data-panel="panel-registrar">
             <div class="list-row-icono ic-violeta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><circle cx="8" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="8" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="8" cy="14" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r=".6" fill="currentColor" stroke="none"/></svg></div>
             <div class="list-row-texto">
@@ -187,6 +194,7 @@
           </button>
           <div class="list-row-panel" id="panel-registrar">
             <a class="btn ancho" id="btn-registrar-mizona" href="#" target="_blank">Ir a Mi Zona</a>
+          </div>
           </div>
         </div>
       </section>
@@ -295,6 +303,7 @@
       <!-- AJUSTES -->
       <section id="seccion-ajustes" class="app-seccion" style="display:none;">
         <div class="list-card">
+          <div class="list-card-item">
           <button class="list-row" data-panel="panel-suscripcion">
             <div class="list-row-icono ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
             <div class="list-row-texto">
@@ -307,7 +316,9 @@
             <p style="margin-top:6px;">Estado: <strong id="estado-suscripcion"></strong></p>
             <p id="fecha-vencimiento" class="ayuda"></p>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <button class="list-row" data-panel="panel-planes">
             <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"  style="vertical-align:middle"><path d="M12 2.5l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 18.5l-6.18 3 1.18-6.87-5-4.87 6.91-1L12 2.5Z"/></svg></div>
             <div class="list-row-texto">
@@ -320,7 +331,9 @@
             <div id="grid-planes" class="grid-categorias"><p class="ayuda">Cargando planes...</p></div>
             <div id="pago-msg"></div>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <div class="list-row deshabilitada">
             <div class="list-row-icono ic-gris"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
             <div class="list-row-texto">
@@ -329,7 +342,9 @@
             </div>
             <span class="pill-proximamente">Próximamente</span>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <div class="list-row deshabilitada">
             <div class="list-row-icono ic-gris"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
             <div class="list-row-texto">
@@ -338,7 +353,9 @@
             </div>
             <span class="pill-proximamente">Próximamente</span>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <button class="list-row" data-panel="panel-ayuda">
             <div class="list-row-icono ic-celeste"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div>
             <div class="list-row-texto">
@@ -350,11 +367,14 @@
           <div class="list-row-panel" id="panel-ayuda">
             <a href="#" id="link-ayuda" class="btn secundario ancho">Contactar soporte</a>
           </div>
+          </div>
 
+          <div class="list-card-item">
           <a href="#" id="link-cerrar-sesion" class="list-row destructivo">
             <div class="list-row-icono ic-rojo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></div>
             <div class="list-row-texto"><strong>Cerrar sesión</strong></div>
           </a>
+          </div>
         </div>
       </section>
 
