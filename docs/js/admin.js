@@ -179,11 +179,26 @@ async function copiarAlPortapapeles(idOrigen, idBoton, textoOriginal) {
   setTimeout(() => { boton.textContent = textoOriginal; }, 2200);
 }
 
+const TITULOS_SECCION = {
+  inicio: null, // en Inicio se muestra el nombre del negocio + el estado del plan
+  pedidos: 'Pedidos',
+  herramientas: 'Herramientas',
+  negocio: 'Mi Negocio',
+  ajustes: 'Ajustes',
+};
+
 function mostrarSeccion(nombre) {
   document.querySelectorAll('.app-seccion').forEach((sec) => { sec.style.display = 'none'; });
   document.getElementById(`seccion-${nombre}`).style.display = 'block';
 
   if (nombre === 'negocio') cerrarEdicionNegocio();
+
+  // La barra de arriba muestra el nombre de la sección actual (como en Herramientas/Ajustes),
+  // y solo en Inicio muestra el nombre del negocio junto con el estado del plan (PRUEBA/ACTIVA/VENCIDA).
+  const tituloSeccion = TITULOS_SECCION[nombre];
+  const nombreNegocio = negocioActual?.formData?.nombreNegocio || 'Mi negocio';
+  document.getElementById('nombre-negocio-panel').textContent = tituloSeccion || nombreNegocio;
+  document.getElementById('estado-suscripcion-pill').style.display = tituloSeccion ? 'none' : '';
 
   document.querySelectorAll('.app-navbar-item').forEach((btn) => {
     btn.classList.toggle('activo', btn.dataset.seccion === nombre);
