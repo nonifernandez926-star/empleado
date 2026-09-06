@@ -439,12 +439,15 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
    LISTAS TIPO "APP" — Herramientas / Ajustes
    (fila con icono + texto + flecha, se abre en acordeón)
    ========================================================= */
-.list-card { background: var(--blanco); border-radius: var(--radio); border: 1px solid var(--linea); overflow: hidden; margin-bottom: 16px; }
+/* Cada fila es ahora su propia "tarjetita" separada, con el gris de fondo
+   asomando entre ellas (como en la referencia), en vez de un bloque continuo. */
+.list-card { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.list-card-item { background: var(--blanco); border-radius: 14px; border: 1px solid #dfe3f0; overflow: hidden; }
 .list-row {
   display: flex; align-items: center; gap: 12px; padding: 15px 16px; cursor: pointer;
-  border-bottom: 1px solid var(--linea); background: none; width: 100%; text-align: left; font: inherit; color: inherit;
+  background: none; width: 100%; text-align: left; font: inherit; color: inherit;
 }
-.list-card .list-row:last-child { border-bottom: none; }
+.list-card-item .list-row-panel { border-top: 1px solid #dfe3f0; }
 .list-row-icono {
   width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
   font-size: 1.15rem; flex-shrink: 0;
@@ -464,9 +467,8 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 }
 
 .list-row-panel {
-  display: none; padding: 4px 16px 20px; border-bottom: 1px solid var(--linea); background: #fafbff;
+  display: none; padding: 4px 16px 20px; background: #fafbff;
 }
-.list-card .list-row-panel:last-child { border-bottom: none; }
 .list-row-panel.abierto { display: block; }
 
 /* colores de íconos por categoría (mismo estilo que el mockup) */
@@ -512,10 +514,15 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 
 /* Pedidos */
 .pedido-card { border: 1px solid var(--linea); border-radius: var(--radio); padding: 18px; margin-bottom: 14px; background: var(--blanco); box-shadow: var(--sombra-chica); }
-.pedido-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
-.pedido-header strong { font-size: 1.02rem; }
+.pedido-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.pedido-avatar {
+  width: 42px; height: 42px; border-radius: 50%; background: var(--gris-claro); color: var(--gris-texto);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.pedido-header-texto { flex: 1; min-width: 0; }
+.pedido-header-texto strong { font-size: 1.02rem; }
 .pedido-telefono { color: var(--gris-texto); font-size: 0.85rem; }
-.pedido-fecha { color: var(--gris-texto); font-size: 0.78rem; margin-top: 2px; }
+.pedido-fecha { color: var(--gris-texto); font-size: 0.78rem; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
 .pedido-items { margin: 4px 0 10px; padding-left: 18px; }
 .pedido-items li { margin-bottom: 3px; font-size: 0.92rem; }
 .pedido-total-linea { font-size: 0.92rem; padding-top: 8px; margin-bottom: 10px; border-top: 1px dashed var(--linea); }
@@ -526,22 +533,30 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 }
 .pedido-detalle { font-size: 0.85rem; color: var(--gris-texto); margin: 6px 0; display: flex; align-items: center; gap: 6px; }
 .badge-estado {
-  display: inline-block; padding: 5px 13px; border-radius: 999px; font-size: 0.68rem; font-weight: 800;
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; font-size: 0.68rem; font-weight: 800;
   text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0;
 }
+.badge-punto { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .badge-pendiente { background: #fef3c7; color: #92400e; }
 .badge-confirmado { background: #dbeafe; color: #1e40af; }
 .badge-en_preparacion { background: #ede9fe; color: #5b21b6; }
 .badge-listo { background: #d1fae5; color: #065f46; }
 .badge-entregado { background: #e5e7eb; color: #374151; }
 
-.pedido-acciones { display: flex; align-items: flex-end; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--linea); }
-.pedido-select-estado { flex: 1; min-width: 0; }
-.pedido-select-estado label { margin: 0 0 6px; font-size: 0.78rem; }
-.pedido-select-estado select { margin: 0; }
-.btn-icono-eliminar {
-  width: 42px; height: 42px; border-radius: 12px; background: #fee2e2; color: var(--error);
-  display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+.pedido-acciones { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--linea); }
+.pedido-acciones-titulo { margin: 0 0 10px; font-size: 0.85rem; }
+.fila-botones-pedido { display: flex; gap: 10px; }
+.accion-pedido-wrap {
+  position: relative; flex: 1; display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+  border-radius: var(--radio-chico); font-weight: 700; font-size: 0.85rem; cursor: pointer; overflow: hidden;
+}
+.accion-pedido-wrap.azul { background: #e8edff; color: var(--azul); }
+.accion-pedido-wrap.rojo { background: #fee2e2; color: var(--error); }
+.accion-pedido-wrap span:not(.accion-flecha) { flex: 1; }
+.accion-flecha { display: flex; opacity: 0.6; }
+.select-invisible {
+  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+  border-radius: 0; padding: 0; background: none;
 }
 
 /* Comprobante de transferencia */
