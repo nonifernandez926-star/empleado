@@ -4,14 +4,28 @@ let negocioActual = null;
 
 // Iconos SVG chicos para usar dentro de las tarjetas de pedido (nada de emojis)
 const ICONOS_PEDIDO = {
-  moto: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M12 17.5H9l-2-6 2-3h5l2 5.5h2.5"/></svg>',
+  moto: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="9" cy="7" r="1.4" fill="currentColor" stroke="none"/><path d="M9 8.5v3l2.5 2"/><path d="M8 11.5h4"/><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M11.5 13.5H9l-1.5 4h6l-1-4h4l2 4h2.5"/></svg>',
+  efectivo: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/></svg>',
+  transferencia: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 7h13"/><path d="M13 3l4 4-4 4"/><path d="M20 17H7"/><path d="M11 21l-4-4 4-4"/></svg>',
   casa: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>',
   tarjeta: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
   nota: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>',
   check: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
   equis: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>',
   tacho: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+  flecha: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  persona: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg>',
+  reloj: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  pin: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/></svg>',
 };
+
+// Elige el ícono según el texto de forma de pago (efectivo / transferencia / tarjeta / otro)
+function iconoFormaPago(formaPago = '') {
+  const texto = formaPago.toLowerCase();
+  if (texto.includes('transfer')) return ICONOS_PEDIDO.transferencia;
+  if (texto.includes('efectivo')) return ICONOS_PEDIDO.efectivo;
+  return ICONOS_PEDIDO.tarjeta;
+}
 
 // Devuelve los headers correctos según cómo se haya logueado el dueño (Google o código admin)
 function headersAuth(extra = {}) {
@@ -606,12 +620,13 @@ function renderizarPedidos() {
   contenedor.innerHTML = pedidosFiltrados.map((p) => `
       <div class="pedido-card" data-id="${p._id}">
         <div class="pedido-header">
-          <div>
+          <div class="pedido-avatar">${ICONOS_PEDIDO.persona}</div>
+          <div class="pedido-header-texto">
             <strong>${p.nombreCliente}</strong>
             ${p.telefonoCliente ? `<span class="pedido-telefono"> · ${p.telefonoCliente}</span>` : ''}
-            <div class="pedido-fecha">${new Date(p.createdAt).toLocaleString('es-AR')}</div>
+            <div class="pedido-fecha">${ICONOS_PEDIDO.reloj} ${new Date(p.createdAt).toLocaleString('es-AR')}</div>
           </div>
-          <span class="badge-estado badge-${p.estado}">${ETIQUETAS_ESTADO[p.estado] || p.estado}</span>
+          <span class="badge-estado badge-${p.estado}"><span class="badge-punto"></span>${ETIQUETAS_ESTADO[p.estado] || p.estado}</span>
         </div>
         <ul class="pedido-items">
           ${p.items.map((i) => `<li>${i.cantidad}x ${i.producto}${i.precioUnitario ? ` — $${i.precioUnitario * i.cantidad}` : ''}</li>`).join('')}
@@ -619,8 +634,8 @@ function renderizarPedidos() {
         ${p.total ? `<div class="pedido-total-linea">Total: <strong>$${p.total.toLocaleString('es-AR')}</strong></div>` : ''}
 
         <div class="pedido-info-chips">
-          <span class="chip-info">${p.tipoEntrega === 'delivery' ? `${ICONOS_PEDIDO.moto} Delivery — ${p.direccionEntrega || 'sin dirección'}` : `${ICONOS_PEDIDO.casa} Retira en el local`}</span>
-          <span class="chip-info">${ICONOS_PEDIDO.tarjeta} ${p.formaPago}</span>
+          <span class="chip-info">${p.tipoEntrega === 'delivery' ? `${ICONOS_PEDIDO.moto} Delivery — ${p.direccionEntrega || 'sin dirección'}` : `${ICONOS_PEDIDO.pin} Retira en el local`}</span>
+          <span class="chip-info">${iconoFormaPago(p.formaPago)} ${p.formaPago}</span>
         </div>
         ${p.observaciones ? `<div class="pedido-detalle">${ICONOS_PEDIDO.nota} ${p.observaciones}</div>` : ''}
 
@@ -639,15 +654,26 @@ function renderizarPedidos() {
         ` : ''}
 
         <div class="pedido-acciones">
-          <div class="pedido-select-estado">
-            <label>Cambiar estado</label>
-            <select class="select-estado-pedido" data-id="${p._id}">
-              ${Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) =>
-                `<option value="${valor}" ${valor === p.estado ? 'selected' : ''}>${etiqueta}</option>`
-              ).join('')}
-            </select>
+          <label class="pedido-acciones-titulo">Cambiar estado</label>
+          <div class="fila-botones-pedido">
+            <div class="accion-pedido-wrap azul">
+              ${ICONOS_PEDIDO.tarjeta}
+              <span>Cambiar estado</span>
+              <span class="accion-flecha">${ICONOS_PEDIDO.flecha}</span>
+              <select class="select-estado-pedido select-invisible" data-id="${p._id}">
+                ${Object.entries(ETIQUETAS_ESTADO).map(([valor, etiqueta]) =>
+                  `<option value="${valor}" ${valor === p.estado ? 'selected' : ''}>${etiqueta}</option>`
+                ).join('')}
+              </select>
+            </div>
+            ${p.estado === 'entregado' ? `
+              <button class="accion-pedido-wrap rojo btn-icono-eliminar" data-id="${p._id}">
+                ${ICONOS_PEDIDO.tacho}
+                <span>Eliminar pedido</span>
+                <span class="accion-flecha">${ICONOS_PEDIDO.flecha}</span>
+              </button>
+            ` : ''}
           </div>
-          ${p.estado === 'entregado' ? `<button class="btn-icono-eliminar" data-id="${p._id}" title="Eliminar pedido" aria-label="Eliminar pedido">${ICONOS_PEDIDO.tacho}</button>` : ''}
         </div>
       </div>
     `).join('');
