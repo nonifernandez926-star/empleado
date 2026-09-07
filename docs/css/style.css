@@ -480,7 +480,7 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 .list-card-item { background: var(--blanco); border-radius: 14px; border: 1px solid #edeff8; overflow: hidden; }
 .list-row {
   display: flex; align-items: center; gap: 12px; padding: 15px 16px; cursor: pointer;
-  background: none; width: 100%; text-align: left; font: inherit; color: inherit;
+  background: none; width: 100%; text-align: left; font: inherit; color: inherit; text-decoration: none;
 }
 .list-card-item .list-row-panel { border-top: 1px solid #e9ecf5; }
 .list-row-icono {
