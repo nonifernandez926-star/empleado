@@ -45,12 +45,16 @@ async function cargarRubros() {
     categoriasData = await res.json();
     renderizarGridCategorias(categoriasData);
 
-    document.getElementById('buscador-rubro').addEventListener('input', (e) => {
-      const texto = e.target.value.trim().toLowerCase();
-      const filtradas = categoriasData.filter((cat) => cat.categoria.toLowerCase().includes(texto));
-      renderizarGridCategorias(filtradas);
-    });
+    const inputBuscador = document.getElementById('buscador-rubro');
+    if (inputBuscador) {
+      inputBuscador.addEventListener('input', (e) => {
+        const texto = e.target.value.trim().toLowerCase();
+        const filtradas = categoriasData.filter((cat) => cat.categoria.toLowerCase().includes(texto));
+        renderizarGridCategorias(filtradas);
+      });
+    }
   } catch (error) {
+    console.error('Error al cargar rubros:', error);
     grid.innerHTML = `<div class="error-msg">No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo en unos segundos (el servidor puede tardar en despertar).</div>`;
   }
 }
