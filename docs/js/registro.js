@@ -17,24 +17,65 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Ícono + color por categoría (mismo estilo que el resto del panel)
+const ICONOS_CATEGORIA = {
+  'Gastronomia': { clase: 'ic-naranja', svg: '<path d="M3 2v7a3 3 0 0 0 3 3v10"/><path d="M3 2v20"/><path d="M9 2v7a3 3 0 0 1-3 3"/><path d="M17 2c-2 2-3 4-3 8 0 3 1.5 4 3 4v8"/>' },
+  'Salud': { clase: 'ic-verde', svg: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/>' },
+  'Hogar': { clase: 'ic-violeta', svg: '<path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>' },
+  'Automotor': { clase: 'ic-rojo', svg: '<path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm14 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/><path d="M3 17V11l2-5h10l4 5h2v6"/><path d="M5 11h14"/>' },
+  'Belleza': { clase: 'ic-rosado', svg: '<path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/>' },
+  'Comercio': { clase: 'ic-amarillo', svg: '<circle cx="9" cy="20" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="1.3" fill="currentColor" stroke="none"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H5.2"/>' },
+  'Servicios profesionales': { clase: 'ic-celeste', svg: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/>' },
+  'Educacion': { clase: 'ic-indigo', svg: '<path d="M2 8 12 3l10 5-10 5-10-5Z"/><path d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"/><path d="M22 8v6"/>' },
+  'Eventos y fiestas': { clase: 'ic-cyan', svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>' },
+};
+const ICONO_CATEGORIA_DEFAULT = { clase: 'ic-gris', svg: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>' };
+
+function iconoCategoriaHTML(nombreCategoria) {
+  const ic = ICONOS_CATEGORIA[nombreCategoria] || ICONO_CATEGORIA_DEFAULT;
+  return `<span class="icono-circulo ${ic.clase}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.svg}</svg></span>`;
+}
+const ICONO_CHEVRON = '<span class="opcion-rubro-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>';
+
 async function cargarRubros() {
   const grid = document.getElementById('grid-categorias');
   try {
     const res = await fetch(`${API_URL}/rubros`, { cache: 'no-store' });
     if (!res.ok) throw new Error('No se pudo obtener la lista de rubros');
     categoriasData = await res.json();
+    renderizarGridCategorias(categoriasData);
 
-    grid.innerHTML = '';
-    categoriasData.forEach((cat) => {
-      const div = document.createElement('div');
-      div.className = 'opcion-rubro';
-      div.innerHTML = `<strong>${cat.categoria}</strong><small>${cat.subrubros.length} tipos de negocio</small>`;
-      div.addEventListener('click', () => seleccionarCategoria(cat, div));
-      grid.appendChild(div);
+    document.getElementById('buscador-rubro').addEventListener('input', (e) => {
+      const texto = e.target.value.trim().toLowerCase();
+      const filtradas = categoriasData.filter((cat) => cat.categoria.toLowerCase().includes(texto));
+      renderizarGridCategorias(filtradas);
     });
   } catch (error) {
     grid.innerHTML = `<div class="error-msg">No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo en unos segundos (el servidor puede tardar en despertar).</div>`;
   }
+}
+
+function renderizarGridCategorias(categorias) {
+  const grid = document.getElementById('grid-categorias');
+  if (!categorias.length) {
+    grid.innerHTML = `<p class="ayuda">No encontramos ningún rubro con ese nombre.</p>`;
+    return;
+  }
+  grid.innerHTML = '';
+  categorias.forEach((cat) => {
+    const div = document.createElement('div');
+    div.className = 'opcion-rubro opcion-rubro-categoria';
+    div.innerHTML = `
+      ${iconoCategoriaHTML(cat.categoria)}
+      <div class="opcion-rubro-texto">
+        <strong>${cat.categoria}</strong>
+        <small>${cat.subrubros.length} tipos de negocio</small>
+      </div>
+      ${ICONO_CHEVRON}
+    `;
+    div.addEventListener('click', () => seleccionarCategoria(cat, div));
+    grid.appendChild(div);
+  });
 }
 
 function seleccionarCategoria(cat, elemento) {
