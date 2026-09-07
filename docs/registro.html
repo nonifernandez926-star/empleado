@@ -1,327 +1,94 @@
-const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
-let categoriasData = [];
-let categoriaSeleccionada = null;
-let subrubroSeleccionado = null;
-let googleIdTokenCapturado = null;
-
-window.addEventListener('DOMContentLoaded', () => {
-  if (window.google && GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.startsWith('TU_CLIENT_ID')) {
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: (respuesta) => {
-        googleIdTokenCapturado = respuesta.credential;
-        document.getElementById('estado-google-registro').textContent = '✅ Cuenta de Google vinculada correctamente.';
-      },
-    });
-    google.accounts.id.renderButton(document.getElementById('boton-google-registro'), { theme: 'outline', size: 'large', width: 280 });
-  }
-});
-
-// Ícono + color por categoría (mismo estilo que el resto del panel)
-const ICONOS_CATEGORIA = {
-  'Gastronomia': { clase: 'ic-naranja', svg: '<path d="M3 2v7a3 3 0 0 0 3 3v10"/><path d="M3 2v20"/><path d="M9 2v7a3 3 0 0 1-3 3"/><path d="M17 2c-2 2-3 4-3 8 0 3 1.5 4 3 4v8"/>' },
-  'Salud': { clase: 'ic-verde', svg: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/>' },
-  'Hogar': { clase: 'ic-violeta', svg: '<path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>' },
-  'Automotor': { clase: 'ic-rojo', svg: '<path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm14 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/><path d="M3 17V11l2-5h10l4 5h2v6"/><path d="M5 11h14"/>' },
-  'Belleza': { clase: 'ic-rosado', svg: '<path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/>' },
-  'Comercio': { clase: 'ic-amarillo', svg: '<circle cx="9" cy="20" r="1.3" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="1.3" fill="currentColor" stroke="none"/><path d="M2 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 7H5.2"/>' },
-  'Servicios profesionales': { clase: 'ic-celeste', svg: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/>' },
-  'Educacion': { clase: 'ic-indigo', svg: '<path d="M2 8 12 3l10 5-10 5-10-5Z"/><path d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"/><path d="M22 8v6"/>' },
-  'Eventos y fiestas': { clase: 'ic-cyan', svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>' },
-};
-const ICONO_CATEGORIA_DEFAULT = { clase: 'ic-gris', svg: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/>' };
-
-function iconoCategoriaHTML(nombreCategoria) {
-  const ic = ICONOS_CATEGORIA[nombreCategoria] || ICONO_CATEGORIA_DEFAULT;
-  return `<span class="icono-circulo ${ic.clase}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic.svg}</svg></span>`;
-}
-const ICONO_CHEVRON = '<span class="opcion-rubro-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>';
-
-async function cargarRubros() {
-  const grid = document.getElementById('grid-categorias');
-  try {
-    const res = await fetch(`${API_URL}/rubros`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('No se pudo obtener la lista de rubros');
-    categoriasData = await res.json();
-    renderizarGridCategorias(categoriasData);
-
-    const inputBuscador = document.getElementById('buscador-rubro');
-    if (inputBuscador) {
-      inputBuscador.addEventListener('input', (e) => {
-        const texto = e.target.value.trim().toLowerCase();
-        const filtradas = categoriasData.filter((cat) => cat.categoria.toLowerCase().includes(texto));
-        renderizarGridCategorias(filtradas);
-      });
-    }
-  } catch (error) {
-    console.error('Error al cargar rubros:', error);
-    grid.innerHTML = `<div class="error-msg">No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo en unos segundos (el servidor puede tardar en despertar).</div>`;
-  }
-}
-
-function renderizarGridCategorias(categorias) {
-  const grid = document.getElementById('grid-categorias');
-  if (!categorias.length) {
-    grid.innerHTML = `<p class="ayuda">No encontramos ningún rubro con ese nombre.</p>`;
-    return;
-  }
-  grid.innerHTML = '';
-  categorias.forEach((cat) => {
-    const div = document.createElement('div');
-    div.className = 'opcion-rubro opcion-rubro-categoria';
-    div.innerHTML = `
-      ${iconoCategoriaHTML(cat.categoria)}
-      <div class="opcion-rubro-texto">
-        <strong>${cat.categoria}</strong>
-        <small>${cat.subrubros.length} tipos de negocio</small>
-      </div>
-      ${ICONO_CHEVRON}
-    `;
-    div.addEventListener('click', () => seleccionarCategoria(cat, div));
-    grid.appendChild(div);
-  });
-}
-
-function seleccionarCategoria(cat, elemento) {
-  document.querySelectorAll('#grid-categorias .opcion-rubro').forEach((el) => el.classList.remove('seleccionado'));
-  elemento.classList.add('seleccionado');
-  categoriaSeleccionada = cat;
-
-  document.getElementById('titulo-categoria').textContent = `Paso 2: elegí el subrubro dentro de ${cat.categoria}`;
-  const gridSub = document.getElementById('grid-subrubros');
-  gridSub.innerHTML = '';
-  cat.subrubros.forEach((sub) => {
-    const div = document.createElement('div');
-    div.className = 'opcion-rubro';
-    div.innerHTML = `<strong>${sub.nombre}</strong>`;
-    div.addEventListener('click', () => seleccionarSubrubro(sub.id, div));
-    gridSub.appendChild(div);
-  });
-
-  document.getElementById('paso-subrubro').style.display = 'block';
-  document.getElementById('paso-formulario').style.display = 'none';
-  document.getElementById('paso-subrubro').scrollIntoView({ behavior: 'smooth' });
-}
-
-async function seleccionarSubrubro(subrubroId, elemento) {
-  document.querySelectorAll('#grid-subrubros .opcion-rubro').forEach((el) => el.classList.remove('seleccionado'));
-  elemento.classList.add('seleccionado');
-  subrubroSeleccionado = subrubroId;
-
-  const res = await fetch(`${API_URL}/rubros/${subrubroId}/formulario`, { cache: 'no-store' });
-  const data = await res.json();
-
-  document.getElementById('titulo-subrubro').textContent = `Paso 3: contanos sobre tu ${data.subrubro.toLowerCase()}`;
-  renderizarCampos(data.campos);
-  renderizarHorarios();
-
-  document.getElementById('paso-formulario').style.display = 'block';
-  document.getElementById('paso-formulario').scrollIntoView({ behavior: 'smooth' });
-}
-
-document.getElementById('link-volver-categoria').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('paso-subrubro').style.display = 'none';
-  document.getElementById('paso-formulario').style.display = 'none';
-  document.getElementById('paso-categoria').scrollIntoView({ behavior: 'smooth' });
-});
-
-document.getElementById('link-volver-subrubro').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('paso-formulario').style.display = 'none';
-  document.getElementById('paso-subrubro').scrollIntoView({ behavior: 'smooth' });
-});
-
-function renderizarCampos(campos) {
-  const contenedor = document.getElementById('campos-dinamicos');
-  contenedor.innerHTML = '';
-
-  campos.forEach((campo) => {
-    const wrapper = document.createElement('div');
-
-    // Caso especial: el campo "menu" no se completa con texto, se reemplaza por carga de fotos
-    if (campo.esMenu) {
-      wrapper.innerHTML = `
-        <label>Fotos de tu menú (subí 1 o 2)</label>
-        <p class="ayuda">En vez de escribir el menú, subí fotos claras de tu carta. El asistente se las va a mostrar a los clientes cuando pregunten qué tenés.</p>
-        <input type="file" id="input-menu-foto-1" accept="image/*">
-        <input type="file" id="input-menu-foto-2" accept="image/*" style="margin-top:8px;">
-      `;
-      contenedor.appendChild(wrapper);
-      return;
-    }
-
-    const requerido = campo.obligatorio ? 'required' : '';
-    const etiquetaOpcional = campo.obligatorio ? '' : ' (opcional)';
-
-    let inputHtml = '';
-    switch (campo.tipo) {
-      case 'textoLargo':
-        inputHtml = `<textarea id="campo-${campo.id}" ${requerido}></textarea>`;
-        break;
-      case 'booleano':
-        inputHtml = `<select id="campo-${campo.id}" ${requerido}>
-          <option value="">Seleccionar...</option>
-          <option value="true">Sí</option>
-          <option value="false">No</option>
-        </select>`;
-        break;
-      case 'seleccionUnica':
-        inputHtml = `<select id="campo-${campo.id}" ${requerido}>
-          <option value="">Seleccionar...</option>
-          ${campo.opciones.map((o) => `<option value="${o}">${o}</option>`).join('')}
-        </select>`;
-        break;
-      case 'seleccionMultiple':
-        inputHtml = `<div class="opciones-checkbox" id="campo-${campo.id}">
-          ${campo.opciones.map((o) => `
-            <label><input type="checkbox" value="${o}" name="check-${campo.id}"> ${o}</label>
-          `).join('')}
-        </div>`;
-        break;
-      default:
-        inputHtml = `<input type="text" id="campo-${campo.id}" ${requerido}>`;
-    }
-
-    wrapper.innerHTML = `<label>${campo.label}${etiquetaOpcional}</label>${inputHtml}`;
-    contenedor.appendChild(wrapper);
-  });
-}
-
-function renderizarHorarios() {
-  const contenedor = document.getElementById('dias-horario');
-  contenedor.innerHTML = DIAS.map((dia) => `
-    <div class="dia-fila" data-dia="${dia}">
-      <label class="nombre-dia" style="margin:0;">
-        <input type="checkbox" class="dia-activo" style="width:auto;"> ${dia}
-      </label>
-      <input type="text" class="dia-apertura" placeholder="09:00" style="width:90px;" disabled>
-      <span>a</span>
-      <input type="text" class="dia-cierre" placeholder="18:00" style="width:90px;" disabled>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Crear mi asistente — Registro</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="pantalla">
+    <div class="pantalla-topbar">
+      <a class="volver" href="index.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></a>
+      <span class="marca">Creá tu asistente virtual</span>
     </div>
-  `).join('');
 
-  contenedor.querySelectorAll('.dia-activo').forEach((chk) => {
-    chk.addEventListener('change', (e) => {
-      const fila = e.target.closest('.dia-fila');
-      const inputs = fila.querySelectorAll('input[type="text"]');
-      inputs.forEach((i) => (i.disabled = !e.target.checked));
-    });
-  });
-}
+    <div class="pantalla-contenido" style="margin-top:0;">
 
-function recolectarFormData(campos) {
-  const formData = {};
-  campos.forEach((campo) => {
-    const el = document.getElementById(`campo-${campo.id}`);
-    if (!el) return;
+      <!-- PASO 1: selección de rubro principal (categoría) -->
+      <div id="paso-categoria" class="tarjeta">
+        <div class="tarjeta-titulo-icono">
+          <span class="icono-circulo ic-azul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></span>
+          <div>
+            <h2 style="margin-bottom:2px;">Paso 1: elegí el rubro principal de tu negocio</h2>
+            <p class="ayuda" style="margin:0;">Esto nos ayuda a entrenar mejor a tu asistente con la información de tu rubro.</p>
+          </div>
+        </div>
+        <div class="search-bar" style="margin-bottom:16px;">
+          <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+          <input type="text" id="buscador-rubro" placeholder="Buscar rubro...">
+        </div>
+        <div id="grid-categorias" class="grid-categorias"><p>Cargando rubros...</p></div>
+      </div>
 
-    if (campo.tipo === 'seleccionMultiple') {
-      const seleccionados = Array.from(el.querySelectorAll('input:checked')).map((i) => i.value);
-      formData[campo.id] = seleccionados;
-    } else if (campo.tipo === 'booleano') {
-      formData[campo.id] = el.value === '' ? undefined : el.value === 'true';
-    } else {
-      formData[campo.id] = el.value;
-    }
-  });
-  return formData;
-}
+      <!-- PASO 2: selección de subrubro dentro de la categoría elegida -->
+      <div id="paso-subrubro" class="tarjeta" style="display:none;">
+        <p><a href="#" id="link-volver-categoria">&larr; Cambiar rubro principal</a></p>
+        <h2 id="titulo-categoria">Paso 2: elegí el subrubro</h2>
+        <div id="grid-subrubros" class="grid-categorias"></div>
+      </div>
 
-function recolectarHorarios() {
-  return Array.from(document.querySelectorAll('.dia-fila')).map((fila) => {
-    const activo = fila.querySelector('.dia-activo').checked;
-    const apertura = fila.querySelector('.dia-apertura').value;
-    const cierre = fila.querySelector('.dia-cierre').value;
-    return {
-      dia: fila.dataset.dia,
-      activo,
-      bloques: activo && apertura && cierre ? [{ apertura, cierre }] : [],
-    };
-  });
-}
+      <!-- PASO 3: formulario dinámico (oculto hasta elegir subrubro) -->
+      <div id="paso-formulario" class="tarjeta" style="display:none;">
+        <p><a href="#" id="link-volver-subrubro">&larr; Cambiar subrubro</a></p>
+        <div class="mensaje-info">
+          La información que ingreses será el conocimiento principal de tu asistente inteligente. Cada respuesta que brinde a tus clientes dependerá directamente de estos datos: cuanto más completa y precisa sea la información, mejor va a responder.
+        </div>
+        <h2 id="titulo-subrubro">Paso 2: contanos sobre tu negocio</h2>
+        <form id="form-negocio">
+          <div id="campos-dinamicos"></div>
 
-async function subirUnaFoto(codigoAdmin, archivo, categoria) {
-  if (!archivo) return;
-  const formDataFoto = new FormData();
-  formDataFoto.append('foto', archivo);
-  formDataFoto.append('categoria', categoria);
-  try {
-    await fetch(`${API_URL}/negocios/fotos`, {
-      method: 'POST',
-      headers: { 'x-codigo-admin': codigoAdmin },
-      body: formDataFoto,
-    });
-  } catch (error) {
-    // si falla una foto, no bloqueamos el registro; el dueño puede volver a subirla desde el panel
-    console.error('No se pudo subir una foto:', error);
-  }
-}
+          <h3>Horarios de atención</h3>
+          <div id="dias-horario" class="dias-horario"></div>
 
-async function subirFotosDelRegistro(codigoAdmin) {
-  const logo = document.getElementById('input-logo')?.files[0];
-  const menuFoto1 = document.getElementById('input-menu-foto-1')?.files[0];
-  const menuFoto2 = document.getElementById('input-menu-foto-2')?.files[0];
+          <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:14px;">
+            <input type="checkbox" id="atencion-solo-horario" style="width:auto;">
+            El asistente debe responder SOLO dentro de mi horario de atención (fuera de horario, avisa que está cerrado en vez de responder con IA)
+          </label>
 
-  await subirUnaFoto(codigoAdmin, logo, 'logo');
-  await subirUnaFoto(codigoAdmin, menuFoto1, 'menu');
-  await subirUnaFoto(codigoAdmin, menuFoto2, 'menu');
-}
+          <h3>Personalidad de tu asistente</h3>
+          <label>Estilo de comunicación</label>
+          <select id="personalidad-estilo">
+            <option value="amable_carismatico">Amable y carismático</option>
+            <option value="profesional_cercano">Profesional cercano</option>
+            <option value="juvenil_energetico">Juvenil y energético</option>
+            <option value="elegante_exclusivo">Elegante y exclusivo</option>
+            <option value="tranquilo_confiable">Tranquilo y confiable</option>
+          </select>
 
-document.getElementById('form-negocio').addEventListener('submit', async (e) => {
-  e.preventDefault();
+          <label>Describí cómo querés que sea tu asistente (opcional)</label>
+          <textarea id="personalidad-libre" placeholder="Ej: quiero que atienda como una persona del local, simpático y cercano, pero profesional."></textarea>
 
-  const resDefinicion = await fetch(`${API_URL}/rubros/${subrubroSeleccionado}/formulario`, { cache: 'no-store' });
-  const definicion = await resDefinicion.json();
+          <h3>Logo de tu negocio (opcional)</h3>
+          <p class="ayuda">Va a aparecer como avatar del asistente en el chat, así los clientes reconocen tu negocio.</p>
+          <input type="file" id="input-logo" accept="image/*">
 
-  const payload = {
-    subrubroId: subrubroSeleccionado,
-    formData: recolectarFormData(definicion.campos),
-    horarios: recolectarHorarios(),
-    personalidad: {
-      estilo: document.getElementById('personalidad-estilo').value,
-      descripcionLibre: document.getElementById('personalidad-libre').value,
-    },
-    googleIdToken: googleIdTokenCapturado || undefined,
-    atencionSoloEnHorario: document.getElementById('atencion-solo-horario').checked,
-  };
+          <h3>Vincular con Google (recomendado)</h3>
+          <p class="ayuda">Vinculá tu cuenta de Google para poder entrar a tu panel sin tener que guardar el código de administración. Es opcional: si no lo hacés, igual te vamos a dar un código para entrar.</p>
+          <div id="boton-google-registro" style="margin-bottom:10px;"></div>
+          <p class="ayuda" id="estado-google-registro"></p>
 
-  const resultadoDiv = document.getElementById('resultado');
+          <button type="submit" class="btn ancho" style="margin-top:24px;">Crear mi asistente (modo prueba gratis)</button>
+        </form>
+      </div>
 
-  try {
-    const res = await fetch(`${API_URL}/negocios`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
+      <!-- RESULTADO -->
+      <div id="resultado" class="tarjeta" style="display:none;"></div>
+    </div>
+  </div>
 
-    if (!res.ok) throw new Error(data.error || 'Error al crear el asistente');
-
-    if (data.token) {
-      localStorage.setItem('jwtToken', data.token); // así entra directo al panel sin loguearse de nuevo
-    }
-
-    // Subimos el logo y las fotos del menú, si el dueño cargó alguna, usando el código admin recién generado
-    await subirFotosDelRegistro(data.codigoAdmin);
-
-    resultadoDiv.style.display = 'block';
-    resultadoDiv.innerHTML = `
-      <div class="exito">¡Tu asistente fue creado en modo prueba!</div>
-      ${data.googleVinculado ? '<p>Tu cuenta de Google ya está vinculada, vas a poder entrar a tu panel directamente.</p>' : ''}
-      <p>Guardá estos dos códigos como respaldo, no se pueden recuperar después:</p>
-      <p><strong>Código de administración</strong> (privado, es tu llave para el panel):</p>
-      <div class="codigo-box">${data.codigoAdmin}</div>
-      <p><strong>Código público</strong> (para probar el chat):</p>
-      <div class="codigo-box">${data.codigoPublico}</div>
-      <a class="btn" href="chat.html?codigo=${data.codigoPublico}">Probar mi asistente</a>
-      <a class="btn secundario" href="admin.html">Ir a mi panel</a>
-    `;
-    resultadoDiv.scrollIntoView({ behavior: 'smooth' });
-  } catch (error) {
-    resultadoDiv.style.display = 'block';
-    resultadoDiv.innerHTML = `<div class="error-msg">${error.message}</div>`;
-  }
-});
-
-cargarRubros();
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="js/config.js"></script>
+  <script src="js/registro.js"></script>
+</body>
+</html>
