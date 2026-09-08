@@ -98,7 +98,9 @@ a { color: inherit; }
 .pantalla-hero {
   background: var(--gradiente-azul);
   color: var(--blanco);
-  padding: 8px 22px 32px;
+  padding: 8px 22px 130px;
+  position: relative;
+  overflow: hidden;
 }
 .pantalla-hero .marca { display: block; font-weight: 800; opacity: 0.92; font-size: 0.95rem; margin-bottom: 8px; }
 .marca-fila { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -106,9 +108,9 @@ a { color: inherit; }
   width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.16);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.pantalla-hero h1 { font-size: 1.5rem; margin: 6px 0 10px; line-height: 1.3; }
-.robot-hero { display: block; margin: 6px auto 4px; }
-.pantalla-hero p { color: rgba(255,255,255,0.88); font-size: 0.95rem; margin: 0 0 22px; }
+.pantalla-hero h1 { font-size: 1.5rem; margin: 6px 0 10px; line-height: 1.3; max-width: 78%; }
+.pantalla-hero p { color: rgba(255,255,255,0.88); font-size: 0.95rem; margin: 0 0 22px; max-width: 80%; }
+.robot-hero { position: absolute; right: 6px; bottom: 8px; width: 150px; height: auto; }
 
 .pantalla-contenido {
   flex: 1;
@@ -370,8 +372,32 @@ html:has(.chat-widget), body:has(.chat-widget) { margin: 0; padding: 0; height: 
 .avatar-circle {
   width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.24);
   display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.95rem;
-  color: white; flex-shrink: 0; cursor: pointer; border: none;
+  color: white; flex-shrink: 0; cursor: pointer; border: none; overflow: hidden;
 }
+.avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Modal centrado para cambiar la foto de perfil del negocio */
+.modal-foto {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.95);
+  width: 84%; max-width: 320px; background: var(--blanco); border-radius: 20px; padding: 26px 20px 20px;
+  z-index: 250; box-shadow: var(--sombra); text-align: center; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.modal-foto.abierto { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+.modal-foto-preview {
+  width: 96px; height: 96px; border-radius: 50%; background: var(--gradiente-azul); color: white;
+  font-size: 1.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; overflow: hidden;
+}
+.modal-foto-preview img { width: 100%; height: 100%; object-fit: cover; }
+.modal-foto-titulo { display: block; margin-bottom: 18px; font-size: 1rem; }
+.modal-foto-opciones { display: flex; flex-direction: column; gap: 8px; }
+.modal-foto-opcion {
+  display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 12px;
+  background: var(--gris-claro); font-weight: 700; font-size: 0.9rem; cursor: pointer; color: var(--azul-oscuro);
+}
+.modal-foto-opcion.destructivo { background: #fee2e2; color: var(--error); }
+.modal-foto-opcion-icono { display: flex; flex-shrink: 0; }
 
 .app-contenido { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 92px; -webkit-overflow-scrolling: touch; }
 .app-seccion .tarjeta:first-child { margin-top: 0; }
@@ -411,7 +437,7 @@ html:has(.chat-widget), body:has(.chat-widget) { margin: 0; padding: 0; height: 
 .app-drawer.abierto { transform: translateX(0); }
 
 .drawer-perfil { background: var(--gradiente-azul); color: white; padding: 26px 20px 20px; flex-shrink: 0; }
-.drawer-perfil .avatar-circle { width: 54px; height: 54px; font-size: 1.3rem; background: rgba(255,255,255,0.24); margin-bottom: 10px; cursor: default; }
+.drawer-perfil .avatar-circle { width: 54px; height: 54px; font-size: 1.3rem; background: rgba(255,255,255,0.24); margin-bottom: 10px; cursor: pointer; }
 .drawer-perfil strong { display: block; font-size: 1.05rem; }
 .drawer-perfil span { font-size: 0.8rem; opacity: 0.85; }
 
