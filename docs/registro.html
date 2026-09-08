@@ -9,7 +9,7 @@
 <body>
   <div class="pantalla">
     <div class="pantalla-topbar">
-      <a class="volver" href="index.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></a>
+      <a class="volver" id="btn-volver-registro" href="index.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></a>
       <span class="marca">Creá tu asistente virtual</span>
     </div>
 
@@ -33,14 +33,12 @@
 
       <!-- PASO 2: selección de subrubro dentro de la categoría elegida -->
       <div id="paso-subrubro" class="tarjeta" style="display:none;">
-        <p><a href="#" id="link-volver-categoria">&larr; Cambiar rubro principal</a></p>
         <h2 id="titulo-categoria">Paso 2: elegí el subrubro</h2>
         <div id="grid-subrubros" class="grid-categorias"></div>
       </div>
 
       <!-- PASO 3: formulario dinámico (oculto hasta elegir subrubro) -->
       <div id="paso-formulario" class="tarjeta" style="display:none;">
-        <p><a href="#" id="link-volver-subrubro">&larr; Cambiar subrubro</a></p>
         <div class="mensaje-info">
           La información que ingreses será el conocimiento principal de tu asistente inteligente. Cada respuesta que brinde a tus clientes dependerá directamente de estos datos: cuanto más completa y precisa sea la información, mejor va a responder.
         </div>
