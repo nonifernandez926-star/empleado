@@ -50,7 +50,31 @@
       </div>
     </div>
 
-    <!-- Barra superior -->
+    <!-- Modal para cambiar la foto de perfil del negocio -->
+    <div class="app-drawer-overlay" id="modal-foto-overlay"></div>
+    <div class="modal-foto" id="modal-foto">
+      <div class="modal-foto-preview" id="modal-foto-preview-img">N</div>
+      <strong class="modal-foto-titulo" id="modal-foto-nombre">Mi negocio</strong>
+      <div class="modal-foto-opciones">
+        <button class="modal-foto-opcion" id="btn-elegir-galeria">
+          <span class="modal-foto-opcion-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+          Elegir de la galería
+        </button>
+        <button class="modal-foto-opcion" id="btn-tomar-foto">
+          <span class="modal-foto-opcion-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+          Tomar foto
+        </button>
+        <button class="modal-foto-opcion destructivo" id="btn-quitar-foto">
+          <span class="modal-foto-opcion-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg></span>
+          Quitar foto
+        </button>
+      </div>
+      <button class="btn secundario ancho" id="btn-cerrar-modal-foto" style="margin-top:6px;">Cancelar</button>
+      <div id="modal-foto-msg"></div>
+      <input type="file" id="input-modal-foto-galeria" accept="image/*" hidden>
+      <input type="file" id="input-modal-foto-camara" accept="image/*" capture="environment" hidden>
+    </div>
+
     <div class="app-topbar">
       <button class="app-topbar-btn" id="btn-abrir-menu" aria-label="Abrir menú"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
       <div class="app-topbar-info">
