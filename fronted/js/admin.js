@@ -1,6 +1,7 @@
 let codigoAdminActual = null;
 let jwtTokenActual = null;
 let negocioActual = null;
+let inicialNegocio = 'N';
 
 // Iconos SVG chicos para usar dentro de las tarjetas de pedido (nada de emojis)
 const ICONOS_PEDIDO = {
@@ -109,6 +110,20 @@ function cerrarDrawer() {
   document.getElementById('drawer-overlay').classList.remove('abierto');
 }
 
+// Muestra la foto real del negocio (categoría "logo") en los avatares si existe,
+// o si no, un círculo con la inicial del nombre.
+function actualizarAvatares(inicial) {
+  const fotosLogo = (negocioActual.fotos || []).filter((f) => f.categoria === 'logo');
+  const urlLogo = fotosLogo.length ? fotosLogo[fotosLogo.length - 1].url : null;
+  const html = urlLogo ? `<img src="${urlLogo}" alt="Foto de perfil">` : inicial;
+  document.getElementById('avatar-topbar').innerHTML = html;
+  document.getElementById('avatar-drawer').innerHTML = html;
+  const previewImg = document.getElementById('modal-foto-preview-img');
+  if (previewImg) {
+    previewImg.innerHTML = urlLogo ? `<img src="${urlLogo}" alt="Foto de perfil">` : `<span class="modal-foto-inicial">${inicial}</span>`;
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   intentarSesionGuardada();
 
@@ -145,8 +160,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (tabPendientes) tabPendientes.click();
   });
 
-  // El avatar abre el mismo menú lateral (accesos a ajustes, ayuda, cerrar sesión, etc.)
-  document.getElementById('avatar-topbar').addEventListener('click', abrirDrawer);
+  // El avatar abre el modal para cambiar la foto de perfil (el menú se abre con el ☰)
+  document.getElementById('avatar-topbar').addEventListener('click', abrirModalFoto);
+  document.getElementById('avatar-drawer').addEventListener('click', () => { cerrarDrawer(); abrirModalFoto(); });
 
   // Acordeones de "Herramientas" y "Ajustes": abrir/cerrar el panel de cada fila
   document.querySelectorAll('.list-row[data-panel]').forEach((fila) => {
@@ -262,9 +278,8 @@ async function mostrarPanel() {
   document.getElementById('drawer-nombre-negocio').textContent = nombreNegocio;
   document.getElementById('saludo-nombre').textContent = `¡Hola, ${nombreNegocio}!`;
 
-  const inicial = nombreNegocio.trim().charAt(0).toUpperCase() || 'N';
-  document.getElementById('avatar-topbar').textContent = inicial;
-  document.getElementById('avatar-drawer').textContent = inicial;
+  inicialNegocio = nombreNegocio.trim().charAt(0).toUpperCase() || 'N';
+  actualizarAvatares(inicialNegocio);
 
   const estado = negocioActual.suscripcion.estado;
   const ETIQUETAS_PLAN = { activa: 'Plan activo', prueba: 'Plan de prueba', vencida: 'Suscripción vencida' };
@@ -757,11 +772,19 @@ function activarSubidaAutomatica(inputId, categoria) {
     const msgDiv = document.getElementById('foto-msg');
     msgDiv.innerHTML = `<p class="ayuda">Subiendo foto...</p>`;
 
-    const formDataFoto = new FormData();
-    formDataFoto.append('foto', archivo);
-    formDataFoto.append('categoria', categoria);
-
     try {
+      // El logo es una sola foto: si ya había una, la reemplazamos en vez de acumular
+      if (categoria === 'logo') {
+        const logosViejos = (negocioActual.fotos || []).filter((f) => f.categoria === 'logo');
+        for (const foto of logosViejos) {
+          await fetch(`${API_URL}/negocios/fotos/${foto.publicId}`, { method: 'DELETE', headers: headersAuth() });
+        }
+      }
+
+      const formDataFoto = new FormData();
+      formDataFoto.append('foto', archivo);
+      formDataFoto.append('categoria', categoria);
+
       const res = await fetch(`${API_URL}/negocios/fotos`, {
         method: 'POST',
         headers: headersAuth(),
@@ -771,6 +794,7 @@ function activarSubidaAutomatica(inputId, categoria) {
 
       const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
       negocioActual = await resNegocio.json();
+      if (categoria === 'logo') actualizarAvatares(inicialNegocio);
       renderizarFotos();
       e.target.value = '';
       msgDiv.innerHTML = `<div class="exito">Foto subida correctamente.</div>`;
@@ -782,6 +806,80 @@ function activarSubidaAutomatica(inputId, categoria) {
 activarSubidaAutomatica('input-foto-logo', 'logo');
 activarSubidaAutomatica('input-foto-menu', 'menu');
 activarSubidaAutomatica('input-foto-producto', 'producto');
+
+// --- Modal para cambiar la foto de perfil del negocio (logo) ---
+function abrirModalFoto() {
+  document.getElementById('modal-foto-nombre').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
+  document.getElementById('modal-foto-msg').innerHTML = '';
+  document.getElementById('modal-foto-overlay').classList.add('abierto');
+  document.getElementById('modal-foto').classList.add('abierto');
+}
+function cerrarModalFoto() {
+  document.getElementById('modal-foto-overlay').classList.remove('abierto');
+  document.getElementById('modal-foto').classList.remove('abierto');
+}
+document.getElementById('modal-foto-overlay').addEventListener('click', cerrarModalFoto);
+document.getElementById('btn-cerrar-modal-foto').addEventListener('click', cerrarModalFoto);
+
+document.getElementById('btn-elegir-galeria').addEventListener('click', () => {
+  document.getElementById('input-modal-foto-galeria').click();
+});
+document.getElementById('btn-tomar-foto').addEventListener('click', () => {
+  document.getElementById('input-modal-foto-camara').click();
+});
+
+async function cambiarFotoPerfil(archivo) {
+  const msgDiv = document.getElementById('modal-foto-msg');
+  msgDiv.innerHTML = `<p class="ayuda">Subiendo foto...</p>`;
+  try {
+    // Sacamos cualquier logo anterior para que quede uno solo (el nuevo)
+    const logosViejos = (negocioActual.fotos || []).filter((f) => f.categoria === 'logo');
+    for (const foto of logosViejos) {
+      await fetch(`${API_URL}/negocios/fotos/${foto.publicId}`, { method: 'DELETE', headers: headersAuth() });
+    }
+
+    const formDataFoto = new FormData();
+    formDataFoto.append('foto', archivo);
+    formDataFoto.append('categoria', 'logo');
+    const res = await fetch(`${API_URL}/negocios/fotos`, { method: 'POST', headers: headersAuth(), body: formDataFoto });
+    if (!res.ok) throw new Error('Error al subir');
+
+    const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
+    negocioActual = await resNegocio.json();
+    actualizarAvatares(inicialNegocio);
+    renderizarFotos();
+    cerrarModalFoto();
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo subir la foto. Intentá de nuevo.</div>`;
+  }
+}
+
+document.getElementById('input-modal-foto-galeria').addEventListener('change', (e) => {
+  if (e.target.files[0]) cambiarFotoPerfil(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('input-modal-foto-camara').addEventListener('change', (e) => {
+  if (e.target.files[0]) cambiarFotoPerfil(e.target.files[0]);
+  e.target.value = '';
+});
+
+document.getElementById('btn-quitar-foto').addEventListener('click', async () => {
+  const logosViejos = (negocioActual.fotos || []).filter((f) => f.categoria === 'logo');
+  if (!logosViejos.length) { cerrarModalFoto(); return; }
+  const msgDiv = document.getElementById('modal-foto-msg');
+  msgDiv.innerHTML = `<p class="ayuda">Quitando foto...</p>`;
+  try {
+    for (const foto of logosViejos) {
+      await fetch(`${API_URL}/negocios/fotos/${foto.publicId}`, { method: 'DELETE', headers: headersAuth() });
+    }
+    negocioActual.fotos = (negocioActual.fotos || []).filter((f) => f.categoria !== 'logo');
+    actualizarAvatares(inicialNegocio);
+    renderizarFotos();
+    cerrarModalFoto();
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo quitar la foto. Intentá de nuevo.</div>`;
+  }
+});
 
 // --- Edición de "Información del negocio" (nombre, descripción, etc. + horarios) ---
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
