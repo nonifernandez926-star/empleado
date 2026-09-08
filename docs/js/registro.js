@@ -3,6 +3,26 @@ let categoriasData = [];
 let categoriaSeleccionada = null;
 let subrubroSeleccionado = null;
 let googleIdTokenCapturado = null;
+let pasoActual = 1;
+
+// Muestra un único paso a la vez (los otros quedan completamente ocultos, sin poder
+// hacer scroll hacia ellos) y hace que la flecha de "volver" de arriba retroceda un
+// paso en vez de salir de la página, salvo que ya estemos en el Paso 1.
+function mostrarPaso(n) {
+  document.getElementById('paso-categoria').style.display = n === 1 ? 'block' : 'none';
+  document.getElementById('paso-subrubro').style.display = n === 2 ? 'block' : 'none';
+  document.getElementById('paso-formulario').style.display = n === 3 ? 'block' : 'none';
+  pasoActual = n;
+  document.querySelector('.pantalla-contenido').scrollTop = 0;
+}
+
+document.getElementById('btn-volver-registro').addEventListener('click', (e) => {
+  if (pasoActual > 1) {
+    e.preventDefault();
+    mostrarPaso(pasoActual - 1);
+  }
+  // si ya estamos en el Paso 1, dejamos que el link navegue normalmente a index.html
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   if (window.google && GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.startsWith('TU_CLIENT_ID')) {
@@ -45,12 +65,16 @@ async function cargarRubros() {
     categoriasData = await res.json();
     renderizarGridCategorias(categoriasData);
 
-    document.getElementById('buscador-rubro').addEventListener('input', (e) => {
-      const texto = e.target.value.trim().toLowerCase();
-      const filtradas = categoriasData.filter((cat) => cat.categoria.toLowerCase().includes(texto));
-      renderizarGridCategorias(filtradas);
-    });
+    const inputBuscador = document.getElementById('buscador-rubro');
+    if (inputBuscador) {
+      inputBuscador.addEventListener('input', (e) => {
+        const texto = e.target.value.trim().toLowerCase();
+        const filtradas = categoriasData.filter((cat) => cat.categoria.toLowerCase().includes(texto));
+        renderizarGridCategorias(filtradas);
+      });
+    }
   } catch (error) {
+    console.error('Error al cargar rubros:', error);
     grid.innerHTML = `<div class="error-msg">No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo en unos segundos (el servidor puede tardar en despertar).</div>`;
   }
 }
@@ -94,9 +118,7 @@ function seleccionarCategoria(cat, elemento) {
     gridSub.appendChild(div);
   });
 
-  document.getElementById('paso-subrubro').style.display = 'block';
-  document.getElementById('paso-formulario').style.display = 'none';
-  document.getElementById('paso-subrubro').scrollIntoView({ behavior: 'smooth' });
+  mostrarPaso(2);
 }
 
 async function seleccionarSubrubro(subrubroId, elemento) {
@@ -111,22 +133,8 @@ async function seleccionarSubrubro(subrubroId, elemento) {
   renderizarCampos(data.campos);
   renderizarHorarios();
 
-  document.getElementById('paso-formulario').style.display = 'block';
-  document.getElementById('paso-formulario').scrollIntoView({ behavior: 'smooth' });
+  mostrarPaso(3);
 }
-
-document.getElementById('link-volver-categoria').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('paso-subrubro').style.display = 'none';
-  document.getElementById('paso-formulario').style.display = 'none';
-  document.getElementById('paso-categoria').scrollIntoView({ behavior: 'smooth' });
-});
-
-document.getElementById('link-volver-subrubro').addEventListener('click', (e) => {
-  e.preventDefault();
-  document.getElementById('paso-formulario').style.display = 'none';
-  document.getElementById('paso-subrubro').scrollIntoView({ behavior: 'smooth' });
-});
 
 function renderizarCampos(campos) {
   const contenedor = document.getElementById('campos-dinamicos');
@@ -305,13 +313,21 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
     resultadoDiv.innerHTML = `
       <div class="exito">¡Tu asistente fue creado en modo prueba!</div>
       ${data.googleVinculado ? '<p>Tu cuenta de Google ya está vinculada, vas a poder entrar a tu panel directamente.</p>' : ''}
-      <p>Guardá estos dos códigos como respaldo, no se pueden recuperar después:</p>
+      <p>Guardá este código como respaldo, no se puede recuperar después:</p>
       <p><strong>Código de administración</strong> (privado, es tu llave para el panel):</p>
       <div class="codigo-box">${data.codigoAdmin}</div>
-      <p><strong>Código público</strong> (para probar el chat):</p>
-      <div class="codigo-box">${data.codigoPublico}</div>
-      <a class="btn" href="chat.html?codigo=${data.codigoPublico}">Probar mi asistente</a>
-      <a class="btn secundario" href="admin.html">Ir a mi panel</a>
+
+      <div class="acciones-edicion" style="margin-top:18px;">
+        <a class="btn" href="chat.html?codigo=${data.codigoPublico}">Probar mi asistente</a>
+        <a class="btn secundario" href="admin.html">Ir a mi panel</a>
+      </div>
+
+      <div class="mensaje-info" style="margin-top:20px;">
+        <strong>¿Ya usás Mi Zona?</strong> Registrá ahí tu negocio para que tus clientes lo encuentren, y vinculalo con este asistente usando el código de abajo cuando Mi Zona te pregunte si querés pegar un código en vez de descargar.
+      </div>
+      <p><strong>Código de vinculación con Mi Zona:</strong></p>
+      <div class="codigo-box">${data.codigoVinculacion}</div>
+      <a class="btn secundario ancho" href="${MI_ZONA_URL}?codigo=${data.codigoVinculacion}" target="_blank">Registrar mi negocio en Mi Zona</a>
     `;
     resultadoDiv.scrollIntoView({ behavior: 'smooth' });
   } catch (error) {
