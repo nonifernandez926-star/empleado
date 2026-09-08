@@ -79,6 +79,7 @@ router.post('/', async (req, res) => {
       mensaje: 'Negocio registrado. Guardá tu código de administración como respaldo, aunque hayas vinculado Google.',
       codigoAdmin: negocio.codigoAdmin,
       codigoPublico: negocio.codigoPublico,
+      codigoVinculacion: negocio.codigoVinculacion,
     };
 
     if (googleId) {
