@@ -121,6 +121,8 @@ function seleccionarCategoria(cat, elemento) {
   mostrarPaso(2);
 }
 
+let tipoOperacionSeleccionado = 'pedidos';
+
 async function seleccionarSubrubro(subrubroId, elemento) {
   document.querySelectorAll('#grid-subrubros .opcion-rubro').forEach((el) => el.classList.remove('seleccionado'));
   elemento.classList.add('seleccionado');
@@ -132,9 +134,26 @@ async function seleccionarSubrubro(subrubroId, elemento) {
   document.getElementById('titulo-subrubro').textContent = `Paso 3: contanos sobre tu ${data.subrubro.toLowerCase()}`;
   renderizarCampos(data.campos);
   renderizarHorarios();
+  renderizarTipoOperacion(data.tipoOperacion);
 
   mostrarPaso(3);
 }
+
+// Muestra el selector "Pedidos" o "Turnos", ya elegido según el subrubro pero
+// el dueño lo puede cambiar (hay negocios mixtos que no encajan 100% en la sugerencia).
+function renderizarTipoOperacion(sugerido) {
+  tipoOperacionSeleccionado = sugerido || 'pedidos';
+  document.querySelectorAll('.opcion-tipo-operacion').forEach((el) => {
+    el.classList.toggle('seleccionado', el.dataset.tipo === tipoOperacionSeleccionado);
+  });
+}
+
+document.querySelectorAll('.opcion-tipo-operacion').forEach((el) => {
+  el.addEventListener('click', () => {
+    tipoOperacionSeleccionado = el.dataset.tipo;
+    document.querySelectorAll('.opcion-tipo-operacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+  });
+});
 
 function renderizarCampos(campos) {
   const contenedor = document.getElementById('campos-dinamicos');
@@ -280,6 +299,7 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
 
   const payload = {
     subrubroId: subrubroSeleccionado,
+    tipoOperacion: tipoOperacionSeleccionado,
     formData: recolectarFormData(definicion.campos),
     horarios: recolectarHorarios(),
     personalidad: {
