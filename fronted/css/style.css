@@ -183,6 +183,17 @@ a { color: inherit; }
 .opcion-rubro-texto small { margin-top: 2px; }
 .opcion-rubro-flecha { color: #c7cbdb; display: flex; flex-shrink: 0; }
 
+/* Selector "Pedidos" o "Turnos" en el Paso 3 del registro */
+.grid-tipo-operacion { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.opcion-tipo-operacion {
+  background: var(--gris-claro); border: 2px solid transparent; border-radius: var(--radio-chico);
+  padding: 14px; cursor: pointer;
+}
+.opcion-tipo-operacion strong { display: block; font-size: 0.92rem; margin-bottom: 4px; }
+.opcion-tipo-operacion span { display: block; font-size: 0.78rem; color: var(--gris-texto); line-height: 1.35; }
+.opcion-tipo-operacion.seleccionado { border-color: var(--azul); background: #eaf0ff; }
+@media (max-width: 380px) { .grid-tipo-operacion { grid-template-columns: 1fr; } }
+
 label { display: block; font-weight: 600; margin: 16px 0 6px; font-size: 0.92rem; }
 input[type="text"], input[type="tel"], textarea, select {
   width: 100%;
@@ -398,6 +409,26 @@ html:has(.chat-widget), body:has(.chat-widget) { margin: 0; padding: 0; height: 
 }
 .modal-foto-opcion.destructivo { background: #fee2e2; color: var(--error); }
 .modal-foto-opcion-icono { display: flex; flex-shrink: 0; }
+
+/* Promociones */
+.promo-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 13px 0; border-bottom: 1px solid var(--linea);
+}
+.promo-card:last-child { border-bottom: none; }
+.promo-card.promo-inactiva { opacity: 0.55; }
+.promo-info strong { display: block; font-size: 0.92rem; }
+.promo-info span { display: block; font-size: 0.8rem; color: var(--gris-texto); margin-top: 2px; }
+.promo-acciones { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.toggle-switch {
+  width: 40px; height: 24px; border-radius: 999px; background: #d7dbea; position: relative; flex-shrink: 0; cursor: pointer;
+}
+.toggle-switch span {
+  position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: white;
+  transition: transform 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch.activo { background: var(--exito); }
+.toggle-switch.activo span { transform: translateX(16px); }
 
 .app-contenido { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 92px; -webkit-overflow-scrolling: touch; }
 .app-seccion .tarjeta:first-child { margin-top: 0; }
