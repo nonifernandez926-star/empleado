@@ -25,6 +25,10 @@ const negocioSchema = new mongoose.Schema({
   rubroCategoria: { type: String, required: true },
   rubroSubrubro: { type: String, required: true },
 
+  // 'pedidos' (venden productos/servicios que se piden por chat) o 'turnos' (se agenda un horario:
+  // médicos, peluquerías, talleres, etc). Se sugiere según el subrubro pero el dueño lo puede cambiar.
+  tipoOperacion: { type: String, enum: ['pedidos', 'turnos'], default: 'pedidos' },
+
   // Datos del formulario (comunes + específicos del subrubro), guardados como mapa clave-valor
   formData: { type: mongoose.Schema.Types.Mixed, default: {} },
 
@@ -62,6 +66,15 @@ const negocioSchema = new mongoose.Schema({
   // Disponibilidad del día: el dueño escribe acá lo que hoy no está disponible
   // (se agotó, no hay stock, etc.) para que el asistente nunca lo recomiende ni lo tome en un pedido.
   disponibilidadHoy: { type: String, default: '' },
+
+  // Promociones que el dueño publica a mano (2x1, % de descuento, lo que se le ocurra).
+  // El asistente las conoce y las puede mencionar a los clientes cuando charlan.
+  promociones: [{
+    titulo: { type: String, required: true },
+    descripcion: { type: String, default: '' },
+    activa: { type: Boolean, default: true },
+    creadaEn: { type: Date, default: Date.now },
+  }],
 
   // Si es true, el asistente SOLO responde con IA dentro del horario configurado;
   // fuera de horario contesta un mensaje fijo (sin gastar en la API). Si es false, responde 24hs.
