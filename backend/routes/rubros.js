@@ -24,6 +24,7 @@ router.get('/:subrubroId/formulario', (req, res) => {
         categoria: cat.categoria,
         subrubro: sub.nombre,
         subrubroId: sub.id,
+        tipoOperacion: sub.tipoOperacion || 'pedidos',
         campos: [...CAMPOS_COMUNES, ...sub.camposEspecificos],
       });
     }
