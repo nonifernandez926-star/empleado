@@ -236,7 +236,8 @@ function mostrarSeccion(nombre) {
 
   // La barra de arriba muestra el nombre de la sección actual (como en Herramientas/Ajustes),
   // y solo en Inicio muestra el nombre del negocio junto con el estado del plan (PRUEBA/ACTIVA/VENCIDA).
-  const tituloSeccion = TITULOS_SECCION[nombre];
+  const esTurnos = negocioActual?.tipoOperacion === 'turnos';
+  const tituloSeccion = nombre === 'pedidos' ? (esTurnos ? 'Consultas' : 'Pedidos') : TITULOS_SECCION[nombre];
   const nombreNegocio = negocioActual?.formData?.nombreNegocio || 'Mi negocio';
   document.getElementById('nombre-negocio-panel').textContent = tituloSeccion || nombreNegocio;
   document.getElementById('estado-suscripcion-pill').style.display = tituloSeccion ? 'none' : '';
@@ -281,6 +282,11 @@ async function mostrarPanel() {
   inicialNegocio = nombreNegocio.trim().charAt(0).toUpperCase() || 'N';
   actualizarAvatares(inicialNegocio);
 
+  // "Pedidos" se llama "Consultas" en negocios que funcionan con turnos (médicos, peluquerías, talleres, etc.)
+  const etiquetaPedidos = negocioActual.tipoOperacion === 'turnos' ? 'Consultas' : 'Pedidos';
+  document.getElementById('texto-nav-pedidos-drawer').textContent = etiquetaPedidos;
+  document.getElementById('texto-nav-pedidos-navbar').textContent = etiquetaPedidos;
+
   const estado = negocioActual.suscripcion.estado;
   const ETIQUETAS_PLAN = { activa: 'Plan activo', prueba: 'Plan de prueba', vencida: 'Suscripción vencida' };
   const pill = document.getElementById('estado-suscripcion-pill');
@@ -308,6 +314,7 @@ async function mostrarPanel() {
   cargarEstadisticas();
   cargarPedidos();
   renderizarFotos();
+  renderizarPromociones();
   cargarPlanes();
   cargarResumenDiario();
   cargarPreguntasSinRespuesta();
@@ -805,6 +812,92 @@ function activarSubidaAutomatica(inputId, categoria) {
 }
 activarSubidaAutomatica('input-foto-logo', 'logo');
 activarSubidaAutomatica('input-foto-menu', 'menu');
+// --- Promociones ---
+function renderizarPromociones() {
+  const contenedor = document.getElementById('lista-promociones');
+  const promos = negocioActual.promociones || [];
+  if (!promos.length) {
+    contenedor.innerHTML = `<p class="ayuda">Todavía no publicaste ninguna promoción.</p>`;
+    return;
+  }
+  contenedor.innerHTML = promos.map((p) => `
+    <div class="promo-card ${p.activa ? '' : 'promo-inactiva'}" data-id="${p._id}">
+      <div class="promo-info">
+        <strong>${p.titulo}</strong>
+        ${p.descripcion ? `<span>${p.descripcion}</span>` : ''}
+      </div>
+      <div class="promo-acciones">
+        <button class="toggle-switch ${p.activa ? 'activo' : ''}" data-id="${p._id}" data-activa="${p.activa}" title="${p.activa ? 'Desactivar' : 'Activar'}"><span></span></button>
+        <button class="btn-icono-eliminar btn-borrar-promo" data-id="${p._id}" title="Eliminar">${ICONOS_PEDIDO.tacho}</button>
+      </div>
+    </div>
+  `).join('');
+
+  contenedor.querySelectorAll('.toggle-switch').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const nuevaActiva = btn.dataset.activa !== 'true';
+      try {
+        await fetch(`${API_URL}/negocios/promociones/${id}`, {
+          method: 'PUT',
+          headers: headersAuth({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ activa: nuevaActiva }),
+        });
+        const promo = negocioActual.promociones.find((p) => p._id === id);
+        if (promo) promo.activa = nuevaActiva;
+        renderizarPromociones();
+      } catch (error) {
+        alert('No se pudo actualizar la promoción.');
+      }
+    });
+  });
+
+  contenedor.querySelectorAll('.btn-borrar-promo').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar esta promoción?')) return;
+      const id = btn.dataset.id;
+      try {
+        await fetch(`${API_URL}/negocios/promociones/${id}`, { method: 'DELETE', headers: headersAuth() });
+        negocioActual.promociones = negocioActual.promociones.filter((p) => p._id !== id);
+        renderizarPromociones();
+      } catch (error) {
+        alert('No se pudo eliminar la promoción.');
+      }
+    });
+  });
+}
+
+document.getElementById('btn-crear-promocion').addEventListener('click', async () => {
+  const tituloInput = document.getElementById('promo-titulo');
+  const descripcionInput = document.getElementById('promo-descripcion');
+  const msgDiv = document.getElementById('promo-msg');
+  const titulo = tituloInput.value.trim();
+
+  if (!titulo) {
+    msgDiv.innerHTML = `<div class="error-msg">Escribí un título para la promoción.</div>`;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/negocios/promociones`, {
+      method: 'POST',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ titulo, descripcion: descripcionInput.value.trim() }),
+    });
+    if (!res.ok) throw new Error('Error al crear');
+    const nuevaPromo = await res.json();
+
+    negocioActual.promociones = negocioActual.promociones || [];
+    negocioActual.promociones.push(nuevaPromo);
+    renderizarPromociones();
+    tituloInput.value = '';
+    descripcionInput.value = '';
+    msgDiv.innerHTML = `<div class="exito">Promoción publicada. El asistente ya la va a mencionar cuando tenga sentido.</div>`;
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo publicar la promoción. Intentá de nuevo.</div>`;
+  }
+});
+
 activarSubidaAutomatica('input-foto-producto', 'producto');
 
 // --- Modal para cambiar la foto de perfil del negocio (logo) ---
