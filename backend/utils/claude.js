@@ -125,6 +125,15 @@ function construirSystemPrompt(negocio, clienteConocido) {
     prompt += 'Nunca recomiendes ni tomes un pedido de algo que este en esa lista. Si el cliente lo pide, avisale que hoy no esta disponible y ofrecele una alternativa si tiene sentido.\n\n';
   }
 
+  const promosActivas = (negocio.promociones || []).filter(function (p) { return p.activa; });
+  if (promosActivas.length) {
+    prompt += 'PROMOCIONES VIGENTES (podes mencionarlas cuando tengan sentido en la charla, por ejemplo si preguntan precios, el menu, o si hay descuentos - no hace falta esperar a que pregunten puntualmente por promociones):\n';
+    promosActivas.forEach(function (p) {
+      prompt += '- ' + p.titulo + (p.descripcion ? ': ' + p.descripcion : '') + '\n';
+    });
+    prompt += 'Nunca inventes una promocion que no este en esta lista, ni apliques un descuento que el cliente no pidio explicitamente que le calcules segun una de estas promociones reales.\n\n';
+  }
+
   if (clienteConocido) {
     prompt += 'MEMORIA DEL CLIENTE - ya hablaste antes con esta persona:\n';
     if (clienteConocido.nombre) prompt += 'Nombre: ' + clienteConocido.nombre + '. ';
@@ -147,11 +156,16 @@ function construirSystemPrompt(negocio, clienteConocido) {
   prompt += 'CATEGORIA\nNombre del producto - breve descripcion si la tenes\n\n';
   prompt += 'Si el cliente pregunta por una categoria especifica, mostra solo esa categoria. Si pide el menu completo, mostralo organizado por categorias.\n\n';
 
-  prompt += 'COMO TOMAR UN PEDIDO (esto es central en tu trabajo):\n';
-  prompt += 'Si el cliente quiere pedir algo, guialo conversacionalmente para juntar todos los datos necesarios: que producto/servicio, cantidad, si es delivery o retiro (y la direccion si es delivery), forma de pago, y cualquier observacion. SIEMPRE pedile tambien su nombre y su numero de telefono, sin excepcion (es obligatorio, sirve como respaldo del negocio). No pidas todo junto en una sola pregunta larga, anda guiando paso a paso de forma natural.\n\n';
-  prompt += 'Cuando tengas todos los datos, mostrale un resumen claro antes de confirmar, con emojis y ordenado (incluyendo el total a pagar si hay precios cargados, sumando el costo de envio si corresponde), y preguntale si confirma.\n\n';
-  prompt += 'SOLO cuando el cliente confirme explicitamente (diga que si, que confirma, etc.), usa la herramienta "registrar_pedido" para guardarlo de verdad en el sistema. Nunca digas que un pedido quedo registrado sin haber usado esa herramienta. Despues de que la herramienta confirme que se guardo, avisale al cliente que su pedido quedo registrado.\n\n';
-  prompt += 'Si el negocio no tiene cargados productos/servicios claros para tomar pedidos de esa forma, o el pedido es algo que no podes resolver por chat, indicale al cliente el WhatsApp del negocio como alternativa, pero esto es un respaldo, no el camino principal.\n\n';
+  if (negocio.tipoOperacion === 'turnos') {
+    prompt += 'ESTE NEGOCIO FUNCIONA CON CONSULTAS, NO CON PEDIDOS:\n';
+    prompt += 'Es un negocio de atencion (salud, belleza, oficio, servicio profesional, etc). No existe todavia un sistema de turnos automatico en este chat, asi que NO ofrezcas horarios ni confirmes turnos como si estuvieran agendados. Cuando el cliente quiera sacar un turno o consultar algo puntual, juntale de forma natural: nombre, telefono, y que necesita (motivo de la consulta). Decile que el negocio se va a comunicar para coordinar el horario. Nunca inventes disponibilidad horaria.\n\n';
+  } else {
+    prompt += 'COMO TOMAR UN PEDIDO (esto es central en tu trabajo):\n';
+    prompt += 'Si el cliente quiere pedir algo, guialo conversacionalmente para juntar todos los datos necesarios: que producto/servicio, cantidad, si es delivery o retiro (y la direccion si es delivery), forma de pago, y cualquier observacion. SIEMPRE pedile tambien su nombre y su numero de telefono, sin excepcion (es obligatorio, sirve como respaldo del negocio). No pidas todo junto en una sola pregunta larga, anda guiando paso a paso de forma natural.\n\n';
+    prompt += 'Cuando tengas todos los datos, mostrale un resumen claro antes de confirmar, con emojis y ordenado (incluyendo el total a pagar si hay precios cargados, sumando el costo de envio si corresponde), y preguntale si confirma.\n\n';
+    prompt += 'SOLO cuando el cliente confirme explicitamente (diga que si, que confirma, etc.), usa la herramienta "registrar_pedido" para guardarlo de verdad en el sistema. Nunca digas que un pedido quedo registrado sin haber usado esa herramienta. Despues de que la herramienta confirme que se guardo, avisale al cliente que su pedido quedo registrado.\n\n';
+    prompt += 'Si el negocio no tiene cargados productos/servicios claros para tomar pedidos de esa forma, o el pedido es algo que no podes resolver por chat, indicale al cliente el WhatsApp del negocio como alternativa, pero esto es un respaldo, no el camino principal.\n\n';
+  }
 
   prompt += 'PAGO POR TRANSFERENCIA (muy importante, seguir estos pasos en orden):\n';
   prompt += 'Si el cliente elige pagar por transferencia:\n';
@@ -249,7 +263,7 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
       model: MODEL,
       max_tokens: 700,
       system: systemPrompt,
-      tools: HERRAMIENTAS,
+      tools: negocio.tipoOperacion === 'turnos' ? [] : HERRAMIENTAS,
       messages: messages,
     });
 
