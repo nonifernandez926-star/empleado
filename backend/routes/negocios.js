@@ -13,7 +13,7 @@ const upload = multer({ storage });
 function validarSubrubro(subrubroId) {
   for (const cat of RUBROS) {
     const sub = cat.subrubros.find((s) => s.id === subrubroId);
-    if (sub) return { categoria: cat.categoria, subrubro: sub.nombre };
+    if (sub) return { categoria: cat.categoria, subrubro: sub.nombre, tipoOperacion: sub.tipoOperacion || 'pedidos' };
   }
   return null;
 }
@@ -23,10 +23,14 @@ function validarSubrubro(subrubroId) {
 // para que el dueño pueda iniciar sesión con Google en el futuro.
 router.post('/', async (req, res) => {
   try {
-    const { subrubroId, formData, horarios, personalidad, googleIdToken, atencionSoloEnHorario } = req.body;
+    const { subrubroId, formData, horarios, personalidad, googleIdToken, atencionSoloEnHorario, tipoOperacion } = req.body;
 
     const match = validarSubrubro(subrubroId);
     if (!match) return res.status(400).json({ error: 'Subrubro inválido' });
+
+    // El subrubro trae una sugerencia (match.tipoOperacion), pero el dueño pudo haberla
+    // cambiado en el formulario de registro; si no viene nada, usamos la sugerencia.
+    const tipoOperacionFinal = ['pedidos', 'turnos'].includes(tipoOperacion) ? tipoOperacion : (match.tipoOperacion || 'pedidos');
 
     let googleId = null;
     let emailPropietario = null;
@@ -64,6 +68,7 @@ router.post('/', async (req, res) => {
       emailPropietario,
       rubroCategoria: match.categoria,
       rubroSubrubro: match.subrubro,
+      tipoOperacion: tipoOperacionFinal,
       formData: formData || {},
       horarios: horarios || [],
       personalidad: personalidad || {},
@@ -132,13 +137,14 @@ router.get('/mi-negocio', requiereAdmin, async (req, res) => {
 // PUT /api/negocios/mi-negocio -> actualiza info, horarios o personalidad
 router.put('/mi-negocio', requiereAdmin, async (req, res) => {
   try {
-    const { formData, horarios, personalidad, disponibilidadHoy, atencionSoloEnHorario } = req.body;
+    const { formData, horarios, personalidad, disponibilidadHoy, atencionSoloEnHorario, tipoOperacion } = req.body;
 
     if (formData) req.negocio.formData = { ...req.negocio.formData, ...formData };
     if (horarios) req.negocio.horarios = horarios;
     if (personalidad) req.negocio.personalidad = { ...req.negocio.personalidad.toObject(), ...personalidad };
     if (disponibilidadHoy !== undefined) req.negocio.disponibilidadHoy = disponibilidadHoy;
     if (atencionSoloEnHorario !== undefined) req.negocio.atencionSoloEnHorario = !!atencionSoloEnHorario;
+    if (tipoOperacion && ['pedidos', 'turnos'].includes(tipoOperacion)) req.negocio.tipoOperacion = tipoOperacion;
 
     await req.negocio.save();
     res.json({ mensaje: 'Negocio actualizado correctamente', negocio: req.negocio });
@@ -163,6 +169,52 @@ router.get('/publico/:codigoPublico', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al obtener el negocio' });
+  }
+});
+
+// POST /api/negocios/promociones -> crea una promoción nueva
+router.post('/promociones', requiereAdmin, async (req, res) => {
+  try {
+    const { titulo, descripcion } = req.body;
+    if (!titulo || !titulo.trim()) return res.status(400).json({ error: 'El título es obligatorio' });
+
+    req.negocio.promociones.push({ titulo: titulo.trim(), descripcion: (descripcion || '').trim(), activa: true });
+    await req.negocio.save();
+    res.status(201).json(req.negocio.promociones[req.negocio.promociones.length - 1]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al crear la promoción' });
+  }
+});
+
+// PUT /api/negocios/promociones/:id -> activa/desactiva o edita una promoción
+router.put('/promociones/:id', requiereAdmin, async (req, res) => {
+  try {
+    const promo = req.negocio.promociones.id(req.params.id);
+    if (!promo) return res.status(404).json({ error: 'Promoción no encontrada' });
+
+    const { titulo, descripcion, activa } = req.body;
+    if (titulo !== undefined) promo.titulo = titulo;
+    if (descripcion !== undefined) promo.descripcion = descripcion;
+    if (activa !== undefined) promo.activa = !!activa;
+
+    await req.negocio.save();
+    res.json(promo);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al actualizar la promoción' });
+  }
+});
+
+// DELETE /api/negocios/promociones/:id -> elimina una promoción
+router.delete('/promociones/:id', requiereAdmin, async (req, res) => {
+  try {
+    req.negocio.promociones = req.negocio.promociones.filter((p) => p._id.toString() !== req.params.id);
+    await req.negocio.save();
+    res.json({ mensaje: 'Promoción eliminada' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al eliminar la promoción' });
   }
 });
 
