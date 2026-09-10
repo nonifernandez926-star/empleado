@@ -122,6 +122,8 @@ function seleccionarCategoria(cat, elemento) {
 }
 
 let tipoOperacionSeleccionado = 'pedidos';
+let aprobacionSeleccionada = 'manual';
+let motivosTurno = [];
 
 async function seleccionarSubrubro(subrubroId, elemento) {
   document.querySelectorAll('#grid-subrubros .opcion-rubro').forEach((el) => el.classList.remove('seleccionado'));
@@ -146,14 +148,89 @@ function renderizarTipoOperacion(sugerido) {
   document.querySelectorAll('.opcion-tipo-operacion').forEach((el) => {
     el.classList.toggle('seleccionado', el.dataset.tipo === tipoOperacionSeleccionado);
   });
+  document.getElementById('bloque-config-turnos').style.display = tipoOperacionSeleccionado === 'turnos' ? 'block' : 'none';
+  if (tipoOperacionSeleccionado === 'turnos' && !document.getElementById('lista-nombres-profesionales').children.length) {
+    renderizarNombresProfesionales();
+  }
 }
 
 document.querySelectorAll('.opcion-tipo-operacion').forEach((el) => {
   el.addEventListener('click', () => {
     tipoOperacionSeleccionado = el.dataset.tipo;
     document.querySelectorAll('.opcion-tipo-operacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+    document.getElementById('bloque-config-turnos').style.display = tipoOperacionSeleccionado === 'turnos' ? 'block' : 'none';
+    if (tipoOperacionSeleccionado === 'turnos' && !document.getElementById('lista-nombres-profesionales').children.length) {
+      renderizarNombresProfesionales();
+    }
   });
 });
+
+// --- Profesionales ---
+function renderizarNombresProfesionales() {
+  const cantidad = parseInt(document.getElementById('cantidad-profesionales').value, 10) || 1;
+  const contenedor = document.getElementById('lista-nombres-profesionales');
+  const nombresPrevios = Array.from(contenedor.querySelectorAll('.input-nombre-profesional')).map((i) => i.value);
+
+  contenedor.innerHTML = '';
+  for (let i = 0; i < cantidad; i++) {
+    const fila = document.createElement('div');
+    fila.className = 'fila-profesional';
+    fila.innerHTML = `<input type="text" class="input-nombre-profesional" placeholder="${cantidad === 1 ? 'Nombre del profesional' : `Nombre del profesional ${i + 1}`}" value="${nombresPrevios[i] || ''}">`;
+    contenedor.appendChild(fila);
+  }
+}
+document.getElementById('cantidad-profesionales').addEventListener('input', renderizarNombresProfesionales);
+
+function recolectarProfesionales() {
+  return Array.from(document.querySelectorAll('.input-nombre-profesional'))
+    .map((input, i) => ({ nombre: input.value.trim() || `Profesional ${i + 1}`, activo: true }));
+}
+
+// --- Motivos de consulta y duración ---
+function renderizarMotivosTurno() {
+  const contenedor = document.getElementById('lista-motivos-turno');
+  if (!motivosTurno.length) {
+    contenedor.innerHTML = `<p class="ayuda">Todavía no agregaste ningún motivo.</p>`;
+    return;
+  }
+  contenedor.innerHTML = motivosTurno.map((m, i) => `
+    <div class="fila-motivo">
+      <div><strong>${m.nombre}</strong> <span>— ${m.duracionMinutos} min</span></div>
+      <button type="button" class="btn-quitar-motivo" data-i="${i}">Quitar</button>
+    </div>
+  `).join('');
+  contenedor.querySelectorAll('.btn-quitar-motivo').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      motivosTurno.splice(parseInt(btn.dataset.i, 10), 1);
+      renderizarMotivosTurno();
+    });
+  });
+}
+document.getElementById('btn-agregar-motivo').addEventListener('click', () => {
+  const nombreInput = document.getElementById('nuevo-motivo-nombre');
+  const duracionInput = document.getElementById('nuevo-motivo-duracion');
+  const nombre = nombreInput.value.trim();
+  const duracionMinutos = parseInt(duracionInput.value, 10);
+
+  if (!nombre || !duracionMinutos || duracionMinutos < 5) {
+    alert('Completá el nombre del motivo y una duración válida en minutos.');
+    return;
+  }
+  motivosTurno.push({ nombre, duracionMinutos });
+  renderizarMotivosTurno();
+  nombreInput.value = '';
+  duracionInput.value = '';
+  nombreInput.focus();
+});
+
+// --- Quién aprueba cada turno ---
+document.querySelectorAll('.opcion-aprobacion').forEach((el) => {
+  el.addEventListener('click', () => {
+    aprobacionSeleccionada = el.dataset.aprobacion;
+    document.querySelectorAll('.opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+  });
+});
+document.querySelector('.opcion-aprobacion[data-aprobacion="manual"]').classList.add('seleccionado');
 
 function renderizarCampos(campos) {
   const contenedor = document.getElementById('campos-dinamicos');
@@ -294,6 +371,11 @@ async function subirFotosDelRegistro(codigoAdmin) {
 document.getElementById('form-negocio').addEventListener('submit', async (e) => {
   e.preventDefault();
 
+  if (tipoOperacionSeleccionado === 'turnos' && !motivosTurno.length) {
+    alert('Agregá al menos un motivo de consulta con su duración antes de crear el asistente (lo necesita para poder ofrecer turnos).');
+    return;
+  }
+
   const resDefinicion = await fetch(`${API_URL}/rubros/${subrubroSeleccionado}/formulario`, { cache: 'no-store' });
   const definicion = await resDefinicion.json();
 
@@ -309,6 +391,14 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
     googleIdToken: googleIdTokenCapturado || undefined,
     atencionSoloEnHorario: document.getElementById('atencion-solo-horario').checked,
   };
+
+  if (tipoOperacionSeleccionado === 'turnos') {
+    payload.profesionales = recolectarProfesionales();
+    payload.configTurnos = {
+      motivos: motivosTurno,
+      requiereAprobacionManual: aprobacionSeleccionada === 'manual',
+    };
+  }
 
   const resultadoDiv = document.getElementById('resultado');
 
@@ -356,4 +446,5 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
   }
 });
 
+renderizarMotivosTurno();
 cargarRubros();
