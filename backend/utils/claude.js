@@ -1,6 +1,8 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const Pedido = require('../models/Pedido');
+const Turno = require('../models/Turno');
 const Cliente = require('../models/Cliente');
+const { calcularHorariosDisponibles } = require('./turnos');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
@@ -59,7 +61,7 @@ function descripcionPersonalidad(personalidad) {
 }
 
 // Herramienta que Claude puede usar para registrar un pedido REAL en la base de datos.
-const HERRAMIENTAS = [
+const HERRAMIENTAS_PEDIDOS = [
   {
     name: 'registrar_pedido',
     description: 'Registra en el sistema del negocio un pedido que el cliente ya confirmo explicitamente (despues de mostrarle el resumen y que haya dicho que si). No usar antes de la confirmacion del cliente.',
@@ -90,6 +92,41 @@ const HERRAMIENTAS = [
     },
   },
 ];
+
+// Herramientas para negocios que funcionan con turnos (medicos, peluquerias, talleres, etc.)
+const HERRAMIENTAS_TURNOS = [
+  {
+    name: 'consultar_turnos_disponibles',
+    description: 'Consulta que horarios estan libres en una fecha puntual, segun el motivo de consulta (que define cuanto dura el turno). Usar esto ANTES de ofrecerle horarios al cliente - nunca inventar horarios de memoria.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        fecha: { type: 'string', description: 'Fecha en formato YYYY-MM-DD' },
+        motivo: { type: 'string', description: 'Motivo de consulta, tiene que ser uno de los que el negocio configuro' },
+        profesional: { type: 'string', description: 'Nombre del profesional, solo si el negocio tiene mas de uno y el cliente eligio o hay que ofrecerle elegir' },
+      },
+      required: ['fecha', 'motivo'],
+    },
+  },
+  {
+    name: 'registrar_turno',
+    description: 'Reserva en el sistema un turno que el cliente ya confirmo explicitamente, en un horario que devolvio consultar_turnos_disponibles. Nunca reservar un horario que no salio en esa consulta.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        fecha: { type: 'string', description: 'Fecha en formato YYYY-MM-DD' },
+        hora: { type: 'string', description: 'Hora en formato HH:MM, tiene que ser una de las que devolvio consultar_turnos_disponibles' },
+        motivo: { type: 'string', description: 'Motivo de la consulta' },
+        profesional: { type: 'string', description: 'Nombre del profesional, si el negocio tiene mas de uno' },
+        nombreCliente: { type: 'string', description: 'Nombre del cliente' },
+        telefonoCliente: { type: 'string', description: 'Telefono de contacto del cliente (siempre pedirlo, es obligatorio)' },
+        notas: { type: 'string', description: 'Cualquier aclaracion adicional' },
+      },
+      required: ['fecha', 'hora', 'motivo', 'nombreCliente', 'telefonoCliente'],
+    },
+  },
+];
+
 
 // Frases que indican que el asistente no tuvo la informacion para responder (para el panel de "preguntas sin respuesta")
 const PATRONES_SIN_RESPUESTA = [
@@ -157,8 +194,29 @@ function construirSystemPrompt(negocio, clienteConocido) {
   prompt += 'Si el cliente pregunta por una categoria especifica, mostra solo esa categoria. Si pide el menu completo, mostralo organizado por categorias.\n\n';
 
   if (negocio.tipoOperacion === 'turnos') {
-    prompt += 'ESTE NEGOCIO FUNCIONA CON CONSULTAS, NO CON PEDIDOS:\n';
-    prompt += 'Es un negocio de atencion (salud, belleza, oficio, servicio profesional, etc). No existe todavia un sistema de turnos automatico en este chat, asi que NO ofrezcas horarios ni confirmes turnos como si estuvieran agendados. Cuando el cliente quiera sacar un turno o consultar algo puntual, juntale de forma natural: nombre, telefono, y que necesita (motivo de la consulta). Decile que el negocio se va a comunicar para coordinar el horario. Nunca inventes disponibilidad horaria.\n\n';
+    const motivos = (negocio.configTurnos && negocio.configTurnos.motivos) || [];
+    const profesionales = (negocio.profesionales || []).filter(function (p) { return p.activo; });
+
+    prompt += 'ESTE NEGOCIO FUNCIONA CON TURNOS (no con pedidos):\n';
+    if (!motivos.length) {
+      prompt += 'El negocio todavia no cargo los motivos de consulta con su duracion, asi que no podes reservar turnos todavia. Juntale al cliente nombre, telefono y que necesita, y decile que el negocio se va a comunicar para coordinar.\n\n';
+    } else {
+      prompt += 'Motivos de consulta disponibles y su duracion:\n';
+      motivos.forEach(function (m) { prompt += '- ' + m.nombre + ' (' + m.duracionMinutos + ' minutos)\n'; });
+      prompt += '\n';
+      if (profesionales.length > 1) {
+        prompt += 'Hay varios profesionales: ' + profesionales.map(function (p) { return p.nombre; }).join(', ') + '. Si el cliente no elige uno, preguntale con cual prefiere o si no tiene preferencia.\n\n';
+      } else if (profesionales.length === 1) {
+        prompt += 'El profesional que atiende es: ' + profesionales[0].nombre + '.\n\n';
+      }
+      prompt += 'Flujo para sacar un turno: primero entende que motivo de consulta necesita el cliente (tiene que ser uno de los de la lista de arriba) y en que fecha le gustaria. Despues usa la herramienta "consultar_turnos_disponibles" con esa fecha y motivo para saber que horarios estan realmente libres - NUNCA inventes ni asumas horarios de memoria. Ofrecele al cliente 2 o 3 opciones de las que te devolvio la herramienta (no todas si son muchas). Cuando el cliente elija un horario y confirme, pedile nombre y telefono si todavia no los tenes, y recien ahi usa la herramienta "registrar_turno" con esos datos exactos. Todo esto debe resolverse dentro de la misma conversacion - no dejes un turno a medio confirmar.\n\n';
+      if (negocio.configTurnos && negocio.configTurnos.requiereAprobacionManual) {
+        prompt += 'Este negocio revisa cada turno a mano antes de confirmarlo del todo. Despues de reservarlo con la herramienta, decile al cliente que su turno quedo reservado pendiente de confirmacion del negocio, y que le va a avisar. Nunca digas que el turno esta "confirmado" en este caso, usa "reservado, pendiente de confirmacion".\n\n';
+      } else {
+        prompt += 'Este negocio confirma los turnos automaticamente apenas se reservan. Podes decirle al cliente que su turno quedo confirmado.\n\n';
+      }
+    }
+    prompt += 'Si un cliente ya esta a mitad de sacar un turno o haciendo una consulta y llega OTRO cliente nuevo en una conversacion distinta, no hay problema - son conversaciones separadas y cada una se atiende de forma independiente, no hace falta avisarle a nadie que espere.\n\n';
   } else {
     prompt += 'COMO TOMAR UN PEDIDO (esto es central en tu trabajo):\n';
     prompt += 'Si el cliente quiere pedir algo, guialo conversacionalmente para juntar todos los datos necesarios: que producto/servicio, cantidad, si es delivery o retiro (y la direccion si es delivery), forma de pago, y cualquier observacion. SIEMPRE pedile tambien su nombre y su numero de telefono, sin excepcion (es obligatorio, sirve como respaldo del negocio). No pidas todo junto en una sola pregunta larga, anda guiando paso a paso de forma natural.\n\n';
@@ -233,6 +291,74 @@ async function ejecutarRegistrarPedido(negocioId, sesionClienteId, input) {
   return { exito: true, pedidoId: pedido._id.toString(), estado: pedido.estado };
 }
 
+// Ejecuta consultar_turnos_disponibles: calcula horarios libres de verdad contra los turnos ya guardados
+async function ejecutarConsultarTurnosDisponibles(negocio, input) {
+  const motivoConfig = (negocio.configTurnos && negocio.configTurnos.motivos || []).find(function (m) { return m.nombre === input.motivo; });
+  if (!motivoConfig) {
+    const nombresValidos = (negocio.configTurnos && negocio.configTurnos.motivos || []).map(function (m) { return m.nombre; });
+    return { error: 'Ese motivo no existe. Los motivos validos son: ' + nombresValidos.join(', ') };
+  }
+
+  const turnosExistentes = await Turno.find({
+    negocioId: negocio._id,
+    fecha: input.fecha,
+    estado: { $in: ['pendiente', 'confirmado'] },
+  });
+
+  const horarios = calcularHorariosDisponibles({
+    negocio: negocio,
+    fecha: input.fecha,
+    duracionMinutos: motivoConfig.duracionMinutos,
+    profesional: input.profesional || '',
+    turnosExistentes: turnosExistentes,
+    ahora: new Date(),
+  });
+
+  if (!horarios.length) {
+    return { horariosDisponibles: [], mensaje: 'No hay horarios libres ese dia para ese motivo. Ofrecele al cliente probar otra fecha.' };
+  }
+  return { horariosDisponibles: horarios, duracionMinutos: motivoConfig.duracionMinutos };
+}
+
+// Ejecuta registrar_turno: reserva el horario DE VERDAD (si ya lo tomo otro cliente, el indice
+// unico de Mongo rechaza la creacion, asi evitamos que dos personas se lleven el mismo horario).
+async function ejecutarRegistrarTurno(negocio, sesionClienteId, input) {
+  const motivoConfig = (negocio.configTurnos && negocio.configTurnos.motivos || []).find(function (m) { return m.nombre === input.motivo; });
+  const duracionMinutos = motivoConfig ? motivoConfig.duracionMinutos : 30;
+  const requiereAprobacion = !!(negocio.configTurnos && negocio.configTurnos.requiereAprobacionManual);
+
+  let turno;
+  try {
+    turno = await Turno.create({
+      negocioId: negocio._id,
+      sesionClienteId: sesionClienteId,
+      fecha: input.fecha,
+      hora: input.hora,
+      duracionMinutos: duracionMinutos,
+      motivo: input.motivo,
+      profesional: input.profesional || '',
+      nombreCliente: input.nombreCliente,
+      telefonoCliente: input.telefonoCliente,
+      notas: input.notas || '',
+      estado: requiereAprobacion ? 'pendiente' : 'confirmado',
+      origen: 'asistente',
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return { error: 'Justo se ocupo ese horario mientras hablabamos. Consulta turnos disponibles de nuevo y ofrecele otro al cliente.' };
+    }
+    throw error;
+  }
+
+  await Cliente.findOneAndUpdate(
+    { negocioId: negocio._id, sesionClienteId: sesionClienteId },
+    { $set: { nombre: input.nombreCliente, telefono: input.telefonoCliente } },
+    { upsert: true, new: true }
+  );
+
+  return { exito: true, turnoId: turno._id.toString(), estado: turno.estado };
+}
+
 /**
  * Busca si ya conocemos a este cliente (mismo negocio + mismo dispositivo/navegador).
  */
@@ -256,6 +382,7 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
   messages.push({ role: 'user', content: mensajeNuevo });
 
   let pedidoCreado = null;
+  let turnoCreado = null;
   const MAX_VUELTAS = 4;
 
   for (let vuelta = 0; vuelta < MAX_VUELTAS; vuelta++) {
@@ -263,7 +390,7 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
       model: MODEL,
       max_tokens: 700,
       system: systemPrompt,
-      tools: negocio.tipoOperacion === 'turnos' ? [] : HERRAMIENTAS,
+      tools: negocio.tipoOperacion === 'turnos' ? HERRAMIENTAS_TURNOS : HERRAMIENTAS_PEDIDOS,
       messages: messages,
     });
 
@@ -272,7 +399,7 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
 
     if (respuesta.stop_reason !== 'tool_use' || !bloqueHerramienta) {
       const sinRespuesta = detectarSinRespuesta(bloquesTexto);
-      return { textoRespuesta: bloquesTexto, pedidoCreado: pedidoCreado, sinRespuesta: sinRespuesta };
+      return { textoRespuesta: bloquesTexto, pedidoCreado: pedidoCreado, turnoCreado: turnoCreado, sinRespuesta: sinRespuesta };
     }
 
     let resultadoHerramienta;
@@ -280,12 +407,17 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
       if (bloqueHerramienta.name === 'registrar_pedido') {
         resultadoHerramienta = await ejecutarRegistrarPedido(negocio._id, sesionClienteId, bloqueHerramienta.input);
         pedidoCreado = resultadoHerramienta;
+      } else if (bloqueHerramienta.name === 'consultar_turnos_disponibles') {
+        resultadoHerramienta = await ejecutarConsultarTurnosDisponibles(negocio, bloqueHerramienta.input);
+      } else if (bloqueHerramienta.name === 'registrar_turno') {
+        resultadoHerramienta = await ejecutarRegistrarTurno(negocio, sesionClienteId, bloqueHerramienta.input);
+        turnoCreado = resultadoHerramienta;
       } else {
         resultadoHerramienta = { error: 'Herramienta desconocida' };
       }
     } catch (error) {
       console.error('Error ejecutando herramienta:', error);
-      resultadoHerramienta = { error: 'No se pudo registrar el pedido, intenta de nuevo.' };
+      resultadoHerramienta = { error: 'No se pudo completar la accion, intenta de nuevo.' };
     }
 
     messages.push({ role: 'assistant', content: respuesta.content });
@@ -297,7 +429,7 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
     });
   }
 
-  return { textoRespuesta: 'Hubo un problema procesando tu pedido, por favor intenta de nuevo.', pedidoCreado: pedidoCreado, sinRespuesta: false };
+  return { textoRespuesta: 'Hubo un problema procesando tu solicitud, por favor intenta de nuevo.', pedidoCreado: pedidoCreado, turnoCreado: turnoCreado, sinRespuesta: false };
 }
 
 module.exports = { generarRespuesta, construirSystemPrompt };
