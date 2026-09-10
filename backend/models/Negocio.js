@@ -29,6 +29,22 @@ const negocioSchema = new mongoose.Schema({
   // médicos, peluquerías, talleres, etc). Se sugiere según el subrubro pero el dueño lo puede cambiar.
   tipoOperacion: { type: String, enum: ['pedidos', 'turnos'], default: 'pedidos' },
 
+  // Solo se usa si tipoOperacion es 'turnos'
+  profesionales: [{
+    nombre: { type: String, required: true },
+    activo: { type: Boolean, default: true },
+  }],
+  configTurnos: {
+    // Motivos de consulta y cuánto dura cada uno (el dueño los carga en el registro o después en Ajustes)
+    motivos: [{
+      nombre: { type: String, required: true },
+      duracionMinutos: { type: Number, required: true, default: 30 },
+    }],
+    // Si es true, cada turno queda "pendiente" hasta que el dueño lo apruebe a mano.
+    // Si es false, se confirma solo apenas el cliente lo reserva por el chat.
+    requiereAprobacionManual: { type: Boolean, default: true },
+  },
+
   // Datos del formulario (comunes + específicos del subrubro), guardados como mapa clave-valor
   formData: { type: mongoose.Schema.Types.Mixed, default: {} },
 
