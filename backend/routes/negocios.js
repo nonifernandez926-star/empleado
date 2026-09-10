@@ -23,7 +23,7 @@ function validarSubrubro(subrubroId) {
 // para que el dueño pueda iniciar sesión con Google en el futuro.
 router.post('/', async (req, res) => {
   try {
-    const { subrubroId, formData, horarios, personalidad, googleIdToken, atencionSoloEnHorario, tipoOperacion } = req.body;
+    const { subrubroId, formData, horarios, personalidad, googleIdToken, atencionSoloEnHorario, tipoOperacion, profesionales, configTurnos } = req.body;
 
     const match = validarSubrubro(subrubroId);
     if (!match) return res.status(400).json({ error: 'Subrubro inválido' });
@@ -69,6 +69,8 @@ router.post('/', async (req, res) => {
       rubroCategoria: match.categoria,
       rubroSubrubro: match.subrubro,
       tipoOperacion: tipoOperacionFinal,
+      profesionales: tipoOperacionFinal === 'turnos' ? (profesionales || []) : [],
+      configTurnos: tipoOperacionFinal === 'turnos' ? (configTurnos || {}) : undefined,
       formData: formData || {},
       horarios: horarios || [],
       personalidad: personalidad || {},
@@ -137,7 +139,7 @@ router.get('/mi-negocio', requiereAdmin, async (req, res) => {
 // PUT /api/negocios/mi-negocio -> actualiza info, horarios o personalidad
 router.put('/mi-negocio', requiereAdmin, async (req, res) => {
   try {
-    const { formData, horarios, personalidad, disponibilidadHoy, atencionSoloEnHorario, tipoOperacion } = req.body;
+    const { formData, horarios, personalidad, disponibilidadHoy, atencionSoloEnHorario, tipoOperacion, profesionales, configTurnos } = req.body;
 
     if (formData) req.negocio.formData = { ...req.negocio.formData, ...formData };
     if (horarios) req.negocio.horarios = horarios;
@@ -145,6 +147,8 @@ router.put('/mi-negocio', requiereAdmin, async (req, res) => {
     if (disponibilidadHoy !== undefined) req.negocio.disponibilidadHoy = disponibilidadHoy;
     if (atencionSoloEnHorario !== undefined) req.negocio.atencionSoloEnHorario = !!atencionSoloEnHorario;
     if (tipoOperacion && ['pedidos', 'turnos'].includes(tipoOperacion)) req.negocio.tipoOperacion = tipoOperacion;
+    if (profesionales) req.negocio.profesionales = profesionales;
+    if (configTurnos) req.negocio.configTurnos = { ...req.negocio.configTurnos.toObject(), ...configTurnos };
 
     await req.negocio.save();
     res.json({ mensaje: 'Negocio actualizado correctamente', negocio: req.negocio });
