@@ -192,7 +192,24 @@ a { color: inherit; }
 .opcion-tipo-operacion strong { display: block; font-size: 0.92rem; margin-bottom: 4px; }
 .opcion-tipo-operacion span { display: block; font-size: 0.78rem; color: var(--gris-texto); line-height: 1.35; }
 .opcion-tipo-operacion.seleccionado { border-color: var(--azul); background: #eaf0ff; }
+.opcion-aprobacion {
+  background: var(--gris-claro); border: 2px solid transparent; border-radius: var(--radio-chico);
+  padding: 14px; cursor: pointer;
+}
+.opcion-aprobacion strong { display: block; font-size: 0.92rem; margin-bottom: 4px; }
+.opcion-aprobacion span { display: block; font-size: 0.78rem; color: var(--gris-texto); line-height: 1.35; }
+.opcion-aprobacion.seleccionado { border-color: var(--azul); background: #eaf0ff; }
 @media (max-width: 380px) { .grid-tipo-operacion { grid-template-columns: 1fr; } }
+
+.fila-profesional { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.fila-profesional input { flex: 1; margin: 0; }
+.fila-motivo {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--gris-claro); border-radius: var(--radio-chico); padding: 10px 14px; margin-bottom: 8px;
+}
+.fila-motivo strong { font-size: 0.9rem; }
+.fila-motivo span { font-size: 0.8rem; color: var(--gris-texto); }
+.btn-quitar-motivo { color: var(--error); background: none; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
 
 label { display: block; font-weight: 600; margin: 16px 0 6px; font-size: 0.92rem; }
 input[type="text"], input[type="tel"], textarea, select {
@@ -638,6 +655,20 @@ table.tabla-stats td:last-child { font-weight: 700; text-align: right; }
 .badge-en_preparacion { background: #ede9fe; color: #5b21b6; }
 .badge-listo { background: #d1fae5; color: #065f46; }
 .badge-entregado { background: #e5e7eb; color: #374151; }
+.badge-rechazado { background: #fee2e2; color: #b91c1c; }
+.badge-cancelado { background: #e5e7eb; color: #6b7280; }
+
+.turno-card { border: 1px solid var(--linea); border-radius: var(--radio); padding: 16px 18px; margin-bottom: 12px; background: var(--blanco); box-shadow: var(--sombra-chica); }
+.turno-fecha-hora { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1rem; margin-bottom: 4px; }
+.turno-detalle { font-size: 0.88rem; color: var(--gris-texto); margin: 2px 0; }
+.turno-acciones { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.turno-acciones button {
+  flex: 1; padding: 10px 12px; border-radius: 10px; font-size: 0.82rem; font-weight: 700; cursor: pointer; min-width: 100px;
+}
+.btn-aprobar-turno { background: #dcfce7; color: #16a34a; }
+.btn-rechazar-turno { background: #fee2e2; color: var(--error); }
+.btn-cancelar-turno { background: #fee2e2; color: var(--error); }
+.btn-eliminar-turno { background: var(--gris-claro); color: var(--gris-texto); }
 
 .pedido-acciones { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--linea); }
 .pedido-acciones-titulo { margin: 0 0 10px; font-size: 0.85rem; }
