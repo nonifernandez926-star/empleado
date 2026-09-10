@@ -156,7 +156,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // La campana lleva directo a Pedidos, filtrados por "Pendientes"
   document.getElementById('btn-campana').addEventListener('click', () => {
     mostrarSeccion('pedidos');
-    const tabPendientes = document.querySelector('#tabs-pedidos .tab-pill[data-filtro="pendiente"]');
+    const idTabs = negocioActual?.tipoOperacion === 'turnos' ? 'tabs-turnos' : 'tabs-pedidos';
+    const tabPendientes = document.querySelector(`#${idTabs} .tab-pill[data-filtro="pendiente"]`);
     if (tabPendientes) tabPendientes.click();
   });
 
@@ -311,8 +312,18 @@ async function mostrarPanel() {
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
 
+  // Vista de "Pedidos" o de "Turnos" según el tipo de negocio
+  const esTurnos = negocioActual.tipoOperacion === 'turnos';
+  document.getElementById('vista-pedidos').style.display = esTurnos ? 'none' : 'block';
+  document.getElementById('vista-turnos').style.display = esTurnos ? 'block' : 'none';
+
   cargarEstadisticas();
-  cargarPedidos();
+  if (esTurnos) {
+    prepararBloqueoTurno();
+    cargarTurnos();
+  } else {
+    cargarPedidos();
+  }
   renderizarFotos();
   renderizarPromociones();
   cargarPlanes();
@@ -460,14 +471,16 @@ function iniciarNotificacionesPedidos() {
     Notification.requestPermission();
   }
 
+  const esTurnos = negocioActual.tipoOperacion === 'turnos';
+
   setInterval(async () => {
     try {
-      const res = await fetch(`${API_URL}/pedidos`, { headers: headersAuth(), cache: 'no-store' });
-      const pedidos = await res.json();
-      actualizarBadgeCampana(pedidos);
-      if (!pedidos.length) return;
+      const res = await fetch(`${API_URL}/${esTurnos ? 'turnos' : 'pedidos'}`, { headers: headersAuth(), cache: 'no-store' });
+      const items = await res.json();
+      actualizarBadgeCampana(items);
+      if (!items.length) return;
 
-      const masReciente = pedidos[0]; // vienen ordenados del más nuevo al más viejo
+      const masReciente = items[0]; // vienen ordenados del más nuevo al más viejo
 
       if (ultimoPedidoIdVisto === null) {
         ultimoPedidoIdVisto = masReciente._id; // primera carga: solo guardamos referencia, no avisamos
@@ -477,8 +490,8 @@ function iniciarNotificacionesPedidos() {
       if (masReciente._id !== ultimoPedidoIdVisto) {
         ultimoPedidoIdVisto = masReciente._id;
         reproducirSonidoAviso();
-        mostrarNotificacionFlotante(`Pedido nuevo de ${masReciente.nombreCliente}`);
-        cargarPedidos();
+        mostrarNotificacionFlotante(esTurnos ? `Turno nuevo de ${masReciente.nombreCliente}` : `Pedido nuevo de ${masReciente.nombreCliente}`);
+        if (esTurnos) { cargarTurnos(); } else { cargarPedidos(); }
         cargarResumenDiario();
       }
     } catch (error) {
@@ -900,7 +913,159 @@ document.getElementById('btn-crear-promocion').addEventListener('click', async (
 
 activarSubidaAutomatica('input-foto-producto', 'producto');
 
-// --- Modal para cambiar la foto de perfil del negocio (logo) ---
+// --- Turnos (agenda de negocios que funcionan con turnos) ---
+let turnosCache = [];
+let filtroTurnoActual = 'todos';
+
+function prepararBloqueoTurno() {
+  const profesionales = (negocioActual.profesionales || []).filter((p) => p.activo);
+  const wrap = document.getElementById('bloqueo-profesional-wrap');
+  const select = document.getElementById('bloqueo-profesional');
+
+  if (profesionales.length > 1) {
+    select.innerHTML = profesionales.map((p) => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  document.getElementById('bloqueo-fecha').min = hoy;
+  if (!document.getElementById('bloqueo-fecha').value) document.getElementById('bloqueo-fecha').value = hoy;
+}
+
+document.getElementById('btn-bloquear-turno').addEventListener('click', async () => {
+  const msgDiv = document.getElementById('bloqueo-msg');
+  const fecha = document.getElementById('bloqueo-fecha').value;
+  const hora = document.getElementById('bloqueo-hora').value;
+  const nombreCliente = document.getElementById('bloqueo-nombre').value.trim();
+  const motivo = document.getElementById('bloqueo-motivo').value.trim();
+  const duracionMinutos = parseInt(document.getElementById('bloqueo-duracion').value, 10) || 30;
+  const profesionalWrap = document.getElementById('bloqueo-profesional-wrap');
+  const profesional = profesionalWrap.style.display !== 'none' ? document.getElementById('bloqueo-profesional').value : '';
+
+  if (!fecha || !hora || !nombreCliente) {
+    msgDiv.innerHTML = `<div class="error-msg">Completá fecha, hora y nombre.</div>`;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/turnos`, {
+      method: 'POST',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ fecha, hora, duracionMinutos, motivo, profesional, nombreCliente }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error al bloquear');
+
+    turnosCache.unshift(data);
+    renderizarTurnos();
+    document.getElementById('bloqueo-hora').value = '';
+    document.getElementById('bloqueo-nombre').value = '';
+    document.getElementById('bloqueo-motivo').value = '';
+    msgDiv.innerHTML = `<div class="exito">Horario bloqueado. El asistente ya no lo va a ofrecer.</div>`;
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">${error.message}</div>`;
+  }
+});
+
+async function cargarTurnos() {
+  const contenedor = document.getElementById('lista-turnos');
+  try {
+    const res = await fetch(`${API_URL}/turnos`, { headers: headersAuth() });
+    turnosCache = await res.json();
+    renderizarTurnos();
+  } catch (error) {
+    contenedor.innerHTML = `<div class="error-msg">No se pudieron cargar los turnos.</div>`;
+  }
+}
+
+const ETIQUETAS_ESTADO_TURNO = { pendiente: 'Pendiente', confirmado: 'Confirmado', rechazado: 'Rechazado', cancelado: 'Cancelado' };
+const GRUPOS_FILTRO_TURNOS = {
+  todos: null,
+  pendiente: ['pendiente'],
+  confirmado: ['confirmado'],
+  cancelado: ['cancelado', 'rechazado'],
+};
+
+document.querySelectorAll('#tabs-turnos .tab-pill').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#tabs-turnos .tab-pill').forEach((t) => t.classList.remove('activo'));
+    tab.classList.add('activo');
+    filtroTurnoActual = tab.dataset.filtro;
+    renderizarTurnos();
+  });
+});
+
+function renderizarTurnos() {
+  const contenedor = document.getElementById('lista-turnos');
+  const grupos = GRUPOS_FILTRO_TURNOS[filtroTurnoActual];
+  const turnos = turnosCache.filter((t) => !grupos || grupos.includes(t.estado));
+
+  if (!turnosCache.length) {
+    contenedor.innerHTML = `<p class="ayuda">Todavía no hay turnos agendados.</p>`;
+    return;
+  }
+  if (!turnos.length) {
+    contenedor.innerHTML = `<p class="ayuda">No hay turnos que coincidan con este filtro.</p>`;
+    return;
+  }
+
+  contenedor.innerHTML = turnos.map((t) => `
+    <div class="turno-card" data-id="${t._id}">
+      <div class="turno-fecha-hora">${new Date(`${t.fecha}T00:00:00`).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })} · ${t.hora}hs
+        <span class="badge-estado badge-${t.estado}" style="margin-left:auto;">${ETIQUETAS_ESTADO_TURNO[t.estado] || t.estado}</span>
+      </div>
+      <div class="turno-detalle"><strong>${t.nombreCliente}</strong>${t.telefonoCliente ? ` · ${t.telefonoCliente}` : ''}</div>
+      ${t.motivo ? `<div class="turno-detalle">${t.motivo} (${t.duracionMinutos} min)</div>` : ''}
+      ${t.profesional ? `<div class="turno-detalle">Con: ${t.profesional}</div>` : ''}
+      ${t.origen === 'dueño' ? `<div class="turno-detalle">Cargado manualmente</div>` : ''}
+      <div class="turno-acciones">
+        ${t.estado === 'pendiente' ? `
+          <button class="btn-aprobar-turno" data-id="${t._id}" data-estado="confirmado">Aprobar</button>
+          <button class="btn-rechazar-turno" data-id="${t._id}" data-estado="rechazado">Rechazar</button>
+        ` : ''}
+        ${t.estado === 'confirmado' ? `<button class="btn-cancelar-turno" data-id="${t._id}" data-estado="cancelado">Cancelar</button>` : ''}
+        ${['rechazado', 'cancelado'].includes(t.estado) ? `<button class="btn-eliminar-turno" data-id="${t._id}">Eliminar</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  contenedor.querySelectorAll('.btn-aprobar-turno, .btn-rechazar-turno, .btn-cancelar-turno').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const estado = btn.dataset.estado;
+      try {
+        await fetch(`${API_URL}/turnos/${id}/estado`, {
+          method: 'PUT',
+          headers: headersAuth({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ estado }),
+        });
+        const turno = turnosCache.find((t) => t._id === id);
+        if (turno) turno.estado = estado;
+        renderizarTurnos();
+      } catch (error) {
+        alert('No se pudo actualizar el turno.');
+      }
+    });
+  });
+
+  contenedor.querySelectorAll('.btn-eliminar-turno').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar este turno?')) return;
+      const id = btn.dataset.id;
+      try {
+        await fetch(`${API_URL}/turnos/${id}`, { method: 'DELETE', headers: headersAuth() });
+        turnosCache = turnosCache.filter((t) => t._id !== id);
+        renderizarTurnos();
+      } catch (error) {
+        alert('No se pudo eliminar el turno.');
+      }
+    });
+  });
+}
+
+
 function abrirModalFoto() {
   document.getElementById('modal-foto-nombre').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
   document.getElementById('modal-foto-msg').innerHTML = '';
