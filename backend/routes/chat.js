@@ -80,7 +80,7 @@ router.post('/:codigoPublico', async (req, res) => {
     if (negocio.atencionSoloEnHorario) {
       const { abierto, mensaje: mensajeFueraDeHorario } = chequearHorario(negocio.horarios);
       if (!abierto) {
-        return res.json({ respuesta: mensajeFueraDeHorario, pedidoCreado: null, imagenes: [] });
+        return res.json({ respuesta: mensajeFueraDeHorario, pedidoCreado: null, turnoCreado: null, imagenes: [] });
       }
     }
 
@@ -122,6 +122,7 @@ router.post('/:codigoPublico', async (req, res) => {
     res.json({
       respuesta: respuestaTexto.textoRespuesta,
       pedidoCreado: respuestaTexto.pedidoCreado || null,
+      turnoCreado: respuestaTexto.turnoCreado || null,
       imagenes: fotosMenu,
     });
   } catch (error) {
