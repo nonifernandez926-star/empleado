@@ -133,28 +133,62 @@
 
       <!-- PEDIDOS -->
       <section id="seccion-pedidos" class="app-seccion" style="display:none;">
-        <div class="tabs-pill-group" id="tabs-pedidos">
-          <button class="tab-pill activo" data-filtro="todos">Todos</button>
-          <button class="tab-pill" data-filtro="pendiente">Pendientes</button>
-          <button class="tab-pill" data-filtro="en_preparacion">En preparación</button>
-          <button class="tab-pill" data-filtro="entregado">Completados</button>
-        </div>
-        <div class="search-bar">
-          <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
-          <input type="text" id="buscador-pedidos" placeholder="Buscar pedido por cliente o N°...">
-        </div>
-        <div id="lista-pedidos"><p class="ayuda">Cargando pedidos...</p></div>
-        <div class="total-hoy-card" id="total-hoy-card" style="display:none;">
-          <div class="izq">
-            <div class="icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></div>
-            <div>
-              <div class="etiqueta" id="total-hoy-etiqueta">0 pedidos hoy</div>
-              <strong>Total hoy</strong>
-            </div>
+        <div id="vista-pedidos">
+          <div class="tabs-pill-group" id="tabs-pedidos">
+            <button class="tab-pill activo" data-filtro="todos">Todos</button>
+            <button class="tab-pill" data-filtro="pendiente">Pendientes</button>
+            <button class="tab-pill" data-filtro="en_preparacion">En preparación</button>
+            <button class="tab-pill" data-filtro="entregado">Completados</button>
           </div>
-          <div class="monto" id="total-hoy-monto">$0</div>
+          <div class="search-bar">
+            <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+            <input type="text" id="buscador-pedidos" placeholder="Buscar pedido por cliente o N°...">
+          </div>
+          <div id="lista-pedidos"><p class="ayuda">Cargando pedidos...</p></div>
+          <div class="total-hoy-card" id="total-hoy-card" style="display:none;">
+            <div class="izq">
+              <div class="icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></div>
+              <div>
+                <div class="etiqueta" id="total-hoy-etiqueta">0 pedidos hoy</div>
+                <strong>Total hoy</strong>
+              </div>
+            </div>
+            <div class="monto" id="total-hoy-monto">$0</div>
+          </div>
+        </div>
+
+        <div id="vista-turnos" style="display:none;">
+          <div class="tarjeta">
+            <h2>Bloquear un horario</h2>
+            <p class="ayuda">Usalo cuando ya tenés un turno agendado por otro medio (teléfono, en persona, etc.), para que el asistente nunca lo ofrezca.</p>
+            <label>Fecha</label>
+            <input type="date" id="bloqueo-fecha">
+            <label>Hora</label>
+            <input type="time" id="bloqueo-hora">
+            <div id="bloqueo-profesional-wrap" style="display:none;">
+              <label>Profesional</label>
+              <select id="bloqueo-profesional"></select>
+            </div>
+            <label>Nombre del cliente</label>
+            <input type="text" id="bloqueo-nombre" placeholder="Nombre de quien va a venir">
+            <label>Motivo / nota (opcional)</label>
+            <input type="text" id="bloqueo-motivo" placeholder="Ej: Control de rutina">
+            <label>Duración (minutos)</label>
+            <input type="number" id="bloqueo-duracion" min="5" step="5" value="30" style="max-width:120px;">
+            <button class="btn ancho" id="btn-bloquear-turno" style="margin-top:12px;">Bloquear horario</button>
+            <div id="bloqueo-msg"></div>
+          </div>
+
+          <div class="tabs-pill-group" id="tabs-turnos">
+            <button class="tab-pill activo" data-filtro="todos">Todos</button>
+            <button class="tab-pill" data-filtro="pendiente">Pendientes</button>
+            <button class="tab-pill" data-filtro="confirmado">Confirmados</button>
+            <button class="tab-pill" data-filtro="cancelado">Cancelados / rechazados</button>
+          </div>
+          <div id="lista-turnos"><p class="ayuda">Cargando turnos...</p></div>
         </div>
       </section>
+
 
       <!-- HERRAMIENTAS -->
       <section id="seccion-herramientas" class="app-seccion" style="display:none;">
