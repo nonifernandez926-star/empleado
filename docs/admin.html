@@ -185,6 +185,14 @@
             <button class="tab-pill" data-filtro="confirmado">Confirmados</button>
             <button class="tab-pill" data-filtro="cancelado">Cancelados / rechazados</button>
           </div>
+
+          <div class="fila-borrar-turnos">
+            <span>Borrar turnos de:</span>
+            <button class="btn-borrar-turnos-rango" data-rango="dia">Hoy</button>
+            <button class="btn-borrar-turnos-rango" data-rango="semana">Esta semana</button>
+            <button class="btn-borrar-turnos-rango" data-rango="mes">Este mes</button>
+          </div>
+
           <div id="lista-turnos"><p class="ayuda">Cargando turnos...</p></div>
         </div>
       </section>
@@ -263,6 +271,86 @@
         <!-- Vista normal -->
         <div id="negocio-vista">
           <div class="tarjeta">
+            <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg> Productos y servicios</h2>
+            <p class="ayuda">Cargá tu catálogo real: el asistente va a usar precios y stock de acá, en vez de inventar.</p>
+            <div id="lista-productos"><p class="ayuda">Cargando...</p></div>
+
+            <button type="button" class="btn secundario ancho" id="btn-mostrar-form-producto" style="margin-top:14px;">+ Agregar producto o servicio</button>
+
+            <div id="form-producto-wrap" style="display:none; margin-top:16px;">
+              <label>¿Qué tipo de producto es?</label>
+              <div class="grid-tipo-operacion" id="grid-tipo-producto">
+                <div class="opcion-tipo-producto" data-tipo="general">
+                  <strong>General</strong>
+                  <span>Cualquier producto o servicio simple.</span>
+                </div>
+                <div class="opcion-tipo-producto" data-tipo="ropa_calzado">
+                  <strong>Ropa / calzado</strong>
+                  <span>Pide talles y colores.</span>
+                </div>
+                <div class="opcion-tipo-producto" data-tipo="comida_bebida">
+                  <strong>Comida / bebida</strong>
+                  <span>Pide tamaño, ingredientes, apto para.</span>
+                </div>
+                <div class="opcion-tipo-producto" data-tipo="servicio">
+                  <strong>Servicio</strong>
+                  <span>Pide duración y qué incluye.</span>
+                </div>
+              </div>
+
+              <label>Nombre</label>
+              <input type="text" id="producto-nombre" placeholder="Ej: Hamburguesa clásica">
+              <label>Descripción (opcional)</label>
+              <textarea id="producto-descripcion" placeholder="Contá de qué se trata"></textarea>
+              <label>Categoría (opcional, para agrupar en el menú)</label>
+              <input type="text" id="producto-categoria" placeholder="Ej: Hamburguesas, Calzado hombre, Cortes">
+              <label>Precio (opcional)</label>
+              <input type="number" id="producto-precio" placeholder="0">
+              <label>Stock general (opcional, dejalo vacío si no lo controlás)</label>
+              <input type="number" id="producto-stock" placeholder="Sin control de stock">
+
+              <div id="campos-comida" style="display:none;">
+                <label>Tamaño / porción</label>
+                <input type="text" id="producto-tamano" placeholder="Ej: Individual, Para compartir (2-3 personas)">
+                <label>Ingredientes principales</label>
+                <input type="text" id="producto-ingredientes" placeholder="Ej: Carne, cheddar, panceta, lechuga">
+                <label>Apto para</label>
+                <input type="text" id="producto-apto" placeholder="Ej: Vegetariano, Sin TACC">
+              </div>
+
+              <div id="campos-servicio" style="display:none;">
+                <label>Duración estimada</label>
+                <input type="text" id="producto-duracion" placeholder="Ej: 45 minutos">
+                <label>Qué incluye</label>
+                <input type="text" id="producto-incluye" placeholder="Ej: Lavado + corte + peinado">
+              </div>
+
+              <div id="campos-variantes" style="display:none;">
+                <label>Variantes (talles, colores, lo que corresponda) y su stock</label>
+                <div id="lista-variantes-producto"></div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <input type="text" id="nueva-variante-nombre" placeholder="Ej: Talle 42" style="flex:2;">
+                  <input type="number" id="nueva-variante-stock" placeholder="Stock" style="flex:1;">
+                  <button type="button" class="btn secundario" id="btn-agregar-variante" style="flex-shrink:0; padding:12px 16px;">Agregar</button>
+                </div>
+              </div>
+
+              <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:16px;">
+                <input type="checkbox" id="producto-disponible-hoy" checked style="width:auto;"> Disponible hoy
+              </label>
+              <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:8px;">
+                <input type="checkbox" id="producto-recomendar" checked style="width:auto;"> El asistente lo puede recomendar activamente
+              </label>
+
+              <div class="acciones-edicion" style="margin-top:16px;">
+                <button type="button" class="btn secundario" id="btn-cancelar-producto">Cancelar</button>
+                <button type="button" class="btn" id="btn-guardar-producto">Guardar producto</button>
+              </div>
+              <div id="producto-msg"></div>
+            </div>
+          </div>
+
+          <div class="tarjeta">
             <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Fotos del negocio</h2>
             <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
 
@@ -320,7 +408,7 @@
             <div id="disponibilidad-msg"></div>
           </div>
 
-          <div class="tarjeta">
+          <div class="tarjeta" id="tarjeta-promociones">
             <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20.6 12.6 12.6 20.6a2 2 0 0 1-2.8 0l-7.4-7.4a2 2 0 0 1 0-2.8L10.4 2.4A2 2 0 0 1 11.8 2H19a2 2 0 0 1 2 2v7.2a2 2 0 0 1-.4 1.4Z"/><circle cx="15" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg> Promociones</h2>
             <p class="ayuda">Publicá descuentos, 2x1 o lo que se te ocurra. El asistente las va a mencionar solo cuando tenga sentido en la charla.</p>
             <div id="lista-promociones"><p class="ayuda">Cargando...</p></div>
@@ -331,6 +419,41 @@
             <textarea id="promo-descripcion" placeholder="Contá los detalles: qué días aplica, condiciones, etc."></textarea>
             <button class="btn ancho" id="btn-crear-promocion" style="margin-top:12px;">Publicar promoción</button>
             <div id="promo-msg"></div>
+          </div>
+
+          <div class="tarjeta" id="tarjeta-vendedor-memoria">
+            <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l7-4"/></svg> Vendedor y memoria</h2>
+            <p class="ayuda">Elegí qué tan activo es el asistente para cerrar ventas/turnos, si recuerda a los clientes que ya hablaron antes, y qué puede hacer por su cuenta.</p>
+
+            <label>Modo vendedor</label>
+            <select id="select-modo-vendedor">
+              <option value="suave">Suave — recomienda sin presionar</option>
+              <option value="normal">Normal — guía naturalmente hacia el cierre</option>
+              <option value="agresivo">Activo — busca activamente cerrar la venta</option>
+            </select>
+
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:16px;">
+              <input type="checkbox" id="check-memoria-activa" style="width:auto;">
+              El asistente recuerda a los clientes que ya hablaron antes (su nombre, su último pedido/turno)
+            </label>
+
+            <label style="margin-top:18px;">Permisos del asistente</label>
+            <p class="ayuda" style="margin-top:0;">Lo que desmarques, el asistente no lo va a hacer nunca por su cuenta.</p>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+              <input type="checkbox" id="check-permiso-recomendar" style="width:auto;"> Recomendar productos/servicios de forma proactiva
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+              <input type="checkbox" id="check-permiso-promos" style="width:auto;"> Mencionar promociones activas
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+              <input type="checkbox" id="check-permiso-tomar" style="width:auto;"> Tomar pedidos / reservar turnos por su cuenta
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+              <input type="checkbox" id="check-permiso-cerrar" style="width:auto;"> Guiar activamente la charla hacia el cierre
+            </label>
+
+            <button class="btn ancho" id="btn-guardar-vendedor-memoria" style="margin-top:14px;">Guardar</button>
+            <div id="vendedor-memoria-msg"></div>
           </div>
 
           <div class="tarjeta">
