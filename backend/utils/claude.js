@@ -143,9 +143,27 @@ function detectarSinRespuesta(textoRespuesta) {
   });
 }
 
-function construirSystemPrompt(negocio, clienteConocido) {
+function descripcionModoVendedor(modoVendedor) {
+  if (modoVendedor === 'apagado') {
+    return 'Modo vendedor: INFORMATIVO.';
+  }
+  if (modoVendedor === 'suave') {
+    return 'Modo vendedor: SUAVE. Recomendá productos/servicios como mucho una vez, de forma relajada, y seguí la conversación en la dirección que el cliente elija. Nunca insistas ni vuelvas sobre algo que ya rechazó.';
+  }
+  if (modoVendedor === 'agresivo') {
+    return 'Modo vendedor: ACTIVO. Buscá activamente guiar la charla hacia cerrar el pedido/turno - proponé el siguiente paso concreto (una fecha, un horario, un producto) en vez de dejar la conversación abierta, y si el cliente duda ofrecele la opción que más se ajuste a lo que pidió. Esto NUNCA significa mentir, inventar disponibilidad o precios, o insistir después de un "no" claro - el cliente se tiene que sentir cómodo, no presionado.';
+  }
+  return 'Modo vendedor: NORMAL. Guiá la conversación de forma natural hacia cerrar el pedido/turno cuando el cliente muestre interés, sin ser insistente ni pasivo.';
+}
+
+function construirSystemPrompt(negocio, clienteConocido, productos) {
   const nombre = (negocio.formData && negocio.formData.nombreNegocio) || 'el negocio';
   const mostrarPrecios = negocio.formData && negocio.formData.mostrarPrecios;
+  const permisos = negocio.permisos || {};
+  const permiteRecomendar = permisos.recomendarProductos !== false;
+  const permitePromos = permisos.ofrecerPromociones !== false;
+  const permiteTomarPedidosOTurnos = permisos.tomarPedidosOTurnos !== false;
+  const permiteCerrarVenta = permisos.intentarCerrarVenta !== false;
 
   let prompt = 'Sos el asistente virtual del negocio "' + nombre + '" (rubro: ' + negocio.rubroCategoria + ' - ' + negocio.rubroSubrubro + ').\n\n';
 
@@ -156,34 +174,74 @@ function construirSystemPrompt(negocio, clienteConocido) {
     prompt += 'Este negocio decidio NO informar precios por chat. Si preguntan precios, indica que deben consultarlo directamente con el negocio. Nunca uses precios en un pedido si no los tenes.\n\n';
   }
 
+  if (productos && productos.length) {
+    prompt += 'CATALOGO REAL DE PRODUCTOS/SERVICIOS (esta es la unica fuente valida de precios y stock - nunca inventes un producto que no este aca, ni un precio distinto al de aca):\n';
+    productos.forEach(function (p) {
+      const partes = [p.nombre];
+      if (p.categoria) partes.push('[' + p.categoria + ']');
+      if (p.precio !== undefined && p.precio !== null && mostrarPrecios !== false) partes.push('$' + p.precio);
+      if (!p.disponibleHoy) partes.push('NO DISPONIBLE HOY');
+      if (p.stock === 0) partes.push('SIN STOCK');
+      else if (typeof p.stock === 'number') partes.push('stock: ' + p.stock);
+      if (p.descripcion) partes.push('- ' + p.descripcion);
+      if (p.tamanoPorcion) partes.push('(' + p.tamanoPorcion + ')');
+      if (p.aptoPara) partes.push('Apto: ' + p.aptoPara);
+      if (p.duracionEstimada) partes.push('Duracion: ' + p.duracionEstimada);
+      if (p.variantes && p.variantes.length) {
+        partes.push('Variantes: ' + p.variantes.map(function (v) { return v.nombre + (typeof v.stock === 'number' ? ' (stock ' + v.stock + ')' : ''); }).join(', '));
+      }
+      if (!p.recomendar) partes.push('[el dueno pidio no recomendar este producto activamente, solo mencionarlo si preguntan puntualmente]');
+      prompt += '- ' + partes.join(' ') + '\n';
+    });
+    prompt += '\nSi un producto dice "NO DISPONIBLE HOY" o "SIN STOCK", nunca lo ofrezcas ni lo tomes en un pedido - avisale al cliente y ofrecele algo similar que si este disponible. Si preguntan por una variante puntual (ej: un talle) que tiene stock 0, decilo con claridad y ofrece las variantes que si tienen stock.\n\n';
+  }
+
   if (negocio.disponibilidadHoy) {
     prompt += 'IMPORTANTE - DISPONIBILIDAD DE HOY:\n';
     prompt += 'El negocio marco que lo siguiente NO esta disponible hoy (agotado, sin stock, etc.): "' + negocio.disponibilidadHoy + '"\n';
     prompt += 'Nunca recomiendes ni tomes un pedido de algo que este en esa lista. Si el cliente lo pide, avisale que hoy no esta disponible y ofrecele una alternativa si tiene sentido.\n\n';
   }
 
-  const promosActivas = (negocio.promociones || []).filter(function (p) { return p.activa; });
+  const promosActivas = permitePromos ? (negocio.promociones || []).filter(function (p) { return p.activa; }) : [];
   if (promosActivas.length) {
     prompt += 'PROMOCIONES VIGENTES (podes mencionarlas cuando tengan sentido en la charla, por ejemplo si preguntan precios, el menu, o si hay descuentos - no hace falta esperar a que pregunten puntualmente por promociones):\n';
     promosActivas.forEach(function (p) {
       prompt += '- ' + p.titulo + (p.descripcion ? ': ' + p.descripcion : '') + '\n';
     });
     prompt += 'Nunca inventes una promocion que no este en esta lista, ni apliques un descuento que el cliente no pidio explicitamente que le calcules segun una de estas promociones reales.\n\n';
+  } else if (!permitePromos) {
+    prompt += 'Este negocio pidio que NO menciones promociones ni descuentos por chat, aunque haya alguna cargada. Si preguntan por descuentos, respondé con naturalidad que por el momento no hay, sin dar mas detalle.\n\n';
   }
 
   if (clienteConocido) {
     prompt += 'MEMORIA DEL CLIENTE - ya hablaste antes con esta persona:\n';
     if (clienteConocido.nombre) prompt += 'Nombre: ' + clienteConocido.nombre + '. ';
-    prompt += 'Ya hizo ' + clienteConocido.totalPedidos + ' pedido(s) antes.\n';
+    if (clienteConocido.totalPedidos) prompt += 'Ya hizo ' + clienteConocido.totalPedidos + ' pedido(s) antes. ';
+    if (clienteConocido.totalTurnos) prompt += 'Ya saco ' + clienteConocido.totalTurnos + ' turno(s) antes. ';
+    prompt += '\n';
     if (clienteConocido.ultimoPedido && clienteConocido.ultimoPedido.items && clienteConocido.ultimoPedido.items.length) {
       const itemsTexto = clienteConocido.ultimoPedido.items.map(function (i) { return i.cantidad + 'x ' + i.producto; }).join(', ');
       prompt += 'Su ultimo pedido fue: ' + itemsTexto + ' (' + clienteConocido.ultimoPedido.tipoEntrega + ').\n';
     }
-    prompt += 'Podes saludarlo por su nombre si lo tenes, y si tiene sentido en la charla podes preguntarle si quiere "lo de siempre", pero no lo fuerces si no viene al caso.\n\n';
+    if (clienteConocido.ultimoTurno && clienteConocido.ultimoTurno.motivo) {
+      prompt += 'Su ultimo turno fue por "' + clienteConocido.ultimoTurno.motivo + '"' + (clienteConocido.ultimoTurno.profesional ? ' con ' + clienteConocido.ultimoTurno.profesional : '') + '.\n';
+    }
+    prompt += 'Podes saludarlo por su nombre si lo tenes, y si tiene sentido en la charla ofrecele repetir lo de la ultima vez (el mismo pedido, o el mismo motivo/profesional del ultimo turno) - pero no lo fuerces si no viene al caso, y si te dice que quiere otra cosa segui con eso sin insistir.\n\n';
   }
 
-  prompt += 'SUGERENCIAS INTELIGENTES (esto ayuda a vender mas, es parte importante de tu trabajo):\n';
-  prompt += 'Cuando el cliente pida algo, si tenes informacion de otro producto o servicio que combine bien (por ejemplo una bebida con una comida, o un accesorio con un producto principal), ofreceselo de forma natural y breve, una sola vez por pedido. No insistas si te dice que no. Nunca sugieras algo que no este en la informacion del negocio.\n\n';
+  if (permiteRecomendar) {
+    prompt += 'SUGERENCIAS INTELIGENTES (esto ayuda a vender mas, es parte importante de tu trabajo):\n';
+    prompt += 'Cuando el cliente pida algo, si tenes informacion de otro producto o servicio que combine bien (por ejemplo una bebida con una comida, o un accesorio con un producto principal), ofreceselo de forma natural y breve, una sola vez por pedido. No insistas si te dice que no. Nunca sugieras algo que no este en la informacion del negocio.\n\n';
+  } else {
+    prompt += 'Este negocio pidio que NO recomiendes productos/servicios de forma proactiva. Respondé solo lo que te preguntan puntualmente, sin ofrecer nada extra por tu cuenta.\n\n';
+  }
+
+  prompt += descripcionModoVendedor(permiteCerrarVenta ? negocio.modoVendedor : 'apagado');
+  if (!permiteCerrarVenta) {
+    prompt += ' Este negocio pidio ademas que NO busques activamente cerrar la venta/turno - respondé las preguntas, informa con claridad, y si el cliente quiere avanzar dejalo avanzar, pero no propongas vos el siguiente paso ni insistas para que decida.';
+  }
+  prompt += '\n\n';
+
 
   prompt += 'FORMATO DE TEXTO:\n';
   prompt += 'Si queres resaltar algo importante (un nombre de producto, un dato clave, un precio), envolvelo entre dos asteriscos asi: **texto**. No uses mayusculas sostenidas ni comillas para resaltar. No abuses de la negrita, solo lo realmente importante.\n\n';
@@ -193,7 +251,10 @@ function construirSystemPrompt(negocio, clienteConocido) {
   prompt += 'CATEGORIA\nNombre del producto - breve descripcion si la tenes\n\n';
   prompt += 'Si el cliente pregunta por una categoria especifica, mostra solo esa categoria. Si pide el menu completo, mostralo organizado por categorias.\n\n';
 
-  if (negocio.tipoOperacion === 'turnos') {
+  if (!permiteTomarPedidosOTurnos) {
+    prompt += 'IMPORTANTE - ESTE NEGOCIO PIDIO QUE NO TOMES PEDIDOS NI RESERVES TURNOS POR TU CUENTA:\n';
+    prompt += 'Podes responder preguntas, mostrar precios/catalogo/turnos disponibles si corresponde, pero NUNCA uses ninguna herramienta para registrar un pedido o un turno. Si el cliente quiere avanzar con eso, indicale que se comunique directamente por WhatsApp con el negocio para coordinarlo.\n\n';
+  } else if (negocio.tipoOperacion === 'turnos') {
     const motivos = (negocio.configTurnos && negocio.configTurnos.motivos) || [];
     const profesionales = (negocio.profesionales || []).filter(function (p) { return p.activo; });
 
@@ -225,16 +286,18 @@ function construirSystemPrompt(negocio, clienteConocido) {
     prompt += 'Si el negocio no tiene cargados productos/servicios claros para tomar pedidos de esa forma, o el pedido es algo que no podes resolver por chat, indicale al cliente el WhatsApp del negocio como alternativa, pero esto es un respaldo, no el camino principal.\n\n';
   }
 
-  prompt += 'PAGO POR TRANSFERENCIA (muy importante, seguir estos pasos en orden):\n';
-  prompt += 'Si el cliente elige pagar por transferencia:\n';
-  prompt += '1) Decile el monto TOTAL exacto que debe transferir (productos + costo de envio si aplica).\n';
-  if (negocio.formData && negocio.formData.aliasCbu) {
-    prompt += '2) Dale este alias o CBU del negocio para transferir: "' + negocio.formData.aliasCbu + '".\n';
-  } else {
-    prompt += '2) Este negocio no cargo un alias/CBU todavia. Avisale al cliente que consulte el medio de pago directamente con el negocio por WhatsApp.\n';
+  if (permiteTomarPedidosOTurnos) {
+    prompt += 'PAGO POR TRANSFERENCIA (muy importante, seguir estos pasos en orden):\n';
+    prompt += 'Si el cliente elige pagar por transferencia:\n';
+    prompt += '1) Decile el monto TOTAL exacto que debe transferir (productos + costo de envio si aplica).\n';
+    if (negocio.formData && negocio.formData.aliasCbu) {
+      prompt += '2) Dale este alias o CBU del negocio para transferir: "' + negocio.formData.aliasCbu + '".\n';
+    } else {
+      prompt += '2) Este negocio no cargo un alias/CBU todavia. Avisale al cliente que consulte el medio de pago directamente con el negocio por WhatsApp.\n';
+    }
+    prompt += '3) Pedile que, apenas transfiera, adjunte la foto del comprobante ahi mismo en el chat (hay un boton para adjuntar archivos).\n';
+    prompt += '4) Cuando el cliente te diga que ya transfirio o que ya mando el comprobante, respondele SIEMPRE algo como: "Perfecto, gracias. El negocio va a revisar que la transferencia haya llegado correctamente y va a confirmar tu pedido a la brevedad." NUNCA le digas que el pago ya esta confirmado o verificado vos mismo - esa decision la toma unicamente el dueño del negocio revisando su cuenta bancaria real, vos no podes saber si una transferencia es autentica solo mirando una imagen.\n\n';
   }
-  prompt += '3) Pedile que, apenas transfiera, adjunte la foto del comprobante ahi mismo en el chat (hay un boton para adjuntar archivos).\n';
-  prompt += '4) Cuando el cliente te diga que ya transfirio o que ya mando el comprobante, respondele SIEMPRE algo como: "Perfecto, gracias. El negocio va a revisar que la transferencia haya llegado correctamente y va a confirmar tu pedido a la brevedad." NUNCA le digas que el pago ya esta confirmado o verificado vos mismo - esa decision la toma unicamente el dueño del negocio revisando su cuenta bancaria real, vos no podes saber si una transferencia es autentica solo mirando una imagen.\n\n';
 
   prompt += 'PERSONALIDAD DEL ASISTENTE:\n' + descripcionPersonalidad(negocio.personalidad) + '\n\n';
   prompt += 'INFORMACION DEL NEGOCIO:\n' + formatearFormData(negocio.formData) + '\n\n';
@@ -246,7 +309,7 @@ function construirSystemPrompt(negocio, clienteConocido) {
 
 // Ejecuta la herramienta registrar_pedido: guarda el pedido REAL en MongoDB
 // y actualiza (o crea) el perfil del cliente para que el asistente lo recuerde despues.
-async function ejecutarRegistrarPedido(negocioId, sesionClienteId, input) {
+async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
   const items = input.items || [];
   const tieneTodosLosPrecios = items.length > 0 && items.every(function (i) { return typeof i.precioUnitario === 'number'; });
   const total = tieneTodosLosPrecios
@@ -256,7 +319,7 @@ async function ejecutarRegistrarPedido(negocioId, sesionClienteId, input) {
   const esTransferencia = /transfer/i.test(input.formaPago || '');
 
   const pedido = await Pedido.create({
-    negocioId: negocioId,
+    negocioId: negocio._id,
     sesionClienteId: sesionClienteId,
     items: items,
     total: total,
@@ -270,23 +333,26 @@ async function ejecutarRegistrarPedido(negocioId, sesionClienteId, input) {
     estadoPago: esTransferencia ? 'esperando_comprobante' : 'no_aplica',
   });
 
-  // Actualizamos (o creamos) el perfil de cliente recurrente para este negocio
-  await Cliente.findOneAndUpdate(
-    { negocioId: negocioId, sesionClienteId: sesionClienteId },
-    {
-      $set: {
-        nombre: input.nombreCliente,
-        telefono: input.telefonoCliente,
-        ultimoPedido: {
-          fecha: new Date(),
-          items: items.map(function (i) { return { producto: i.producto, cantidad: i.cantidad }; }),
-          tipoEntrega: input.tipoEntrega,
+  // Actualizamos (o creamos) el perfil de cliente recurrente para este negocio,
+  // salvo que el dueño haya apagado la memoria de clientes.
+  if (negocio.memoriaActiva !== false) {
+    await Cliente.findOneAndUpdate(
+      { negocioId: negocio._id, sesionClienteId: sesionClienteId },
+      {
+        $set: {
+          nombre: input.nombreCliente,
+          telefono: input.telefonoCliente,
+          ultimoPedido: {
+            fecha: new Date(),
+            items: items.map(function (i) { return { producto: i.producto, cantidad: i.cantidad }; }),
+            tipoEntrega: input.tipoEntrega,
+          },
         },
+        $inc: { totalPedidos: 1 },
       },
-      $inc: { totalPedidos: 1 },
-    },
-    { upsert: true, new: true }
-  );
+      { upsert: true, new: true }
+    );
+  }
 
   return { exito: true, pedidoId: pedido._id.toString(), estado: pedido.estado };
 }
@@ -350,20 +416,35 @@ async function ejecutarRegistrarTurno(negocio, sesionClienteId, input) {
     throw error;
   }
 
-  await Cliente.findOneAndUpdate(
-    { negocioId: negocio._id, sesionClienteId: sesionClienteId },
-    { $set: { nombre: input.nombreCliente, telefono: input.telefonoCliente } },
-    { upsert: true, new: true }
-  );
+  if (negocio.memoriaActiva !== false) {
+    await Cliente.findOneAndUpdate(
+      { negocioId: negocio._id, sesionClienteId: sesionClienteId },
+      {
+        $set: {
+          nombre: input.nombreCliente,
+          telefono: input.telefonoCliente,
+          ultimoTurno: {
+            fecha: input.fecha,
+            motivo: input.motivo,
+            profesional: input.profesional || '',
+          },
+        },
+        $inc: { totalTurnos: 1 },
+      },
+      { upsert: true, new: true }
+    );
+  }
 
   return { exito: true, turnoId: turno._id.toString(), estado: turno.estado };
 }
 
 /**
  * Busca si ya conocemos a este cliente (mismo negocio + mismo dispositivo/navegador).
+ * Si el negocio apago la memoria, ni siquiera consultamos - se trata como cliente nuevo siempre.
  */
-async function buscarClienteConocido(negocioId, sesionClienteId) {
-  const cliente = await Cliente.findOne({ negocioId: negocioId, sesionClienteId: sesionClienteId });
+async function buscarClienteConocido(negocio, sesionClienteId) {
+  if (negocio.memoriaActiva === false) return null;
+  const cliente = await Cliente.findOne({ negocioId: negocio._id, sesionClienteId: sesionClienteId });
   return cliente;
 }
 
@@ -372,9 +453,9 @@ async function buscarClienteConocido(negocioId, sesionClienteId) {
  * usar la herramienta de registrar pedido, la ejecuta de verdad contra la
  * base de datos y le devuelve el resultado al modelo para que siga la charla.
  */
-async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesionClienteId) {
-  const clienteConocido = await buscarClienteConocido(negocio._id, sesionClienteId);
-  const systemPrompt = construirSystemPrompt(negocio, clienteConocido);
+async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesionClienteId, productos) {
+  const clienteConocido = await buscarClienteConocido(negocio, sesionClienteId);
+  const systemPrompt = construirSystemPrompt(negocio, clienteConocido, productos || []);
 
   const messages = historialMensajes.map(function (m) {
     return { role: m.rol === 'cliente' ? 'user' : 'assistant', content: m.contenido };
@@ -384,13 +465,17 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
   let pedidoCreado = null;
   let turnoCreado = null;
   const MAX_VUELTAS = 4;
+  const permiteTomarPedidosOTurnos = !negocio.permisos || negocio.permisos.tomarPedidosOTurnos !== false;
+  const herramientasDisponibles = !permiteTomarPedidosOTurnos
+    ? []
+    : (negocio.tipoOperacion === 'turnos' ? HERRAMIENTAS_TURNOS : HERRAMIENTAS_PEDIDOS);
 
   for (let vuelta = 0; vuelta < MAX_VUELTAS; vuelta++) {
     const respuesta = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 700,
       system: systemPrompt,
-      tools: negocio.tipoOperacion === 'turnos' ? HERRAMIENTAS_TURNOS : HERRAMIENTAS_PEDIDOS,
+      tools: herramientasDisponibles.length ? herramientasDisponibles : undefined,
       messages: messages,
     });
 
@@ -405,7 +490,7 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
     let resultadoHerramienta;
     try {
       if (bloqueHerramienta.name === 'registrar_pedido') {
-        resultadoHerramienta = await ejecutarRegistrarPedido(negocio._id, sesionClienteId, bloqueHerramienta.input);
+        resultadoHerramienta = await ejecutarRegistrarPedido(negocio, sesionClienteId, bloqueHerramienta.input);
         pedidoCreado = resultadoHerramienta;
       } else if (bloqueHerramienta.name === 'consultar_turnos_disponibles') {
         resultadoHerramienta = await ejecutarConsultarTurnosDisponibles(negocio, bloqueHerramienta.input);
