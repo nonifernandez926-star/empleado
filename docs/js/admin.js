@@ -312,10 +312,22 @@ async function mostrarPanel() {
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
 
+  document.getElementById('select-modo-vendedor').value = negocioActual.modoVendedor || 'normal';
+  document.getElementById('check-memoria-activa').checked = negocioActual.memoriaActiva !== false;
+  const permisosActuales = negocioActual.permisos || {};
+  document.getElementById('check-permiso-recomendar').checked = permisosActuales.recomendarProductos !== false;
+  document.getElementById('check-permiso-promos').checked = permisosActuales.ofrecerPromociones !== false;
+  document.getElementById('check-permiso-tomar').checked = permisosActuales.tomarPedidosOTurnos !== false;
+  document.getElementById('check-permiso-cerrar').checked = permisosActuales.intentarCerrarVenta !== false;
+
   // Vista de "Pedidos" o de "Turnos" según el tipo de negocio
   const esTurnos = negocioActual.tipoOperacion === 'turnos';
   document.getElementById('vista-pedidos').style.display = esTurnos ? 'none' : 'block';
   document.getElementById('vista-turnos').style.display = esTurnos ? 'block' : 'none';
+
+  // Las promociones no tienen mucho sentido en rubros de Salud (no es habitual ni bien visto
+  // ofrecer descuentos en consultas médicas); en el resto de los negocios de turnos sí aplica.
+  document.getElementById('tarjeta-promociones').style.display = negocioActual.rubroCategoria === 'Salud' ? 'none' : 'block';
 
   cargarEstadisticas();
   if (esTurnos) {
@@ -325,6 +337,7 @@ async function mostrarPanel() {
     cargarPedidos();
   }
   renderizarFotos();
+  cargarProductos();
   renderizarPromociones();
   cargarPlanes();
   cargarResumenDiario();
@@ -911,7 +924,228 @@ document.getElementById('btn-crear-promocion').addEventListener('click', async (
   }
 });
 
+// Nota: este botón ya existía en el HTML pero no tenía listener (no hacía nada al tocarlo). Lo conecto acá.
+document.getElementById('btn-guardar-disponibilidad').addEventListener('click', async () => {
+  const msgDiv = document.getElementById('disponibilidad-msg');
+  try {
+    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
+      method: 'PUT',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ disponibilidadHoy: document.getElementById('disponibilidad-hoy').value }),
+    });
+    if (!res.ok) throw new Error('Error al guardar');
+    const data = await res.json();
+    negocioActual = data.negocio;
+    msgDiv.innerHTML = `<p class="exito">Guardado.</p>`;
+    setTimeout(() => { msgDiv.innerHTML = ''; }, 2000);
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar, intentá de nuevo.</div>`;
+  }
+});
+
+// --- Vendedor y memoria (modo vendedor, memoria de clientes, permisos del asistente) ---
+document.getElementById('btn-guardar-vendedor-memoria').addEventListener('click', async () => {
+  const msgDiv = document.getElementById('vendedor-memoria-msg');
+  const cambios = {
+    modoVendedor: document.getElementById('select-modo-vendedor').value,
+    memoriaActiva: document.getElementById('check-memoria-activa').checked,
+    permisos: {
+      recomendarProductos: document.getElementById('check-permiso-recomendar').checked,
+      ofrecerPromociones: document.getElementById('check-permiso-promos').checked,
+      tomarPedidosOTurnos: document.getElementById('check-permiso-tomar').checked,
+      intentarCerrarVenta: document.getElementById('check-permiso-cerrar').checked,
+    },
+  };
+  try {
+    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
+      method: 'PUT',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(cambios),
+    });
+    if (!res.ok) throw new Error('Error al guardar');
+    const data = await res.json();
+    negocioActual = data.negocio;
+    msgDiv.innerHTML = `<p class="exito">Guardado.</p>`;
+    setTimeout(() => { msgDiv.innerHTML = ''; }, 2000);
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar, intentá de nuevo.</div>`;
+  }
+});
+
 activarSubidaAutomatica('input-foto-producto', 'producto');
+
+// --- Productos y servicios (catálogo real) ---
+let productosCache = [];
+let tipoProductoSeleccionado = 'general';
+let variantesProducto = [];
+
+document.getElementById('btn-mostrar-form-producto').addEventListener('click', () => {
+  const wrap = document.getElementById('form-producto-wrap');
+  const abrir = wrap.style.display === 'none';
+  wrap.style.display = abrir ? 'block' : 'none';
+  document.getElementById('btn-mostrar-form-producto').style.display = abrir ? 'none' : 'block';
+});
+document.getElementById('btn-cancelar-producto').addEventListener('click', () => {
+  limpiarFormProducto();
+  document.getElementById('form-producto-wrap').style.display = 'none';
+  document.getElementById('btn-mostrar-form-producto').style.display = 'block';
+});
+
+document.querySelectorAll('.opcion-tipo-producto').forEach((el) => {
+  el.addEventListener('click', () => {
+    tipoProductoSeleccionado = el.dataset.tipo;
+    document.querySelectorAll('.opcion-tipo-producto').forEach((e) => e.classList.toggle('seleccionado', e === el));
+    document.getElementById('campos-comida').style.display = tipoProductoSeleccionado === 'comida_bebida' ? 'block' : 'none';
+    document.getElementById('campos-servicio').style.display = tipoProductoSeleccionado === 'servicio' ? 'block' : 'none';
+    document.getElementById('campos-variantes').style.display = tipoProductoSeleccionado === 'ropa_calzado' ? 'block' : 'none';
+  });
+});
+document.querySelector('.opcion-tipo-producto[data-tipo="general"]').classList.add('seleccionado');
+
+function renderizarVariantesProducto() {
+  const contenedor = document.getElementById('lista-variantes-producto');
+  contenedor.innerHTML = variantesProducto.map((v, i) => `
+    <div class="fila-variante">
+      <span>${v.nombre}${v.stock !== null && v.stock !== undefined ? ` — stock: ${v.stock}` : ''}</span>
+      <button type="button" data-i="${i}">Quitar</button>
+    </div>
+  `).join('');
+  contenedor.querySelectorAll('button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      variantesProducto.splice(parseInt(btn.dataset.i, 10), 1);
+      renderizarVariantesProducto();
+    });
+  });
+}
+document.getElementById('btn-agregar-variante').addEventListener('click', () => {
+  const nombreInput = document.getElementById('nueva-variante-nombre');
+  const stockInput = document.getElementById('nueva-variante-stock');
+  if (!nombreInput.value.trim()) { alert('Ponele un nombre a la variante (ej: Talle 42, Color rojo).'); return; }
+  variantesProducto.push({ nombre: nombreInput.value.trim(), stock: stockInput.value !== '' ? parseInt(stockInput.value, 10) : null });
+  renderizarVariantesProducto();
+  nombreInput.value = '';
+  stockInput.value = '';
+});
+
+function limpiarFormProducto() {
+  ['producto-nombre', 'producto-descripcion', 'producto-categoria', 'producto-precio', 'producto-stock',
+   'producto-tamano', 'producto-ingredientes', 'producto-apto', 'producto-duracion', 'producto-incluye'].forEach((id) => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('producto-disponible-hoy').checked = true;
+  document.getElementById('producto-recomendar').checked = true;
+  variantesProducto = [];
+  renderizarVariantesProducto();
+  tipoProductoSeleccionado = 'general';
+  document.querySelectorAll('.opcion-tipo-producto').forEach((e) => e.classList.remove('seleccionado'));
+  document.querySelector('.opcion-tipo-producto[data-tipo="general"]').classList.add('seleccionado');
+  document.getElementById('campos-comida').style.display = 'none';
+  document.getElementById('campos-servicio').style.display = 'none';
+  document.getElementById('campos-variantes').style.display = 'none';
+  document.getElementById('producto-msg').innerHTML = '';
+}
+
+document.getElementById('btn-guardar-producto').addEventListener('click', async () => {
+  const msgDiv = document.getElementById('producto-msg');
+  const nombre = document.getElementById('producto-nombre').value.trim();
+  if (!nombre) {
+    msgDiv.innerHTML = `<div class="error-msg">El nombre es obligatorio.</div>`;
+    return;
+  }
+
+  const payload = {
+    nombre,
+    descripcion: document.getElementById('producto-descripcion').value.trim(),
+    categoria: document.getElementById('producto-categoria').value.trim(),
+    precio: document.getElementById('producto-precio').value,
+    stock: document.getElementById('producto-stock').value,
+    variantes: variantesProducto,
+    disponibleHoy: document.getElementById('producto-disponible-hoy').checked,
+    recomendar: document.getElementById('producto-recomendar').checked,
+    tipoProducto: tipoProductoSeleccionado,
+    tamanoPorcion: document.getElementById('producto-tamano').value.trim(),
+    ingredientesPrincipales: document.getElementById('producto-ingredientes').value.trim(),
+    aptoPara: document.getElementById('producto-apto').value.trim(),
+    duracionEstimada: document.getElementById('producto-duracion').value.trim(),
+    queIncluye: document.getElementById('producto-incluye').value.trim(),
+  };
+
+  try {
+    const res = await fetch(`${API_URL}/productos`, {
+      method: 'POST',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Error al guardar');
+    const nuevo = await res.json();
+    productosCache.unshift(nuevo);
+    renderizarProductos();
+    limpiarFormProducto();
+    document.getElementById('form-producto-wrap').style.display = 'none';
+    document.getElementById('btn-mostrar-form-producto').style.display = 'block';
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar el producto. Intentá de nuevo.</div>`;
+  }
+});
+
+async function cargarProductos() {
+  const contenedor = document.getElementById('lista-productos');
+  try {
+    const res = await fetch(`${API_URL}/productos`, { headers: headersAuth() });
+    productosCache = await res.json();
+    renderizarProductos();
+  } catch (error) {
+    contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el catálogo.</p>`;
+  }
+}
+
+function renderizarProductos() {
+  const contenedor = document.getElementById('lista-productos');
+  if (!productosCache.length) {
+    contenedor.innerHTML = `<p class="ayuda">Todavía no cargaste ningún producto o servicio.</p>`;
+    return;
+  }
+  contenedor.innerHTML = productosCache.map((p) => `
+    <div class="producto-card ${p.disponibleHoy ? '' : 'producto-no-disponible'}" data-id="${p._id}">
+      ${p.fotos && p.fotos[0] ? `<img class="producto-foto" src="${p.fotos[0].url}" alt="${p.nombre}">` : '<div class="producto-foto"></div>'}
+      <div class="producto-info">
+        <strong>${p.nombre}</strong>
+        ${p.categoria ? `<span>${p.categoria}</span>` : ''}
+        ${p.precio ? `<span class="producto-precio">$${Number(p.precio).toLocaleString('es-AR')}</span>` : ''}
+        ${!p.disponibleHoy ? '<span>No disponible hoy</span>' : ''}
+      </div>
+      <div class="producto-acciones">
+        <button class="toggle-disponible-producto" data-id="${p._id}" data-valor="${!p.disponibleHoy}">${p.disponibleHoy ? 'Marcar agotado' : 'Marcar disponible'}</button>
+        <button class="quitar btn-borrar-producto" data-id="${p._id}">Eliminar</button>
+      </div>
+    </div>
+  `).join('');
+
+  contenedor.querySelectorAll('.toggle-disponible-producto').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const nuevoValor = btn.dataset.valor === 'true';
+      await fetch(`${API_URL}/productos/${id}`, {
+        method: 'PUT',
+        headers: headersAuth({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ disponibleHoy: nuevoValor }),
+      });
+      const producto = productosCache.find((p) => p._id === id);
+      if (producto) producto.disponibleHoy = nuevoValor;
+      renderizarProductos();
+    });
+  });
+
+  contenedor.querySelectorAll('.btn-borrar-producto').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar este producto del catálogo?')) return;
+      const id = btn.dataset.id;
+      await fetch(`${API_URL}/productos/${id}`, { method: 'DELETE', headers: headersAuth() });
+      productosCache = productosCache.filter((p) => p._id !== id);
+      renderizarProductos();
+    });
+  });
+}
 
 // --- Turnos (agenda de negocios que funcionan con turnos) ---
 let turnosCache = [];
@@ -969,6 +1203,21 @@ document.getElementById('btn-bloquear-turno').addEventListener('click', async ()
   }
 });
 
+document.querySelectorAll('.btn-borrar-turnos-rango').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const etiquetas = { dia: 'de hoy', semana: 'de esta semana', mes: 'de este mes' };
+    if (!confirm(`¿Borrar todos los turnos ${etiquetas[btn.dataset.rango]}? No se puede deshacer.`)) return;
+    try {
+      const res = await fetch(`${API_URL}/turnos/bulk?rango=${btn.dataset.rango}`, { method: 'DELETE', headers: headersAuth() });
+      const data = await res.json();
+      alert(`Se borraron ${data.cantidad} turno(s).`);
+      cargarTurnos();
+    } catch (error) {
+      alert('No se pudieron borrar los turnos.');
+    }
+  });
+});
+
 async function cargarTurnos() {
   const contenedor = document.getElementById('lista-turnos');
   try {
@@ -1017,8 +1266,9 @@ function renderizarTurnos() {
         <span class="badge-estado badge-${t.estado}" style="margin-left:auto;">${ETIQUETAS_ESTADO_TURNO[t.estado] || t.estado}</span>
       </div>
       <div class="turno-detalle"><strong>${t.nombreCliente}</strong>${t.telefonoCliente ? ` · ${t.telefonoCliente}` : ''}</div>
-      ${t.motivo ? `<div class="turno-detalle">${t.motivo} (${t.duracionMinutos} min)</div>` : ''}
+      ${t.motivo ? `<div class="turno-detalle">Motivo: ${t.motivo} (${t.duracionMinutos} min)</div>` : `<div class="turno-detalle">Duración: ${t.duracionMinutos} min</div>`}
       ${t.profesional ? `<div class="turno-detalle">Con: ${t.profesional}</div>` : ''}
+      ${t.notas ? `<div class="turno-detalle">Notas: ${t.notas}</div>` : ''}
       ${t.origen === 'dueño' ? `<div class="turno-detalle">Cargado manualmente</div>` : ''}
       <div class="turno-acciones">
         ${t.estado === 'pendiente' ? `
@@ -1026,7 +1276,7 @@ function renderizarTurnos() {
           <button class="btn-rechazar-turno" data-id="${t._id}" data-estado="rechazado">Rechazar</button>
         ` : ''}
         ${t.estado === 'confirmado' ? `<button class="btn-cancelar-turno" data-id="${t._id}" data-estado="cancelado">Cancelar</button>` : ''}
-        ${['rechazado', 'cancelado'].includes(t.estado) ? `<button class="btn-eliminar-turno" data-id="${t._id}">Eliminar</button>` : ''}
+        <button class="btn-eliminar-turno" data-id="${t._id}">Eliminar</button>
       </div>
     </div>
   `).join('');
