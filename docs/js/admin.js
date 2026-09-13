@@ -978,10 +978,14 @@ activarSubidaAutomatica('input-foto-producto', 'producto');
 let productosCache = [];
 let tipoProductoSeleccionado = 'general';
 let variantesProducto = [];
+let productoEditandoId = null; // null = creando uno nuevo; si tiene valor, estamos editando ese producto
 
 document.getElementById('btn-mostrar-form-producto').addEventListener('click', () => {
   const wrap = document.getElementById('form-producto-wrap');
   const abrir = wrap.style.display === 'none';
+  if (abrir) {
+    limpiarFormProducto(); // siempre arranca en modo "nuevo producto" al abrirlo con este botón
+  }
   wrap.style.display = abrir ? 'block' : 'none';
   document.getElementById('btn-mostrar-form-producto').style.display = abrir ? 'none' : 'block';
 });
@@ -1043,6 +1047,81 @@ function limpiarFormProducto() {
   document.getElementById('campos-servicio').style.display = 'none';
   document.getElementById('campos-variantes').style.display = 'none';
   document.getElementById('producto-msg').innerHTML = '';
+
+  productoEditandoId = null;
+  document.getElementById('form-producto-titulo').textContent = 'Nuevo producto';
+  document.getElementById('btn-guardar-producto').textContent = 'Guardar producto';
+  document.getElementById('producto-foto-nueva').value = '';
+  document.getElementById('producto-foto-actual-wrap').style.display = 'none';
+}
+
+// Abre el formulario ya precargado con los datos del producto, para editarlo (en vez de crear uno nuevo)
+function abrirFormEdicionProducto(producto) {
+  limpiarFormProducto();
+  productoEditandoId = producto._id;
+  document.getElementById('form-producto-titulo').textContent = `Editando: ${producto.nombre}`;
+  document.getElementById('btn-guardar-producto').textContent = 'Guardar cambios';
+
+  document.getElementById('producto-nombre').value = producto.nombre || '';
+  document.getElementById('producto-descripcion').value = producto.descripcion || '';
+  document.getElementById('producto-categoria').value = producto.categoria || '';
+  document.getElementById('producto-precio').value = producto.precio ?? '';
+  document.getElementById('producto-stock').value = producto.stock ?? '';
+  document.getElementById('producto-disponible-hoy').checked = producto.disponibleHoy !== false;
+  document.getElementById('producto-recomendar').checked = producto.recomendar !== false;
+  document.getElementById('producto-tamano').value = producto.tamanoPorcion || '';
+  document.getElementById('producto-ingredientes').value = producto.ingredientesPrincipales || '';
+  document.getElementById('producto-apto').value = producto.aptoPara || '';
+  document.getElementById('producto-duracion').value = producto.duracionEstimada || '';
+  document.getElementById('producto-incluye').value = producto.queIncluye || '';
+
+  variantesProducto = Array.isArray(producto.variantes) ? producto.variantes.map((v) => ({ ...v })) : [];
+  renderizarVariantesProducto();
+
+  tipoProductoSeleccionado = producto.tipoProducto || 'general';
+  document.querySelectorAll('.opcion-tipo-producto').forEach((e) => e.classList.toggle('seleccionado', e.dataset.tipo === tipoProductoSeleccionado));
+  document.getElementById('campos-comida').style.display = tipoProductoSeleccionado === 'comida_bebida' ? 'block' : 'none';
+  document.getElementById('campos-servicio').style.display = tipoProductoSeleccionado === 'servicio' ? 'block' : 'none';
+  document.getElementById('campos-variantes').style.display = tipoProductoSeleccionado === 'ropa_calzado' ? 'block' : 'none';
+
+  if (producto.fotos && producto.fotos[0]) {
+    document.getElementById('producto-foto-actual').src = producto.fotos[0].url;
+    document.getElementById('producto-foto-actual-wrap').style.display = 'block';
+  }
+
+  document.getElementById('form-producto-wrap').style.display = 'block';
+  document.getElementById('btn-mostrar-form-producto').style.display = 'none';
+  document.getElementById('form-producto-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Quita la foto actual del producto que se está editando (borra todas las que tenga, es una sola en la práctica)
+document.getElementById('btn-quitar-foto-producto').addEventListener('click', async () => {
+  if (!productoEditandoId) return;
+  const producto = productosCache.find((p) => p._id === productoEditandoId);
+  if (!producto || !producto.fotos || !producto.fotos.length) return;
+  try {
+    for (const foto of producto.fotos) {
+      await fetch(`${API_URL}/productos/${productoEditandoId}/fotos/${encodeURIComponent(foto.publicId)}`, { method: 'DELETE', headers: headersAuth() });
+    }
+    producto.fotos = [];
+    document.getElementById('producto-foto-actual-wrap').style.display = 'none';
+    renderizarProductos();
+  } catch (error) {
+    alert('No se pudo quitar la foto, intentá de nuevo.');
+  }
+});
+
+// Sube la foto nueva de un producto (si el dueño eligió un archivo), reemplazando cualquier foto anterior
+async function subirFotoProducto(productoId, archivo) {
+  const formData = new FormData();
+  formData.append('foto', archivo);
+  const res = await fetch(`${API_URL}/productos/${productoId}/fotos`, {
+    method: 'POST',
+    headers: headersAuth(), // sin Content-Type: el navegador arma el multipart/form-data solo
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Error al subir la foto');
+  return res.json();
 }
 
 document.getElementById('btn-guardar-producto').addEventListener('click', async () => {
@@ -1070,15 +1149,39 @@ document.getElementById('btn-guardar-producto').addEventListener('click', async 
     queIncluye: document.getElementById('producto-incluye').value.trim(),
   };
 
+  const archivoFoto = document.getElementById('producto-foto-nueva').files[0] || null;
+
   try {
-    const res = await fetch(`${API_URL}/productos`, {
-      method: 'POST',
-      headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error('Error al guardar');
-    const nuevo = await res.json();
-    productosCache.unshift(nuevo);
+    let productoGuardado;
+    if (productoEditandoId) {
+      const res = await fetch(`${API_URL}/productos/${productoEditandoId}`, {
+        method: 'PUT',
+        headers: headersAuth({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Error al guardar');
+      productoGuardado = await res.json();
+    } else {
+      const res = await fetch(`${API_URL}/productos`, {
+        method: 'POST',
+        headers: headersAuth({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Error al guardar');
+      productoGuardado = await res.json();
+    }
+
+    // Si eligió una foto nueva, la subimos después de guardar los datos (necesitamos el id del producto)
+    if (archivoFoto) {
+      productoGuardado = await subirFotoProducto(productoGuardado._id, archivoFoto);
+    }
+
+    if (productoEditandoId) {
+      const idx = productosCache.findIndex((p) => p._id === productoEditandoId);
+      if (idx !== -1) productosCache[idx] = productoGuardado;
+    } else {
+      productosCache.unshift(productoGuardado);
+    }
     renderizarProductos();
     limpiarFormProducto();
     document.getElementById('form-producto-wrap').style.display = 'none';
@@ -1115,11 +1218,19 @@ function renderizarProductos() {
         ${!p.disponibleHoy ? '<span>No disponible hoy</span>' : ''}
       </div>
       <div class="producto-acciones">
+        <button class="btn-editar-producto" data-id="${p._id}">Editar</button>
         <button class="toggle-disponible-producto" data-id="${p._id}" data-valor="${!p.disponibleHoy}">${p.disponibleHoy ? 'Marcar agotado' : 'Marcar disponible'}</button>
         <button class="quitar btn-borrar-producto" data-id="${p._id}">Eliminar</button>
       </div>
     </div>
   `).join('');
+
+  contenedor.querySelectorAll('.btn-editar-producto').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const producto = productosCache.find((p) => p._id === btn.dataset.id);
+      if (producto) abrirFormEdicionProducto(producto);
+    });
+  });
 
   contenedor.querySelectorAll('.toggle-disponible-producto').forEach((btn) => {
     btn.addEventListener('click', async () => {
