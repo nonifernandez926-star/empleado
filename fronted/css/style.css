@@ -225,6 +225,18 @@ a { color: inherit; }
   background: var(--gris-claro); border-radius: var(--radio-chico); padding: 9px 12px; margin-bottom: 6px; font-size: 0.85rem;
 }
 .fila-variante button { color: var(--error); background: none; border: none; cursor: pointer; font-weight: 700; font-size: 0.78rem; }
+
+.oportunidad-card { border: 1px solid var(--linea); border-radius: var(--radio-chico); padding: 12px 14px; margin-bottom: 8px; }
+.oportunidad-card strong { display: block; font-size: 0.9rem; }
+.oportunidad-card span { display: block; font-size: 0.8rem; color: var(--gris-texto); margin-top: 2px; }
+.oportunidad-card .mensaje-cliente { font-style: italic; }
+.btn-recuperar-cliente {
+  margin-top: 8px; background: #fee2e2; color: var(--error); border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+}
+.btn-recuperar-cliente[disabled] { background: var(--gris-claro); color: var(--gris-texto); cursor: default; }
+#grid-umbral-inactivos { margin-bottom: 16px; grid-template-columns: repeat(3, 1fr); }
+#grid-umbral-inactivos .opcion-aprobacion { text-align: center; font-weight: 700; font-size: 0.85rem; }
 @media (max-width: 380px) { .grid-tipo-operacion { grid-template-columns: 1fr; } }
 
 .fila-profesional { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -407,6 +419,40 @@ html:has(.chat-widget), body:has(.chat-widget) { margin: 0; padding: 0; height: 
 .lightbox-prev { left: 12px; }
 .lightbox-next { right: 12px; }
 .lightbox-contador { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); color: white; font-size: 0.85rem; opacity: 0.8; }
+
+/* Widget de calificación con estrellas, aparece en el chat tras cerrar un pedido/turno */
+.resena-widget { text-align: center; }
+.resena-texto { margin: 0 0 8px; font-size: 0.88rem; }
+.resena-estrellas { display: flex; justify-content: center; gap: 4px; margin-bottom: 10px; }
+.resena-estrella { background: none; border: none; font-size: 1.8rem; line-height: 1; color: #d8dce8; cursor: pointer; padding: 0; }
+.resena-estrella.llena { color: #f5b301; }
+.resena-enviar {
+  background: var(--gradiente-azul); color: white; border: none; border-radius: 999px;
+  padding: 8px 22px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+}
+.resena-enviar[disabled] { opacity: 0.4; cursor: default; }
+
+.resena-comentario-widget { display: flex; gap: 8px; align-items: center; }
+.resena-comentario-input {
+  flex: 1; border: 1px solid var(--linea); border-radius: 999px; padding: 8px 14px; font-size: 0.85rem;
+}
+.resena-comentario-enviar {
+  background: var(--gradiente-azul); color: white; border: none; border-radius: 999px;
+  padding: 8px 16px; font-size: 0.82rem; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+
+/* Panel del dueño: resumen y lista de reseñas */
+.grid-resumen-experiencia { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.resumen-experiencia-item {
+  text-align: center; background: var(--gris-claro); border-radius: var(--radio-chico); padding: 10px 4px;
+}
+.resumen-experiencia-item strong { display: block; font-size: 1.1rem; }
+.resumen-experiencia-item span { display: block; font-size: 0.68rem; color: var(--gris-texto); margin-top: 2px; }
+.resena-card { border: 1px solid var(--linea); border-radius: var(--radio-chico); padding: 12px 14px; margin-bottom: 8px; }
+.resena-card .resena-card-estrellas { color: #f5b301; font-size: 0.95rem; letter-spacing: 1px; }
+.resena-card .resena-card-nombre { font-size: 0.82rem; color: var(--gris-texto); margin-left: 6px; }
+.resena-card .resena-card-comentario { font-size: 0.85rem; margin-top: 4px; font-style: italic; }
+.resena-card .resena-card-fecha { font-size: 0.72rem; color: var(--gris-texto); margin-top: 4px; }
 
 .chat-input-area { display: flex; gap: 8px; padding: 14px; background: var(--blanco); border-top: 1px solid var(--linea); flex-shrink: 0; }
 .chat-input-area input { flex: 1; }
