@@ -339,6 +339,8 @@ async function mostrarPanel() {
   renderizarFotos();
   cargarProductos();
   renderizarPromociones();
+  cargarOportunidades();
+  cargarExperiencia();
   cargarPlanes();
   cargarResumenDiario();
   cargarPreguntasSinRespuesta();
@@ -846,18 +848,27 @@ function renderizarPromociones() {
     contenedor.innerHTML = `<p class="ayuda">Todavía no publicaste ninguna promoción.</p>`;
     return;
   }
-  contenedor.innerHTML = promos.map((p) => `
+  contenedor.innerHTML = promos.map((p) => {
+    const reglas = [];
+    if (p.aplicaA) reglas.push(`Solo: ${p.aplicaA}`);
+    if (p.horarioDesde && p.horarioHasta) reglas.push(`${p.horarioDesde}–${p.horarioHasta}`);
+    if (p.fechaHasta) reglas.push(`Hasta ${new Date(p.fechaHasta).toLocaleDateString('es-AR')}`);
+    if (typeof p.usosMaximos === 'number') reglas.push(`${p.usosActuales || 0}/${p.usosMaximos} usos`);
+    return `
     <div class="promo-card ${p.activa ? '' : 'promo-inactiva'}" data-id="${p._id}">
       <div class="promo-info">
         <strong>${p.titulo}</strong>
         ${p.descripcion ? `<span>${p.descripcion}</span>` : ''}
+        ${reglas.length ? `<span>${reglas.join(' · ')}</span>` : ''}
       </div>
       <div class="promo-acciones">
+        ${typeof p.usosMaximos === 'number' ? `<button class="btn-sumar-uso-promo" data-id="${p._id}" title="Sumar un uso">+1 uso</button>` : ''}
         <button class="toggle-switch ${p.activa ? 'activo' : ''}" data-id="${p._id}" data-activa="${p.activa}" title="${p.activa ? 'Desactivar' : 'Activar'}"><span></span></button>
         <button class="btn-icono-eliminar btn-borrar-promo" data-id="${p._id}" title="Eliminar">${ICONOS_PEDIDO.tacho}</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   contenedor.querySelectorAll('.toggle-switch').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -878,6 +889,26 @@ function renderizarPromociones() {
     });
   });
 
+  contenedor.querySelectorAll('.btn-sumar-uso-promo').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const promo = negocioActual.promociones.find((p) => p._id === id);
+      if (!promo) return;
+      const nuevosUsos = (promo.usosActuales || 0) + 1;
+      try {
+        await fetch(`${API_URL}/negocios/promociones/${id}`, {
+          method: 'PUT',
+          headers: headersAuth({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ usosActuales: nuevosUsos }),
+        });
+        promo.usosActuales = nuevosUsos;
+        renderizarPromociones();
+      } catch (error) {
+        alert('No se pudo actualizar el contador de usos.');
+      }
+    });
+  });
+
   contenedor.querySelectorAll('.btn-borrar-promo').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (!confirm('¿Eliminar esta promoción?')) return;
@@ -893,6 +924,13 @@ function renderizarPromociones() {
   });
 }
 
+document.getElementById('btn-mostrar-reglas-promo').addEventListener('click', () => {
+  const wrap = document.getElementById('reglas-promo-wrap');
+  const abrir = wrap.style.display === 'none';
+  wrap.style.display = abrir ? 'block' : 'none';
+  document.getElementById('btn-mostrar-reglas-promo').style.display = abrir ? 'none' : 'block';
+});
+
 document.getElementById('btn-crear-promocion').addEventListener('click', async () => {
   const tituloInput = document.getElementById('promo-titulo');
   const descripcionInput = document.getElementById('promo-descripcion');
@@ -904,11 +942,21 @@ document.getElementById('btn-crear-promocion').addEventListener('click', async (
     return;
   }
 
+  const payload = {
+    titulo,
+    descripcion: descripcionInput.value.trim(),
+    aplicaA: document.getElementById('promo-aplica-a').value.trim(),
+    fechaHasta: document.getElementById('promo-fecha-hasta').value || undefined,
+    horarioDesde: document.getElementById('promo-horario-desde').value || undefined,
+    horarioHasta: document.getElementById('promo-horario-hasta').value || undefined,
+    usosMaximos: document.getElementById('promo-usos-maximos').value || undefined,
+  };
+
   try {
     const res = await fetch(`${API_URL}/negocios/promociones`, {
       method: 'POST',
       headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ titulo, descripcion: descripcionInput.value.trim() }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error('Error al crear');
     const nuevaPromo = await res.json();
@@ -918,6 +966,13 @@ document.getElementById('btn-crear-promocion').addEventListener('click', async (
     renderizarPromociones();
     tituloInput.value = '';
     descripcionInput.value = '';
+    document.getElementById('promo-aplica-a').value = '';
+    document.getElementById('promo-fecha-hasta').value = '';
+    document.getElementById('promo-horario-desde').value = '';
+    document.getElementById('promo-horario-hasta').value = '';
+    document.getElementById('promo-usos-maximos').value = '';
+    document.getElementById('reglas-promo-wrap').style.display = 'none';
+    document.getElementById('btn-mostrar-reglas-promo').style.display = 'block';
     msgDiv.innerHTML = `<div class="exito">Promoción publicada. El asistente ya la va a mencionar cuando tenga sentido.</div>`;
   } catch (error) {
     msgDiv.innerHTML = `<div class="error-msg">No se pudo publicar la promoción. Intentá de nuevo.</div>`;
@@ -1632,6 +1687,128 @@ document.getElementById('btn-guardar-info').addEventListener('click', async () =
     msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar. Intentá de nuevo.</div>`;
   }
 });
+
+// --- Oportunidades de venta (indecisos e inactivos) ---
+let diasUmbralInactivos = 7;
+
+document.querySelectorAll('#grid-umbral-inactivos .opcion-aprobacion').forEach((el) => {
+  el.addEventListener('click', () => {
+    diasUmbralInactivos = parseInt(el.dataset.dias, 10);
+    document.querySelectorAll('#grid-umbral-inactivos .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+    cargarOportunidades();
+  });
+});
+document.querySelector('#grid-umbral-inactivos .opcion-aprobacion[data-dias="7"]').classList.add('seleccionado');
+
+async function cargarOportunidades() {  const contenedorIndecisos = document.getElementById('lista-indecisos');
+  const contenedorInactivos = document.getElementById('lista-inactivos');
+  try {
+    const res = await fetch(`${API_URL}/oportunidades?dias=${diasUmbralInactivos}`, { headers: headersAuth() });
+    const data = await res.json();
+    renderizarOportunidades('indeciso', data.indecisos, contenedorIndecisos, document.getElementById('btn-recuperar-todos-indecisos'));
+    renderizarOportunidades('inactivo', data.inactivos, contenedorInactivos, document.getElementById('btn-recuperar-todos-inactivos'));
+  } catch (error) {
+    contenedorIndecisos.innerHTML = `<p class="ayuda">No se pudo cargar.</p>`;
+    contenedorInactivos.innerHTML = '';
+  }
+}
+
+function renderizarOportunidades(tipo, lista, contenedor, btnTodos) {
+  if (!lista.length) {
+    contenedor.innerHTML = `<p class="ayuda">${tipo === 'indeciso' ? 'No hay clientes en esta situación por ahora.' : 'No hay clientes inactivos en este período.'}</p>`;
+    btnTodos.style.display = 'none';
+    return;
+  }
+
+  contenedor.innerHTML = lista.map((c) => `
+    <div class="oportunidad-card" data-sesion="${c.sesionClienteId}">
+      <strong>${c.nombre || 'Cliente sin identificar'}</strong>
+      <span>Último contacto: ${new Date(c.ultimaFecha).toLocaleDateString('es-AR')}</span>
+      ${c.totalPedidos ? `<span>${c.totalPedidos} pedido(s) hechos antes</span>` : ''}
+      ${c.totalTurnos ? `<span>${c.totalTurnos} turno(s) antes</span>` : ''}
+      ${c.ultimoMensaje ? `<span class="mensaje-cliente">"${c.ultimoMensaje}"</span>` : ''}
+      <button class="btn-recuperar-cliente" data-sesion="${c.sesionClienteId}" data-tipo="${tipo}" ${c.recuperacionPendiente ? 'disabled' : ''}>
+        ${c.recuperacionPendiente ? 'Ya preparado ✓' : 'Recuperar'}
+      </button>
+    </div>
+  `).join('');
+
+  btnTodos.style.display = 'block';
+  btnTodos.onclick = async () => {
+    if (!confirm(`¿Preparar un mensaje de recuperación para los ${lista.length} clientes de esta lista?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/oportunidades/recuperar-todos`, {
+        method: 'POST',
+        headers: headersAuth({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ tipo, sesiones: lista.map((c) => c.sesionClienteId) }),
+      });
+      const data = await res.json();
+      alert(data.mensaje);
+      cargarOportunidades();
+    } catch (error) {
+      alert('No se pudo preparar la recuperación.');
+    }
+  };
+
+  contenedor.querySelectorAll('.btn-recuperar-cliente').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API_URL}/oportunidades/recuperar`, {
+          method: 'POST',
+          headers: headersAuth({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ sesionClienteId: btn.dataset.sesion, tipo: btn.dataset.tipo }),
+        });
+        const data = await res.json();
+        btn.disabled = true;
+        btn.textContent = 'Ya preparado ✓';
+      } catch (error) {
+        alert('No se pudo preparar la recuperación.');
+      }
+    });
+  });
+}
+
+// --- Experiencia (calificaciones con estrellas + reseñas) ---
+let filtroResenasActual = 'todas';
+
+document.querySelectorAll('#grid-filtro-resenas .opcion-aprobacion').forEach((el) => {
+  el.addEventListener('click', () => {
+    filtroResenasActual = el.dataset.filtro;
+    document.querySelectorAll('#grid-filtro-resenas .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+    cargarExperiencia();
+  });
+});
+
+async function cargarExperiencia() {
+  const contenedor = document.getElementById('lista-resenas');
+  try {
+    const url = filtroResenasActual === 'todas' ? `${API_URL}/resenas` : `${API_URL}/resenas?tipo=${filtroResenasActual}`;
+    const res = await fetch(url, { headers: headersAuth() });
+    const data = await res.json();
+
+    document.getElementById('resumen-promedio').textContent = data.resumen.total ? `${data.resumen.promedio} ⭐` : '—';
+    document.getElementById('resumen-total').textContent = data.resumen.total;
+    document.getElementById('resumen-positivas').textContent = data.resumen.positivas;
+    document.getElementById('resumen-negativas').textContent = data.resumen.negativas;
+
+    if (!data.resenas.length) {
+      contenedor.innerHTML = `<p class="ayuda">Todavía no hay reseñas para mostrar acá.</p>`;
+      return;
+    }
+
+    contenedor.innerHTML = data.resenas.map((r) => `
+      <div class="resena-card">
+        <span class="resena-card-estrellas">${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</span>
+        ${r.nombreCliente ? `<span class="resena-card-nombre">${r.nombreCliente}</span>` : ''}
+        ${r.comentario ? `<p class="resena-card-comentario">"${r.comentario}"</p>` : ''}
+        <p class="resena-card-fecha">${new Date(r.createdAt).toLocaleDateString('es-AR')}</p>
+      </div>
+    `).join('');
+  } catch (error) {
+    contenedor.innerHTML = `<p class="ayuda">No se pudieron cargar las reseñas.</p>`;
+  }
+}
+
 
 async function cargarEstadisticas() {
   const res = await fetch(`${API_URL}/estadisticas`, {
