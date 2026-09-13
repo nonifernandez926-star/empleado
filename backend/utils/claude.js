@@ -202,13 +202,27 @@ function construirSystemPrompt(negocio, clienteConocido, productos) {
     prompt += 'Nunca recomiendes ni tomes un pedido de algo que este en esa lista. Si el cliente lo pide, avisale que hoy no esta disponible y ofrecele una alternativa si tiene sentido.\n\n';
   }
 
-  const promosActivas = permitePromos ? (negocio.promociones || []).filter(function (p) { return p.activa; }) : [];
+  const ahoraDate = new Date();
+  const horaActualStr = ahoraDate.getHours().toString().padStart(2, '0') + ':' + ahoraDate.getMinutes().toString().padStart(2, '0');
+  function promoVigenteAhora(p) {
+    if (!p.activa) return false;
+    if (p.fechaHasta && ahoraDate > new Date(p.fechaHasta)) return false;
+    if (p.horarioDesde && p.horarioHasta && (horaActualStr < p.horarioDesde || horaActualStr > p.horarioHasta)) return false;
+    if (typeof p.usosMaximos === 'number' && p.usosActuales >= p.usosMaximos) return false;
+    return true;
+  }
+
+  const promosActivas = permitePromos ? (negocio.promociones || []).filter(promoVigenteAhora) : [];
   if (promosActivas.length) {
-    prompt += 'PROMOCIONES VIGENTES (podes mencionarlas cuando tengan sentido en la charla, por ejemplo si preguntan precios, el menu, o si hay descuentos - no hace falta esperar a que pregunten puntualmente por promociones):\n';
+    prompt += 'PROMOCIONES VIGENTES AHORA MISMO (podes mencionarlas cuando tengan sentido en la charla, por ejemplo si preguntan precios, el menu, o si hay descuentos - no hace falta esperar a que pregunten puntualmente por promociones):\n';
     promosActivas.forEach(function (p) {
-      prompt += '- ' + p.titulo + (p.descripcion ? ': ' + p.descripcion : '') + '\n';
+      let linea = p.titulo + (p.descripcion ? ': ' + p.descripcion : '');
+      if (p.aplicaA) linea += ' (aplica solo a: ' + p.aplicaA + ')';
+      if (p.horarioDesde && p.horarioHasta) linea += ' (valido de ' + p.horarioDesde + ' a ' + p.horarioHasta + ')';
+      if (p.fechaHasta) linea += ' (valido hasta ' + new Date(p.fechaHasta).toLocaleDateString('es-AR') + ')';
+      prompt += '- ' + linea + '\n';
     });
-    prompt += 'Nunca inventes una promocion que no este en esta lista, ni apliques un descuento que el cliente no pidio explicitamente que le calcules segun una de estas promociones reales.\n\n';
+    prompt += 'Nunca inventes una promocion que no este en esta lista, ni apliques un descuento que el cliente no pidio explicitamente que le calcules segun una de estas promociones reales. Si una promo "aplica solo a" algo puntual, no la ofrezcas para otra cosa.\n\n';
   } else if (!permitePromos) {
     prompt += 'Este negocio pidio que NO menciones promociones ni descuentos por chat, aunque haya alguna cargada. Si preguntan por descuentos, respondé con naturalidad que por el momento no hay, sin dar mas detalle.\n\n';
   }
