@@ -270,196 +270,257 @@
 
         <!-- Vista normal -->
         <div id="negocio-vista">
-          <div class="tarjeta">
-            <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg> Productos y servicios</h2>
-            <p class="ayuda">Cargá tu catálogo real: el asistente va a usar precios y stock de acá, en vez de inventar.</p>
-            <div id="lista-productos"><p class="ayuda">Cargando...</p></div>
+          <div class="list-card">
 
-            <button type="button" class="btn secundario ancho" id="btn-mostrar-form-producto" style="margin-top:14px;">+ Agregar producto o servicio</button>
-
-            <div id="form-producto-wrap" style="display:none; margin-top:16px;">
-              <label>¿Qué tipo de producto es?</label>
-              <div class="grid-tipo-operacion" id="grid-tipo-producto">
-                <div class="opcion-tipo-producto" data-tipo="general">
-                  <strong>General</strong>
-                  <span>Cualquier producto o servicio simple.</span>
+            <div class="list-card-item">
+              <button class="list-row" data-panel="panel-productos">
+                <div class="list-row-icono ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Productos y servicios</strong>
+                  <span>Cargá tu catálogo real, con precios, stock y fotos.</span>
                 </div>
-                <div class="opcion-tipo-producto" data-tipo="ropa_calzado">
-                  <strong>Ropa / calzado</strong>
-                  <span>Pide talles y colores.</span>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-productos">
+                <div id="lista-productos"><p class="ayuda">Cargando...</p></div>
+
+                <button type="button" class="btn secundario ancho" id="btn-mostrar-form-producto" style="margin-top:14px;">+ Agregar producto o servicio</button>
+
+                <div id="form-producto-wrap" style="display:none; margin-top:16px;">
+                  <strong id="form-producto-titulo" style="display:block; margin-bottom:10px;">Nuevo producto</strong>
+                  <label>¿Qué tipo de producto es?</label>
+                  <div class="grid-tipo-operacion" id="grid-tipo-producto">
+                    <div class="opcion-tipo-producto" data-tipo="general">
+                      <strong>General</strong>
+                      <span>Cualquier producto o servicio simple.</span>
+                    </div>
+                    <div class="opcion-tipo-producto" data-tipo="ropa_calzado">
+                      <strong>Ropa / calzado</strong>
+                      <span>Pide talles y colores.</span>
+                    </div>
+                    <div class="opcion-tipo-producto" data-tipo="comida_bebida">
+                      <strong>Comida / bebida</strong>
+                      <span>Pide tamaño, ingredientes, apto para.</span>
+                    </div>
+                    <div class="opcion-tipo-producto" data-tipo="servicio">
+                      <strong>Servicio</strong>
+                      <span>Pide duración y qué incluye.</span>
+                    </div>
+                  </div>
+
+                  <label>Nombre</label>
+                  <input type="text" id="producto-nombre" placeholder="Ej: Hamburguesa clásica">
+                  <label>Descripción (opcional)</label>
+                  <textarea id="producto-descripcion" placeholder="Contá de qué se trata"></textarea>
+                  <label>Categoría (opcional, para agrupar en el menú)</label>
+                  <input type="text" id="producto-categoria" placeholder="Ej: Hamburguesas, Calzado hombre, Cortes">
+                  <label>Precio (opcional)</label>
+                  <input type="number" id="producto-precio" placeholder="0">
+                  <label>Stock general (opcional, dejalo vacío si no lo controlás)</label>
+                  <input type="number" id="producto-stock" placeholder="Sin control de stock">
+
+                  <div id="campos-comida" style="display:none;">
+                    <label>Tamaño / porción</label>
+                    <input type="text" id="producto-tamano" placeholder="Ej: Individual, Para compartir (2-3 personas)">
+                    <label>Ingredientes principales</label>
+                    <input type="text" id="producto-ingredientes" placeholder="Ej: Carne, cheddar, panceta, lechuga">
+                    <label>Apto para</label>
+                    <input type="text" id="producto-apto" placeholder="Ej: Vegetariano, Sin TACC">
+                  </div>
+
+                  <div id="campos-servicio" style="display:none;">
+                    <label>Duración estimada</label>
+                    <input type="text" id="producto-duracion" placeholder="Ej: 45 minutos">
+                    <label>Qué incluye</label>
+                    <input type="text" id="producto-incluye" placeholder="Ej: Lavado + corte + peinado">
+                  </div>
+
+                  <div id="campos-variantes" style="display:none;">
+                    <label>Variantes (talles, colores, lo que corresponda) y su stock</label>
+                    <div id="lista-variantes-producto"></div>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                      <input type="text" id="nueva-variante-nombre" placeholder="Ej: Talle 42" style="flex:2;">
+                      <input type="number" id="nueva-variante-stock" placeholder="Stock" style="flex:1;">
+                      <button type="button" class="btn secundario" id="btn-agregar-variante" style="flex-shrink:0; padding:12px 16px;">Agregar</button>
+                    </div>
+                  </div>
+
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:16px;">
+                    <input type="checkbox" id="producto-disponible-hoy" checked style="width:auto;"> Disponible hoy
+                  </label>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:8px;">
+                    <input type="checkbox" id="producto-recomendar" checked style="width:auto;"> El asistente lo puede recomendar activamente
+                  </label>
+
+                  <label style="margin-top:16px;">Foto (opcional)</label>
+                  <div id="producto-foto-actual-wrap" style="display:none; margin-bottom:8px;">
+                    <img id="producto-foto-actual" src="" alt="Foto actual" style="width:70px; height:70px; object-fit:cover; border-radius:10px; display:block; margin-bottom:6px;">
+                    <button type="button" class="btn secundario" id="btn-quitar-foto-producto" style="padding:6px 12px; font-size:0.85rem;">Quitar foto</button>
+                  </div>
+                  <input type="file" id="producto-foto-nueva" accept="image/*">
+
+                  <div class="acciones-edicion" style="margin-top:16px;">
+                    <button type="button" class="btn secundario" id="btn-cancelar-producto">Cancelar</button>
+                    <button type="button" class="btn" id="btn-guardar-producto">Guardar producto</button>
+                  </div>
+                  <div id="producto-msg"></div>
                 </div>
-                <div class="opcion-tipo-producto" data-tipo="comida_bebida">
-                  <strong>Comida / bebida</strong>
-                  <span>Pide tamaño, ingredientes, apto para.</span>
-                </div>
-                <div class="opcion-tipo-producto" data-tipo="servicio">
-                  <strong>Servicio</strong>
-                  <span>Pide duración y qué incluye.</span>
-                </div>
               </div>
-
-              <label>Nombre</label>
-              <input type="text" id="producto-nombre" placeholder="Ej: Hamburguesa clásica">
-              <label>Descripción (opcional)</label>
-              <textarea id="producto-descripcion" placeholder="Contá de qué se trata"></textarea>
-              <label>Categoría (opcional, para agrupar en el menú)</label>
-              <input type="text" id="producto-categoria" placeholder="Ej: Hamburguesas, Calzado hombre, Cortes">
-              <label>Precio (opcional)</label>
-              <input type="number" id="producto-precio" placeholder="0">
-              <label>Stock general (opcional, dejalo vacío si no lo controlás)</label>
-              <input type="number" id="producto-stock" placeholder="Sin control de stock">
-
-              <div id="campos-comida" style="display:none;">
-                <label>Tamaño / porción</label>
-                <input type="text" id="producto-tamano" placeholder="Ej: Individual, Para compartir (2-3 personas)">
-                <label>Ingredientes principales</label>
-                <input type="text" id="producto-ingredientes" placeholder="Ej: Carne, cheddar, panceta, lechuga">
-                <label>Apto para</label>
-                <input type="text" id="producto-apto" placeholder="Ej: Vegetariano, Sin TACC">
-              </div>
-
-              <div id="campos-servicio" style="display:none;">
-                <label>Duración estimada</label>
-                <input type="text" id="producto-duracion" placeholder="Ej: 45 minutos">
-                <label>Qué incluye</label>
-                <input type="text" id="producto-incluye" placeholder="Ej: Lavado + corte + peinado">
-              </div>
-
-              <div id="campos-variantes" style="display:none;">
-                <label>Variantes (talles, colores, lo que corresponda) y su stock</label>
-                <div id="lista-variantes-producto"></div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                  <input type="text" id="nueva-variante-nombre" placeholder="Ej: Talle 42" style="flex:2;">
-                  <input type="number" id="nueva-variante-stock" placeholder="Stock" style="flex:1;">
-                  <button type="button" class="btn secundario" id="btn-agregar-variante" style="flex-shrink:0; padding:12px 16px;">Agregar</button>
-                </div>
-              </div>
-
-              <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:16px;">
-                <input type="checkbox" id="producto-disponible-hoy" checked style="width:auto;"> Disponible hoy
-              </label>
-              <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:8px;">
-                <input type="checkbox" id="producto-recomendar" checked style="width:auto;"> El asistente lo puede recomendar activamente
-              </label>
-
-              <div class="acciones-edicion" style="margin-top:16px;">
-                <button type="button" class="btn secundario" id="btn-cancelar-producto">Cancelar</button>
-                <button type="button" class="btn" id="btn-guardar-producto">Guardar producto</button>
-              </div>
-              <div id="producto-msg"></div>
-            </div>
-          </div>
-
-          <div class="tarjeta">
-            <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Fotos del negocio</h2>
-            <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
-
-            <div class="foto-row">
-              <div class="foto-row-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 4 4h16l1 5.5"/><path d="M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5"/><path d="M9 20v-6h6v6"/><path d="M3 9.5h18"/></svg></div>
-              <div class="foto-row-texto">
-                <strong>Logo del negocio</strong>
-                <span>Subí el logo que representa tu negocio. Se mostrará en tu perfil y en las conversaciones.</span>
-              </div>
-              <label class="upload-box" for="input-foto-logo">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
-                <span class="upload-box-texto">Subir foto</span>
-                <span class="upload-box-caption">PNG o JPG</span>
-              </label>
-              <input type="file" id="input-foto-logo" accept="image/*" hidden>
-            </div>
-
-            <div class="foto-row">
-              <div class="foto-row-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 17a9 9 0 0 1 18 0"/><path d="M2 17h20"/><path d="M12 3v3"/></svg></div>
-              <div class="foto-row-texto">
-                <strong>Carta o menú</strong>
-                <span>Subí una foto clara de tu carta o menú para que el asistente la muestre a los clientes.</span>
-              </div>
-              <label class="upload-box" for="input-foto-menu">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
-                <span class="upload-box-texto">Subir foto</span>
-                <span class="upload-box-caption">PNG o JPG</span>
-              </label>
-              <input type="file" id="input-foto-menu" accept="image/*" hidden>
             </div>
 
-            <div class="foto-row">
-              <div class="foto-row-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><ellipse cx="12" cy="17.5" rx="9" ry="1.7"/><path d="M4 16a8 8 0 0 1 16 0"/><path d="M9 8.5a3 3 0 0 1 6 0"/></svg></div>
-              <div class="foto-row-texto">
-                <strong>Fotos de productos</strong>
-                <span>Subí fotos de tus productos o platos para que el asistente los muestre a los clientes.</span>
+            <div class="list-card-item">
+              <button class="list-row" data-panel="panel-fotos-negocio">
+                <div class="list-row-icono ic-rosado"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Fotos del negocio</strong>
+                  <span>Logo, carta/menú y fotos de productos.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-fotos-negocio">
+                <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
+
+                <div class="foto-row">
+                  <div class="foto-row-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 4 4h16l1 5.5"/><path d="M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5"/><path d="M9 20v-6h6v6"/><path d="M3 9.5h18"/></svg></div>
+                  <div class="foto-row-texto">
+                    <strong>Logo del negocio</strong>
+                    <span>Subí el logo que representa tu negocio. Se mostrará en tu perfil y en las conversaciones.</span>
+                  </div>
+                  <label class="upload-box" for="input-foto-logo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
+                    <span class="upload-box-texto">Subir foto</span>
+                    <span class="upload-box-caption">PNG o JPG</span>
+                  </label>
+                  <input type="file" id="input-foto-logo" accept="image/*" hidden>
+                </div>
+
+                <div class="foto-row">
+                  <div class="foto-row-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 17a9 9 0 0 1 18 0"/><path d="M2 17h20"/><path d="M12 3v3"/></svg></div>
+                  <div class="foto-row-texto">
+                    <strong>Carta o menú</strong>
+                    <span>Subí una foto clara de tu carta o menú para que el asistente la muestre a los clientes.</span>
+                  </div>
+                  <label class="upload-box" for="input-foto-menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
+                    <span class="upload-box-texto">Subir foto</span>
+                    <span class="upload-box-caption">PNG o JPG</span>
+                  </label>
+                  <input type="file" id="input-foto-menu" accept="image/*" hidden>
+                </div>
+
+                <div class="foto-row">
+                  <div class="foto-row-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><ellipse cx="12" cy="17.5" rx="9" ry="1.7"/><path d="M4 16a8 8 0 0 1 16 0"/><path d="M9 8.5a3 3 0 0 1 6 0"/></svg></div>
+                  <div class="foto-row-texto">
+                    <strong>Fotos de productos</strong>
+                    <span>Subí fotos de tus productos o platos para que el asistente los muestre a los clientes.</span>
+                  </div>
+                  <label class="upload-box" for="input-foto-producto">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
+                    <span class="upload-box-texto">Subir fotos</span>
+                    <span class="upload-box-caption">PNG o JPG</span>
+                  </label>
+                  <input type="file" id="input-foto-producto" accept="image/*" hidden>
+                </div>
+
+                <div id="foto-msg"></div>
+                <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
               </div>
-              <label class="upload-box" for="input-foto-producto">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
-                <span class="upload-box-texto">Subir fotos</span>
-                <span class="upload-box-caption">PNG o JPG</span>
-              </label>
-              <input type="file" id="input-foto-producto" accept="image/*" hidden>
             </div>
 
-            <div id="foto-msg"></div>
-            <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
-          </div>
+            <div class="list-card-item">
+              <button class="list-row" data-panel="panel-disponibilidad">
+                <div class="list-row-icono ic-amarillo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Disponibilidad de hoy</strong>
+                  <span>Marcá lo que hoy no está disponible.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-disponibilidad">
+                <p class="ayuda">Escribí acá lo que hoy no está disponible (se agotó, sin stock, etc.). El asistente no lo va a recomendar ni tomar pedidos de eso.</p>
+                <textarea id="disponibilidad-hoy" placeholder="Ej: hoy no hay pizza de rúcula, se agotaron las empanadas de pollo"></textarea>
+                <button class="btn ancho" id="btn-guardar-disponibilidad" style="margin-top:12px;">Guardar disponibilidad</button>
+                <div id="disponibilidad-msg"></div>
+              </div>
+            </div>
 
-          <div class="tarjeta">
-            <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Disponibilidad de hoy</h2>
-            <p class="ayuda">Escribí acá lo que hoy no está disponible (se agotó, sin stock, etc.). El asistente no lo va a recomendar ni tomar pedidos de eso.</p>
-            <textarea id="disponibilidad-hoy" placeholder="Ej: hoy no hay pizza de rúcula, se agotaron las empanadas de pollo"></textarea>
-            <button class="btn ancho" id="btn-guardar-disponibilidad" style="margin-top:12px;">Guardar disponibilidad</button>
-            <div id="disponibilidad-msg"></div>
-          </div>
+            <div class="list-card-item" id="tarjeta-promociones">
+              <button class="list-row" data-panel="panel-promociones">
+                <div class="list-row-icono ic-naranja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20.6 12.6 12.6 20.6a2 2 0 0 1-2.8 0l-7.4-7.4a2 2 0 0 1 0-2.8L10.4 2.4A2 2 0 0 1 11.8 2H19a2 2 0 0 1 2 2v7.2a2 2 0 0 1-.4 1.4Z"/><circle cx="15" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Promociones</strong>
+                  <span>Publicá descuentos, 2x1 o lo que se te ocurra.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-promociones">
+                <p class="ayuda">El asistente las va a mencionar solo cuando tenga sentido en la charla.</p>
+                <div id="lista-promociones"><p class="ayuda">Cargando...</p></div>
 
-          <div class="tarjeta" id="tarjeta-promociones">
-            <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20.6 12.6 12.6 20.6a2 2 0 0 1-2.8 0l-7.4-7.4a2 2 0 0 1 0-2.8L10.4 2.4A2 2 0 0 1 11.8 2H19a2 2 0 0 1 2 2v7.2a2 2 0 0 1-.4 1.4Z"/><circle cx="15" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg> Promociones</h2>
-            <p class="ayuda">Publicá descuentos, 2x1 o lo que se te ocurra. El asistente las va a mencionar solo cuando tenga sentido en la charla.</p>
-            <div id="lista-promociones"><p class="ayuda">Cargando...</p></div>
+                <label>Título</label>
+                <input type="text" id="promo-titulo" placeholder="Ej: 2x1 en helados los martes">
+                <label>Descripción (opcional)</label>
+                <textarea id="promo-descripcion" placeholder="Contá los detalles: qué días aplica, condiciones, etc."></textarea>
+                <button class="btn ancho" id="btn-crear-promocion" style="margin-top:12px;">Publicar promoción</button>
+                <div id="promo-msg"></div>
+              </div>
+            </div>
 
-            <label>Título</label>
-            <input type="text" id="promo-titulo" placeholder="Ej: 2x1 en helados los martes">
-            <label>Descripción (opcional)</label>
-            <textarea id="promo-descripcion" placeholder="Contá los detalles: qué días aplica, condiciones, etc."></textarea>
-            <button class="btn ancho" id="btn-crear-promocion" style="margin-top:12px;">Publicar promoción</button>
-            <div id="promo-msg"></div>
-          </div>
+            <div class="list-card-item">
+              <button class="list-row" data-panel="panel-vendedor-memoria">
+                <div class="list-row-icono ic-violeta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l7-4"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Vendedor y memoria</strong>
+                  <span>Modo vendedor, memoria de clientes y permisos.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-vendedor-memoria">
+                <p class="ayuda">Elegí qué tan activo es el asistente para cerrar ventas/turnos, si recuerda a los clientes que ya hablaron antes, y qué puede hacer por su cuenta.</p>
 
-          <div class="tarjeta" id="tarjeta-vendedor-memoria">
-            <h2><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l7-4"/></svg> Vendedor y memoria</h2>
-            <p class="ayuda">Elegí qué tan activo es el asistente para cerrar ventas/turnos, si recuerda a los clientes que ya hablaron antes, y qué puede hacer por su cuenta.</p>
+                <label>Modo vendedor</label>
+                <select id="select-modo-vendedor">
+                  <option value="suave">Suave — recomienda sin presionar</option>
+                  <option value="normal">Normal — guía naturalmente hacia el cierre</option>
+                  <option value="agresivo">Activo — busca activamente cerrar la venta</option>
+                </select>
 
-            <label>Modo vendedor</label>
-            <select id="select-modo-vendedor">
-              <option value="suave">Suave — recomienda sin presionar</option>
-              <option value="normal">Normal — guía naturalmente hacia el cierre</option>
-              <option value="agresivo">Activo — busca activamente cerrar la venta</option>
-            </select>
+                <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:16px;">
+                  <input type="checkbox" id="check-memoria-activa" style="width:auto;">
+                  El asistente recuerda a los clientes que ya hablaron antes (su nombre, su último pedido/turno)
+                </label>
 
-            <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:16px;">
-              <input type="checkbox" id="check-memoria-activa" style="width:auto;">
-              El asistente recuerda a los clientes que ya hablaron antes (su nombre, su último pedido/turno)
-            </label>
+                <label style="margin-top:18px;">Permisos del asistente</label>
+                <p class="ayuda" style="margin-top:0;">Lo que desmarques, el asistente no lo va a hacer nunca por su cuenta.</p>
+                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                  <input type="checkbox" id="check-permiso-recomendar" style="width:auto;"> Recomendar productos/servicios de forma proactiva
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                  <input type="checkbox" id="check-permiso-promos" style="width:auto;"> Mencionar promociones activas
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                  <input type="checkbox" id="check-permiso-tomar" style="width:auto;"> Tomar pedidos / reservar turnos por su cuenta
+                </label>
+                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                  <input type="checkbox" id="check-permiso-cerrar" style="width:auto;"> Guiar activamente la charla hacia el cierre
+                </label>
 
-            <label style="margin-top:18px;">Permisos del asistente</label>
-            <p class="ayuda" style="margin-top:0;">Lo que desmarques, el asistente no lo va a hacer nunca por su cuenta.</p>
-            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-              <input type="checkbox" id="check-permiso-recomendar" style="width:auto;"> Recomendar productos/servicios de forma proactiva
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-              <input type="checkbox" id="check-permiso-promos" style="width:auto;"> Mencionar promociones activas
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-              <input type="checkbox" id="check-permiso-tomar" style="width:auto;"> Tomar pedidos / reservar turnos por su cuenta
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-              <input type="checkbox" id="check-permiso-cerrar" style="width:auto;"> Guiar activamente la charla hacia el cierre
-            </label>
+                <button class="btn ancho" id="btn-guardar-vendedor-memoria" style="margin-top:14px;">Guardar</button>
+                <div id="vendedor-memoria-msg"></div>
+              </div>
+            </div>
 
-            <button class="btn ancho" id="btn-guardar-vendedor-memoria" style="margin-top:14px;">Guardar</button>
-            <div id="vendedor-memoria-msg"></div>
-          </div>
+            <div class="list-card-item">
+              <button class="list-row" id="btn-abrir-edicion-negocio">
+                <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 4 4h16l1 5.5"/><path d="M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5"/><path d="M9 20v-6h6v6"/><path d="M3 9.5h18"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Información del negocio</strong>
+                  <span>Datos, detalles y horarios de atención.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+            </div>
 
-          <div class="tarjeta">
-            <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 4 4h16l1 5.5"/><path d="M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5"/><path d="M9 20v-6h6v6"/><path d="M3 9.5h18"/></svg> Información del negocio</h2>
-            <p class="ayuda">Editá los datos y detalles de tu negocio que verá el asistente y tus clientes, y tus horarios de atención.</p>
-            <button class="btn secundario ancho" id="btn-abrir-edicion-negocio"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Editar</button>
           </div>
         </div>
 
