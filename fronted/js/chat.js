@@ -54,18 +54,83 @@ function agregarMensaje(texto, rol) {
 }
 
 function agregarImagenes(urls) {
-  urls.forEach((url) => {
-    const fila = document.createElement('div');
-    fila.className = 'msg-fila asistente';
-    const burbuja = document.createElement('div');
-    burbuja.className = 'msg asistente';
-    burbuja.style.padding = '4px';
-    burbuja.innerHTML = `<img src="${url}" alt="Menu" style="max-width:100%; border-radius:10px; display:block;">`;
-    fila.appendChild(burbuja);
-    contenedorMensajes.appendChild(fila);
-  });
+  const fila = document.createElement('div');
+  fila.className = 'msg-fila asistente';
+  const burbuja = document.createElement('div');
+  burbuja.className = 'msg asistente';
+  burbuja.style.padding = '4px';
+
+  if (urls.length === 1) {
+    // Una sola foto: se muestra grande directamente, igual que en WhatsApp
+    const img = document.createElement('img');
+    img.src = urls[0];
+    img.alt = 'Foto';
+    img.className = 'msg-imagen-unica';
+    img.addEventListener('click', () => abrirLightbox(urls, 0));
+    burbuja.appendChild(img);
+  } else {
+    // Varias fotos juntas: se ven chicas en grilla, tocando una se abre completa con navegación
+    const MAX_VISIBLES = 6;
+    const grid = document.createElement('div');
+    grid.className = 'msg-imagenes-grid';
+    urls.slice(0, MAX_VISIBLES).forEach((url, i) => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'Foto';
+      const esUltimaVisible = i === MAX_VISIBLES - 1 && urls.length > MAX_VISIBLES;
+      const celda = document.createElement('div');
+      if (esUltimaVisible) {
+        celda.className = 'grid-mas';
+        celda.dataset.mas = `+${urls.length - MAX_VISIBLES}`;
+      }
+      celda.appendChild(img);
+      celda.addEventListener('click', () => abrirLightbox(urls, i));
+      grid.appendChild(celda);
+    });
+    burbuja.appendChild(grid);
+  }
+
+  fila.appendChild(burbuja);
+  contenedorMensajes.appendChild(fila);
   contenedorMensajes.scrollTop = contenedorMensajes.scrollHeight;
 }
+
+// --- Visor de fotos a pantalla completa (lightbox estilo WhatsApp) ---
+let lightboxUrls = [];
+let lightboxIndice = 0;
+
+function abrirLightbox(urls, indice) {
+  lightboxUrls = urls;
+  lightboxIndice = indice;
+  mostrarFotoLightbox();
+  document.getElementById('lightbox-overlay').classList.add('abierto');
+}
+
+function mostrarFotoLightbox() {
+  document.getElementById('lightbox-img').src = lightboxUrls[lightboxIndice];
+  const mostrarNav = lightboxUrls.length > 1;
+  document.getElementById('lightbox-prev').style.display = mostrarNav ? 'flex' : 'none';
+  document.getElementById('lightbox-next').style.display = mostrarNav ? 'flex' : 'none';
+  document.getElementById('lightbox-contador').textContent = mostrarNav ? `${lightboxIndice + 1} / ${lightboxUrls.length}` : '';
+}
+
+function cerrarLightbox() {
+  document.getElementById('lightbox-overlay').classList.remove('abierto');
+}
+
+document.getElementById('lightbox-cerrar').addEventListener('click', cerrarLightbox);
+document.getElementById('lightbox-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'lightbox-overlay') cerrarLightbox(); // tocar el fondo también cierra
+});
+document.getElementById('lightbox-prev').addEventListener('click', () => {
+  lightboxIndice = (lightboxIndice - 1 + lightboxUrls.length) % lightboxUrls.length;
+  mostrarFotoLightbox();
+});
+document.getElementById('lightbox-next').addEventListener('click', () => {
+  lightboxIndice = (lightboxIndice + 1) % lightboxUrls.length;
+  mostrarFotoLightbox();
+});
+
 
 async function cargarInfoNegocio() {
   if (!codigoPublico) return;
