@@ -183,6 +183,13 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // "Negocio" funciona distinto: cada fila abre su contenido en pantalla completa (no se despliega
+  // abajo como en Herramientas/Ajustes), con una flechita para volver arriba a la derecha.
+  document.querySelectorAll('#negocio-vista .list-row[data-fullscreen]').forEach((fila) => {
+    fila.addEventListener('click', () => abrirSubpantallaNegocio(fila.dataset.fullscreen, fila.dataset.titulo));
+  });
+  document.getElementById('btn-cerrar-subpantalla-negocio').addEventListener('click', cerrarSubpantallaNegocio);
+
   // Copiar enlace de chat / código de vinculación con un botón (en vez de seleccionar texto a mano)
   document.getElementById('btn-copiar-link').addEventListener('click', () => copiarAlPortapapeles('link-chat', 'btn-copiar-link', '📋 Copiar enlace'));
   document.getElementById('btn-copiar-invitar')?.addEventListener('click', () => copiarAlPortapapeles('link-invitar', 'btn-copiar-invitar', 'Copiar enlace'));
@@ -234,7 +241,7 @@ function mostrarSeccion(nombre) {
   document.querySelectorAll('.app-seccion').forEach((sec) => { sec.style.display = 'none'; });
   document.getElementById(`seccion-${nombre}`).style.display = 'block';
 
-  if (nombre === 'negocio') cerrarEdicionNegocio();
+  if (nombre === 'negocio') { cerrarEdicionNegocio(); cerrarSubpantallaNegocio(); }
 
   // La barra de arriba muestra el nombre de la sección actual (como en Herramientas/Ajustes),
   // y solo en Inicio muestra el nombre del negocio junto con el estado del plan (PRUEBA/ACTIVA/VENCIDA).
@@ -1644,6 +1651,30 @@ function recolectarHorariosEdicion() {
   });
 }
 
+// Cada opción de "Negocio" (Productos, Fotos, Promociones, etc.) vive en un <div class="list-row-panel">
+// que ya tiene todo su HTML e inputs armados desde antes. En vez de duplicar ese contenido, lo
+// MOVEMOS al contenedor de la subpantalla y lo mostramos ahí, en pantalla completa.
+function abrirSubpantallaNegocio(panelId, titulo) {
+  const panel = document.getElementById(panelId);
+  const contenedor = document.getElementById('negocio-subpantalla-contenido');
+  if (!panel || !contenedor) return;
+
+  contenedor.appendChild(panel);
+  panel.style.display = 'block';
+  panel.style.padding = '0';
+  panel.style.background = 'transparent';
+
+  document.getElementById('negocio-subpantalla-titulo').textContent = titulo;
+  document.getElementById('negocio-vista').style.display = 'none';
+  document.getElementById('negocio-subpantalla').style.display = 'block';
+  document.querySelector('.app-contenido').scrollTop = 0;
+}
+
+function cerrarSubpantallaNegocio() {
+  document.getElementById('negocio-subpantalla').style.display = 'none';
+  document.getElementById('negocio-vista').style.display = 'block';
+}
+
 function abrirEdicionNegocio() {
   renderizarCamposEdicion();
   renderizarHorariosEdicion();
@@ -1943,6 +1974,7 @@ document.getElementById('btn-agregar-zona-delivery')?.addEventListener('click', 
 
 // --- Clientes destacados (ranking + premios) ---
 let criterioRankingActual = 'compras';
+let ultimoTop10 = [];
 
 const ETIQUETAS_CRITERIO = {
   compras: 'compras',
@@ -1959,64 +1991,114 @@ document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((
   });
 });
 
+function valorRankingTexto(c, criterio) {
+  if (!c) return '';
+  if (criterio === 'dinero') return `$${Number(c.valor || 0).toLocaleString('es-AR')}`;
+  if (criterio === 'fidelidad') return `Cliente desde ${new Date(c.valor).toLocaleDateString('es-AR')}`;
+  return `${c.valor} ${ETIQUETAS_CRITERIO[criterio]}`;
+}
+
+function renderizarPodio(top3, criterio) {
+  const clases = { 1: 'oro', 2: 'plata', 3: 'bronce' };
+  const contenedor = document.getElementById('podio-ranking');
+  contenedor.innerHTML = [1, 2, 3].map((puesto) => {
+    const c = top3[puesto - 1];
+    const nombre = c ? (c.nombre || 'Cliente sin identificar') : '—';
+    const valor = c ? valorRankingTexto(c, criterio) : 'Todavía nadie';
+    return `
+      <div class="podio-puesto" data-orden="${puesto}">
+        <div class="podio-circulo ${clases[puesto]}">
+          ${puesto}
+          <span class="podio-badge">${puesto}°</span>
+        </div>
+        <div class="podio-nombre">${nombre}</div>
+        <div class="podio-valor">${valor}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderizarPremiosPuestos(premios) {
+  const clases = { 1: 'oro', 2: 'plata', 3: 'bronce' };
+  const colores = { 1: '#f59e0b', 2: '#94a3b8', 3: '#b8703f' };
+  const contenedor = document.getElementById('premios-ranking');
+  contenedor.innerHTML = [1, 2, 3].map((puesto) => {
+    const premio = (premios && premios['top' + puesto]) || { texto: '', descuentoPorcentaje: 0 };
+    return `
+      <div class="premio-puesto-fila">
+        <div class="premio-puesto-medalla" style="background:${colores[puesto]}">${puesto}°</div>
+        <div class="premio-puesto-campos">
+          <input type="text" class="premio-texto" data-puesto="${puesto}" placeholder="Ej: Envío gratis, un producto de regalo..." value="${premio.texto || ''}">
+          <div class="premio-puesto-descuento-wrap">
+            <input type="number" class="premio-descuento" data-puesto="${puesto}" min="0" max="100" placeholder="0" value="${premio.descuentoPorcentaje || ''}">
+            <span>% de descuento (opcional, el asistente lo calcula y aplica solo)</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 async function cargarRanking() {
-  const contenedor = document.getElementById('lista-ranking');
+  const contenedorResto = document.getElementById('lista-ranking');
   try {
     const res = await fetch(`${API_URL}/ranking?criterio=${criterioRankingActual}`, { headers: headersAuth() });
     const data = await res.json();
+    ultimoTop10 = data.top10 || [];
 
     document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((e) => {
       e.classList.toggle('seleccionado', e.dataset.criterio === data.criterio);
     });
-    document.getElementById('ranking-premio-top1').value = (data.config && data.config.premios && data.config.premios.top1) || '';
-    document.getElementById('ranking-premio-top2').value = (data.config && data.config.premios && data.config.premios.top2) || '';
-    document.getElementById('ranking-premio-top3').value = (data.config && data.config.premios && data.config.premios.top3) || '';
 
-    if (!data.top10 || !data.top10.length) {
-      contenedor.innerHTML = `<p class="ayuda">Todavía no hay clientes suficientes para armar un ranking.</p>`;
+    renderizarPodio(ultimoTop10.slice(0, 3), data.criterio);
+    renderizarPremiosPuestos(data.config && data.config.premios);
+
+    const resto = ultimoTop10.slice(3);
+    if (!resto.length) {
+      contenedorResto.innerHTML = ultimoTop10.length
+        ? ''
+        : `<p class="ayuda">Todavía no hay clientes suficientes para armar un ranking.</p>`;
       return;
     }
 
-    contenedor.innerHTML = data.top10.map((c, i) => {
+    contenedorResto.innerHTML = resto.map((c, i) => {
       const nombre = c.nombre || 'Cliente sin identificar';
-      const valorTexto = data.criterio === 'dinero' ? `$${Number(c.valor || 0).toLocaleString('es-AR')}`
-        : data.criterio === 'fidelidad' ? new Date(c.valor).toLocaleDateString('es-AR')
-        : `${c.valor} ${ETIQUETAS_CRITERIO[data.criterio]}`;
       return `
         <div class="ranking-card">
-          <div class="ranking-puesto">${i + 1}</div>
+          <div class="ranking-puesto">${i + 4}</div>
           <div class="ranking-info">
             <strong>${nombre}</strong>
-            <span>${valorTexto}</span>
+            <span>${valorRankingTexto(c, data.criterio)}</span>
           </div>
         </div>
       `;
     }).join('');
   } catch (error) {
-    contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el ranking.</p>`;
+    contenedorResto.innerHTML = `<p class="ayuda">No se pudo cargar el ranking.</p>`;
   }
 }
 
 document.getElementById('btn-guardar-ranking')?.addEventListener('click', async () => {
   const msgDiv = document.getElementById('ranking-msg');
+  const premios = {};
+  [1, 2, 3].forEach((puesto) => {
+    const texto = document.querySelector(`.premio-texto[data-puesto="${puesto}"]`).value;
+    const descuento = document.querySelector(`.premio-descuento[data-puesto="${puesto}"]`).value;
+    premios['top' + puesto] = { texto, descuentoPorcentaje: descuento ? Number(descuento) : 0 };
+  });
+
   try {
     const res = await fetch(`${API_URL}/ranking/config`, {
       method: 'PUT',
       headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({
-        criterioActivo: criterioRankingActual,
-        premios: {
-          top1: document.getElementById('ranking-premio-top1').value,
-          top2: document.getElementById('ranking-premio-top2').value,
-          top3: document.getElementById('ranking-premio-top3').value,
-        },
-      }),
+      body: JSON.stringify({ criterioActivo: criterioRankingActual, premios }),
     });
     if (!res.ok) throw new Error('Error al guardar');
     negocioActual = (await res.json()).negocio;
-    msgDiv.innerHTML = `<p class="exito">Guardado. El asistente ya va a usar este criterio.</p>`;
+    msgDiv.innerHTML = `<p class="exito">Guardado. El asistente ya va a avisar y aplicar estos premios.</p>`;
     setTimeout(() => { msgDiv.innerHTML = ''; }, 2500);
   } catch (error) {
     msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar, intentá de nuevo.</div>`;
   }
 });
+
