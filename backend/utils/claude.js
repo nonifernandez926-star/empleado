@@ -3,6 +3,7 @@ const Pedido = require('../models/Pedido');
 const Turno = require('../models/Turno');
 const Cliente = require('../models/Cliente');
 const { calcularHorariosDisponibles } = require('./turnos');
+const { calcularTop10 } = require('../routes/ranking');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
@@ -156,7 +157,7 @@ function descripcionModoVendedor(modoVendedor) {
   return 'Modo vendedor: NORMAL. Guiá la conversación de forma natural hacia cerrar el pedido/turno cuando el cliente muestre interés, sin ser insistente ni pasivo.';
 }
 
-function construirSystemPrompt(negocio, clienteConocido, productos) {
+function construirSystemPrompt(negocio, clienteConocido, productos, posicionRanking) {
   const nombre = (negocio.formData && negocio.formData.nombreNegocio) || 'el negocio';
   const mostrarPrecios = negocio.formData && negocio.formData.mostrarPrecios;
   const permisos = negocio.permisos || {};
@@ -240,6 +241,15 @@ function construirSystemPrompt(negocio, clienteConocido, productos) {
     if (clienteConocido.ultimoTurno && clienteConocido.ultimoTurno.motivo) {
       prompt += 'Su ultimo turno fue por "' + clienteConocido.ultimoTurno.motivo + '"' + (clienteConocido.ultimoTurno.profesional ? ' con ' + clienteConocido.ultimoTurno.profesional : '') + '.\n';
     }
+    if (clienteConocido.ultimaDireccion) {
+      prompt += 'La ultima vez que pidio delivery, la direccion fue: "' + clienteConocido.ultimaDireccion + '". Si vuelve a pedir delivery, podes preguntarle si es la misma direccion en vez de pedirsela de cero - pero confirmala siempre, nunca la des por sentada sin preguntar.\n';
+    }
+    if (posicionRanking && negocio.ranking && negocio.ranking.premios) {
+      const textoPremio = negocio.ranking.premios['top' + posicionRanking];
+      if (textoPremio) {
+        prompt += 'IMPORTANTE: este cliente esta en el puesto #' + posicionRanking + ' del ranking de clientes de este negocio, y le corresponde este premio: "' + textoPremio + '". Haceselo saber de forma natural en algun momento de la charla (por ejemplo cuando confirmes su pedido/turno, o al saludarlo) - no lo repitas si ya se lo dijiste antes en esta misma conversacion.\n';
+      }
+    }
     prompt += 'Podes saludarlo por su nombre si lo tenes, y si tiene sentido en la charla ofrecele repetir lo de la ultima vez (el mismo pedido, o el mismo motivo/profesional del ultimo turno) - pero no lo fuerces si no viene al caso, y si te dice que quiere otra cosa segui con eso sin insistir.\n\n';
   }
 
@@ -294,14 +304,25 @@ function construirSystemPrompt(negocio, clienteConocido, productos) {
     prompt += 'Si un cliente ya esta a mitad de sacar un turno o haciendo una consulta y llega OTRO cliente nuevo en una conversacion distinta, no hay problema - son conversaciones separadas y cada una se atiende de forma independiente, no hace falta avisarle a nadie que espere.\n\n';
   } else {
     prompt += 'COMO TOMAR UN PEDIDO (esto es central en tu trabajo):\n';
-    prompt += 'Si el cliente quiere pedir algo, guialo conversacionalmente para juntar todos los datos necesarios: que producto/servicio, cantidad, si es delivery o retiro (y la direccion si es delivery), forma de pago, y cualquier observacion. SIEMPRE pedile tambien su nombre y su numero de telefono, sin excepcion (es obligatorio, sirve como respaldo del negocio). No pidas todo junto en una sola pregunta larga, anda guiando paso a paso de forma natural.\n\n';
+    prompt += 'Si el cliente quiere pedir algo, guialo conversacionalmente para juntar todos los datos necesarios: que producto/servicio y cantidad, si es delivery o retiro (y la direccion si es delivery), forma de pago, nombre, telefono (siempre obligatorio, sin excepcion) y cualquier observacion. Para ir mas rapido y no cansar al cliente, agrupa varias preguntas juntas en un mismo mensaje (por ejemplo "¿Es para delivery o retiras? ¿A que direccion, y a que nombre y telefono lo anoto?") en vez de preguntar un solo dato por mensaje - pero segui siendo natural, si el cliente ya te dio algo no se lo vuelvas a preguntar, y si la situacion pide ir de a un dato por vez (por ejemplo porque el pedido es confuso) esta bien hacerlo asi tambien.\n\n';
     prompt += 'Cuando tengas todos los datos, mostrale un resumen claro antes de confirmar, con emojis y ordenado (incluyendo el total a pagar si hay precios cargados, sumando el costo de envio si corresponde), y preguntale si confirma.\n\n';
-    prompt += 'SOLO cuando el cliente confirme explicitamente (diga que si, que confirma, etc.), usa la herramienta "registrar_pedido" para guardarlo de verdad en el sistema. Nunca digas que un pedido quedo registrado sin haber usado esa herramienta. Despues de que la herramienta confirme que se guardo, avisale al cliente que su pedido quedo registrado.\n\n';
+    prompt += 'Si el cliente confirma Y la forma de pago NO es transferencia: usa la herramienta "registrar_pedido" en ese mismo momento para guardarlo de verdad en el sistema, y despues avisale que quedo registrado.\n';
+    prompt += 'Si el cliente confirma Y la forma de pago SI es transferencia: todavia NO uses la herramienta. Primero segui los pasos de "PAGO POR TRANSFERENCIA" de abajo (mandarle el monto y el alias/CBU, y esperar el comprobante) - la herramienta "registrar_pedido" se usa recien despues de que el cliente diga que ya transfirio o mande el comprobante, nunca antes. Esto es importante: no registres el pedido en el sistema hasta tener la plata en camino.\n';
+    prompt += 'Nunca digas que un pedido quedo registrado sin haber usado la herramienta primero.\n\n';
     prompt += 'Si el negocio no tiene cargados productos/servicios claros para tomar pedidos de esa forma, o el pedido es algo que no podes resolver por chat, indicale al cliente el WhatsApp del negocio como alternativa, pero esto es un respaldo, no el camino principal.\n\n';
+
+    const zonas = negocio.zonasDelivery || [];
+    if (zonas.length) {
+      prompt += 'COSTO DE DELIVERY POR ZONA (usa esta lista para cobrar el envio, nunca inventes un precio de envio):\n';
+      zonas.forEach(function (z) { prompt += '- ' + z.zona + ': $' + z.precio + '\n'; });
+      prompt += 'Cuando el cliente te de una direccion, fijate a que zona de la lista corresponde (aunque no diga el nombre exacto de la zona, interpreta por el barrio/calle que mencione) y sumale ese costo de envio al total. Si la direccion no coincide claramente con ninguna zona cargada, no inventes un precio - decile que el negocio va a confirmar el costo de envio para esa direccion puntual.\n\n';
+    } else {
+      prompt += 'Este negocio todavia no cargo zonas de delivery con precios. Si el cliente pide delivery, no inventes un costo de envio - decile que el negocio va a confirmar el costo de envio segun la direccion.\n\n';
+    }
   }
 
   if (permiteTomarPedidosOTurnos) {
-    prompt += 'PAGO POR TRANSFERENCIA (muy importante, seguir estos pasos en orden):\n';
+    prompt += 'PAGO POR TRANSFERENCIA (muy importante, seguir estos pasos en orden - y recorda que "registrar_pedido" va DESPUES del paso 3, nunca antes):\n';
     prompt += 'Si el cliente elige pagar por transferencia:\n';
     prompt += '1) Decile el monto TOTAL exacto que debe transferir (productos + costo de envio si aplica).\n';
     if (negocio.formData && negocio.formData.aliasCbu) {
@@ -309,8 +330,8 @@ function construirSystemPrompt(negocio, clienteConocido, productos) {
     } else {
       prompt += '2) Este negocio no cargo un alias/CBU todavia. Avisale al cliente que consulte el medio de pago directamente con el negocio por WhatsApp.\n';
     }
-    prompt += '3) Pedile que, apenas transfiera, adjunte la foto del comprobante ahi mismo en el chat (hay un boton para adjuntar archivos).\n';
-    prompt += '4) Cuando el cliente te diga que ya transfirio o que ya mando el comprobante, respondele SIEMPRE algo como: "Perfecto, gracias. El negocio va a revisar que la transferencia haya llegado correctamente y va a confirmar tu pedido a la brevedad." NUNCA le digas que el pago ya esta confirmado o verificado vos mismo - esa decision la toma unicamente el dueño del negocio revisando su cuenta bancaria real, vos no podes saber si una transferencia es autentica solo mirando una imagen.\n\n';
+    prompt += '3) Pedile que, apenas transfiera, adjunte la foto del comprobante ahi mismo en el chat (hay un boton para adjuntar archivos), o que te avise por texto cuando ya transfirio.\n';
+    prompt += '4) SOLO cuando el cliente te diga que ya transfirio o que ya mando el comprobante: primero usa la herramienta "registrar_pedido" (recien ahi, no antes), y despues respondele SIEMPRE algo como: "Perfecto, gracias. El negocio va a revisar que la transferencia haya llegado correctamente y va a confirmar tu pedido a la brevedad." NUNCA le digas que el pago ya esta confirmado o verificado vos mismo - esa decision la toma unicamente el dueño del negocio revisando su cuenta bancaria real, vos no podes saber si una transferencia es autentica solo mirando una imagen.\n\n';
   }
 
   prompt += 'PERSONALIDAD DEL ASISTENTE:\n' + descripcionPersonalidad(negocio.personalidad) + '\n\n';
@@ -361,8 +382,9 @@ async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
             items: items.map(function (i) { return { producto: i.producto, cantidad: i.cantidad }; }),
             tipoEntrega: input.tipoEntrega,
           },
+          ultimaDireccion: input.direccionEntrega || undefined,
         },
-        $inc: { totalPedidos: 1 },
+        $inc: { totalPedidos: 1, totalGastado: total || 0 },
       },
       { upsert: true, new: true }
     );
@@ -469,7 +491,24 @@ async function buscarClienteConocido(negocio, sesionClienteId) {
  */
 async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesionClienteId, productos) {
   const clienteConocido = await buscarClienteConocido(negocio, sesionClienteId);
-  const systemPrompt = construirSystemPrompt(negocio, clienteConocido, productos || []);
+
+  // Si el negocio configuro premios para el ranking, nos fijamos si este cliente esta en el top 3
+  // segun el criterio elegido, para que el asistente se lo pueda hacer saber.
+  let posicionRanking = null;
+  const premiosConfigurados = negocio.ranking && negocio.ranking.premios &&
+    (negocio.ranking.premios.top1 || negocio.ranking.premios.top2 || negocio.ranking.premios.top3);
+  if (clienteConocido && premiosConfigurados) {
+    try {
+      const criterio = (negocio.ranking && negocio.ranking.criterioActivo) || 'compras';
+      const top10 = await calcularTop10(negocio._id, criterio);
+      const indice = top10.findIndex(function (c) { return c.sesionClienteId === sesionClienteId; });
+      if (indice !== -1 && indice < 3) posicionRanking = indice + 1;
+    } catch (error) {
+      console.error('Error calculando ranking:', error);
+    }
+  }
+
+  const systemPrompt = construirSystemPrompt(negocio, clienteConocido, productos || [], posicionRanking);
 
   const messages = historialMensajes.map(function (m) {
     return { role: m.rol === 'cliente' ? 'user' : 'assistant', content: m.contenido };
