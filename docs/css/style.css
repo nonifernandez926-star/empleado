@@ -237,6 +237,37 @@ a { color: inherit; }
 .btn-recuperar-cliente[disabled] { background: var(--gris-claro); color: var(--gris-texto); cursor: default; }
 #grid-umbral-inactivos { margin-bottom: 16px; grid-template-columns: repeat(3, 1fr); }
 #grid-umbral-inactivos .opcion-aprobacion { text-align: center; font-weight: 700; font-size: 0.85rem; }
+.fila-filtro-todas { margin-bottom: 10px; }
+.fila-filtro-todas .opcion-aprobacion,
+#grid-filtro-resenas .opcion-aprobacion { text-align: center; font-weight: 700; font-size: 0.85rem; }
+
+/* Probar al asistente: mini chat de simulación dentro del panel */
+.chat-prueba-mensajes {
+  background: var(--gris-claro); border-radius: var(--radio-chico); padding: 12px;
+  min-height: 120px; max-height: 320px; overflow-y: auto; margin-bottom: 10px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.chat-prueba-msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; line-height: 1.35; }
+.chat-prueba-msg.cliente { align-self: flex-end; background: var(--gradiente-azul); color: white; }
+.chat-prueba-msg.asistente { align-self: flex-start; background: var(--blanco); border: 1px solid var(--linea); }
+.chat-prueba-input-fila { display: flex; gap: 8px; }
+.chat-prueba-input-fila input { flex: 1; }
+
+/* Ranking de clientes destacados */
+.ranking-card {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--linea);
+}
+.ranking-card:last-child { border-bottom: none; }
+.ranking-puesto {
+  width: 28px; height: 28px; border-radius: 999px; background: var(--gris-claro); color: var(--gris-texto);
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; flex-shrink: 0;
+}
+.ranking-card:nth-child(1) .ranking-puesto { background: #fef3c7; color: #92400e; }
+.ranking-card:nth-child(2) .ranking-puesto { background: #e5e7eb; color: #374151; }
+.ranking-card:nth-child(3) .ranking-puesto { background: #fed7aa; color: #9a3412; }
+.ranking-info { flex: 1; min-width: 0; }
+.ranking-info strong { display: block; font-size: 0.88rem; }
+.ranking-info span { display: block; font-size: 0.76rem; color: var(--gris-texto); }
 @media (max-width: 380px) { .grid-tipo-operacion { grid-template-columns: 1fr; } }
 
 .fila-profesional { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
