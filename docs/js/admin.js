@@ -185,6 +185,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Copiar enlace de chat / código de vinculación con un botón (en vez de seleccionar texto a mano)
   document.getElementById('btn-copiar-link').addEventListener('click', () => copiarAlPortapapeles('link-chat', 'btn-copiar-link', '📋 Copiar enlace'));
+  document.getElementById('btn-copiar-invitar')?.addEventListener('click', () => copiarAlPortapapeles('link-invitar', 'btn-copiar-invitar', 'Copiar enlace'));
   document.getElementById('btn-copiar-codigo').addEventListener('click', () => copiarAlPortapapeles('codigo-vinculacion', 'btn-copiar-codigo', '📋 Copiar código'));
 
   document.getElementById('link-ayuda').addEventListener('click', (e) => {
@@ -309,6 +310,7 @@ async function mostrarPanel() {
   document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
   document.getElementById('codigo-vinculacion').textContent = negocioActual.codigoVinculacion || '(no disponible)';
   document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
+  document.getElementById('link-invitar').textContent = `${window.location.origin}/registro.html`;
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
 
@@ -328,6 +330,7 @@ async function mostrarPanel() {
   // Las promociones no tienen mucho sentido en rubros de Salud (no es habitual ni bien visto
   // ofrecer descuentos en consultas médicas); en el resto de los negocios de turnos sí aplica.
   document.getElementById('tarjeta-promociones').style.display = negocioActual.rubroCategoria === 'Salud' ? 'none' : 'block';
+  document.getElementById('tarjeta-zonas-delivery').style.display = negocioActual.tipoOperacion === 'turnos' ? 'none' : 'block';
 
   cargarEstadisticas();
   if (esTurnos) {
@@ -339,8 +342,10 @@ async function mostrarPanel() {
   renderizarFotos();
   cargarProductos();
   renderizarPromociones();
+  renderizarZonasDelivery();
   cargarOportunidades();
   cargarExperiencia();
+  cargarRanking();
   cargarPlanes();
   cargarResumenDiario();
   cargarPreguntasSinRespuesta();
@@ -1771,10 +1776,10 @@ function renderizarOportunidades(tipo, lista, contenedor, btnTodos) {
 // --- Experiencia (calificaciones con estrellas + reseñas) ---
 let filtroResenasActual = 'todas';
 
-document.querySelectorAll('#grid-filtro-resenas .opcion-aprobacion').forEach((el) => {
+document.querySelectorAll('#grid-filtro-resenas .opcion-aprobacion, #filtro-resena-todas').forEach((el) => {
   el.addEventListener('click', () => {
     filtroResenasActual = el.dataset.filtro;
-    document.querySelectorAll('#grid-filtro-resenas .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+    document.querySelectorAll('#grid-filtro-resenas .opcion-aprobacion, #filtro-resena-todas').forEach((e) => e.classList.toggle('seleccionado', e === el));
     cargarExperiencia();
   });
 });
@@ -1822,3 +1827,196 @@ async function cargarEstadisticas() {
     <tr><td>Plan actual</td><td>${stats.suscripcion.plan}</td></tr>
   `;
 }
+
+// --- Probar al asistente (simulación, no guarda nada real) ---
+let modoPruebaActual = 'suave';
+let historialPrueba = [];
+
+document.querySelectorAll('#grid-modo-prueba .opcion-aprobacion').forEach((el) => {
+  el.addEventListener('click', () => {
+    modoPruebaActual = el.dataset.modo;
+    document.querySelectorAll('#grid-modo-prueba .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+  });
+});
+
+function agregarMensajePrueba(texto, rol) {
+  const contenedor = document.getElementById('chat-prueba-mensajes');
+  const burbuja = document.createElement('div');
+  burbuja.className = `chat-prueba-msg ${rol}`;
+  burbuja.textContent = texto;
+  contenedor.appendChild(burbuja);
+  contenedor.scrollTop = contenedor.scrollHeight;
+}
+
+async function enviarMensajePrueba() {
+  const input = document.getElementById('input-prueba');
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  agregarMensajePrueba(texto, 'cliente');
+  historialPrueba.push({ rol: 'cliente', contenido: texto });
+  input.value = '';
+  input.disabled = true;
+
+  try {
+    const res = await fetch(`${API_URL}/chat/prueba`, {
+      method: 'POST',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ mensaje: texto, historial: historialPrueba, modoVendedor: modoPruebaActual }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      agregarMensajePrueba(data.respuesta, 'asistente');
+      historialPrueba.push({ rol: 'asistente', contenido: data.respuesta });
+    } else {
+      agregarMensajePrueba('No se pudo generar la respuesta de prueba.', 'asistente');
+    }
+  } catch (error) {
+    agregarMensajePrueba('Error de conexión al probar el asistente.', 'asistente');
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+document.getElementById('btn-enviar-prueba')?.addEventListener('click', enviarMensajePrueba);
+document.getElementById('input-prueba')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') enviarMensajePrueba(); });
+
+// --- Zonas de delivery y precios ---
+function renderizarZonasDelivery() {
+  const contenedor = document.getElementById('lista-zonas-delivery');
+  const zonas = negocioActual.zonasDelivery || [];
+
+  if (!zonas.length) {
+    contenedor.innerHTML = `<p class="ayuda">Todavía no cargaste ninguna zona de delivery.</p>`;
+  } else {
+    contenedor.innerHTML = zonas.map((z, i) => `
+      <div class="fila-variante">
+        <span>${z.zona} — $${Number(z.precio).toLocaleString('es-AR')}</span>
+        <button type="button" data-i="${i}">Quitar</button>
+      </div>
+    `).join('');
+    contenedor.querySelectorAll('button').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const nuevasZonas = zonas.filter((_, idx) => idx !== Number(btn.dataset.i));
+        await guardarZonasDelivery(nuevasZonas);
+      });
+    });
+  }
+}
+
+async function guardarZonasDelivery(zonasNuevas) {
+  const msgDiv = document.getElementById('zonas-delivery-msg');
+  try {
+    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
+      method: 'PUT',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ zonasDelivery: zonasNuevas }),
+    });
+    if (!res.ok) throw new Error('Error al guardar');
+    const data = await res.json();
+    negocioActual = data.negocio;
+    renderizarZonasDelivery();
+    if (msgDiv) {
+      msgDiv.innerHTML = `<p class="exito">Guardado.</p>`;
+      setTimeout(() => { msgDiv.innerHTML = ''; }, 2000);
+    }
+  } catch (error) {
+    if (msgDiv) msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar, intentá de nuevo.</div>`;
+  }
+}
+
+document.getElementById('btn-agregar-zona-delivery')?.addEventListener('click', async () => {
+  const nombreInput = document.getElementById('zona-delivery-nombre');
+  const precioInput = document.getElementById('zona-delivery-precio');
+  const nombre = nombreInput.value.trim();
+  const precio = Number(precioInput.value);
+
+  if (!nombre) { alert('Escribí el nombre de la zona.'); return; }
+  if (Number.isNaN(precio) || precio < 0) { alert('Poné un precio válido.'); return; }
+
+  const nuevasZonas = [...(negocioActual.zonasDelivery || []), { zona: nombre, precio }];
+  await guardarZonasDelivery(nuevasZonas);
+  nombreInput.value = '';
+  precioInput.value = '';
+});
+
+// --- Clientes destacados (ranking + premios) ---
+let criterioRankingActual = 'compras';
+
+const ETIQUETAS_CRITERIO = {
+  compras: 'compras',
+  dinero: 'gastado',
+  visitas: 'visitas',
+  fidelidad: 'cliente desde',
+};
+
+document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((el) => {
+  el.addEventListener('click', () => {
+    criterioRankingActual = el.dataset.criterio;
+    document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+    cargarRanking();
+  });
+});
+
+async function cargarRanking() {
+  const contenedor = document.getElementById('lista-ranking');
+  try {
+    const res = await fetch(`${API_URL}/ranking?criterio=${criterioRankingActual}`, { headers: headersAuth() });
+    const data = await res.json();
+
+    document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((e) => {
+      e.classList.toggle('seleccionado', e.dataset.criterio === data.criterio);
+    });
+    document.getElementById('ranking-premio-top1').value = (data.config && data.config.premios && data.config.premios.top1) || '';
+    document.getElementById('ranking-premio-top2').value = (data.config && data.config.premios && data.config.premios.top2) || '';
+    document.getElementById('ranking-premio-top3').value = (data.config && data.config.premios && data.config.premios.top3) || '';
+
+    if (!data.top10 || !data.top10.length) {
+      contenedor.innerHTML = `<p class="ayuda">Todavía no hay clientes suficientes para armar un ranking.</p>`;
+      return;
+    }
+
+    contenedor.innerHTML = data.top10.map((c, i) => {
+      const nombre = c.nombre || 'Cliente sin identificar';
+      const valorTexto = data.criterio === 'dinero' ? `$${Number(c.valor || 0).toLocaleString('es-AR')}`
+        : data.criterio === 'fidelidad' ? new Date(c.valor).toLocaleDateString('es-AR')
+        : `${c.valor} ${ETIQUETAS_CRITERIO[data.criterio]}`;
+      return `
+        <div class="ranking-card">
+          <div class="ranking-puesto">${i + 1}</div>
+          <div class="ranking-info">
+            <strong>${nombre}</strong>
+            <span>${valorTexto}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (error) {
+    contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el ranking.</p>`;
+  }
+}
+
+document.getElementById('btn-guardar-ranking')?.addEventListener('click', async () => {
+  const msgDiv = document.getElementById('ranking-msg');
+  try {
+    const res = await fetch(`${API_URL}/ranking/config`, {
+      method: 'PUT',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        criterioActivo: criterioRankingActual,
+        premios: {
+          top1: document.getElementById('ranking-premio-top1').value,
+          top2: document.getElementById('ranking-premio-top2').value,
+          top3: document.getElementById('ranking-premio-top3').value,
+        },
+      }),
+    });
+    if (!res.ok) throw new Error('Error al guardar');
+    negocioActual = (await res.json()).negocio;
+    msgDiv.innerHTML = `<p class="exito">Guardado. El asistente ya va a usar este criterio.</p>`;
+    setTimeout(() => { msgDiv.innerHTML = ''; }, 2500);
+  } catch (error) {
+    msgDiv.innerHTML = `<div class="error-msg">No se pudo guardar, intentá de nuevo.</div>`;
+  }
+});
