@@ -23,6 +23,15 @@ const clienteSchema = new mongoose.Schema({
     motivo: { type: String },
     profesional: { type: String },
   },
+
+  // Ultima direccion de delivery que dio este cliente, para que el asistente pueda ofrecerle
+  // "¿es la misma dirección de la vez pasada?" en vez de pedirsela de cero, y para que el negocio
+  // vaya viendo de que zonas le llegan mas pedidos.
+  ultimaDireccion: { type: String },
+
+  // Suma de lo gastado en pedidos con precio cargado (los turnos no suman aca, no tienen precio en
+  // el sistema todavia). Se usa para el ranking de clientes por "dinero gastado".
+  totalGastado: { type: Number, default: 0 },
 }, { timestamps: true });
 
 clienteSchema.index({ negocioId: 1, sesionClienteId: 1 }, { unique: true });
