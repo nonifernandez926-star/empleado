@@ -245,9 +245,14 @@ function construirSystemPrompt(negocio, clienteConocido, productos, posicionRank
       prompt += 'La ultima vez que pidio delivery, la direccion fue: "' + clienteConocido.ultimaDireccion + '". Si vuelve a pedir delivery, podes preguntarle si es la misma direccion en vez de pedirsela de cero - pero confirmala siempre, nunca la des por sentada sin preguntar.\n';
     }
     if (posicionRanking && negocio.ranking && negocio.ranking.premios) {
-      const textoPremio = negocio.ranking.premios['top' + posicionRanking];
-      if (textoPremio) {
-        prompt += 'IMPORTANTE: este cliente esta en el puesto #' + posicionRanking + ' del ranking de clientes de este negocio, y le corresponde este premio: "' + textoPremio + '". Haceselo saber de forma natural en algun momento de la charla (por ejemplo cuando confirmes su pedido/turno, o al saludarlo) - no lo repitas si ya se lo dijiste antes en esta misma conversacion.\n';
+      const premio = negocio.ranking.premios['top' + posicionRanking];
+      if (premio && (premio.texto || premio.descuentoPorcentaje)) {
+        prompt += 'IMPORTANTE: este cliente esta en el puesto #' + posicionRanking + ' del ranking de clientes de este negocio.';
+        if (premio.texto) prompt += ' Su premio: "' + premio.texto + '".';
+        if (premio.descuentoPorcentaje > 0) {
+          prompt += ' Ademas tiene un ' + premio.descuentoPorcentaje + '% de descuento en esta compra. Cuando le digas el total a pagar (ya sea de un pedido o de un servicio con precio), calculalo SIEMPRE con este descuento ya aplicado, y decile los dos numeros con claridad: el precio original y el precio final con el descuento restado (ejemplo: "el total es $10.000, pero con tu ' + premio.descuentoPorcentaje + '% de descuento por ser cliente top, queda en $9.000"). Si usas la herramienta de registrar el pedido, el monto que le cobres/muestres al cliente debe ser el que ya tiene el descuento aplicado.';
+        }
+        prompt += ' Haceselo saber de forma natural en algun momento de la charla (por ejemplo cuando confirmes su pedido/turno, o al saludarlo) - no lo repitas si ya se lo dijiste antes en esta misma conversacion.\n';
       }
     }
     prompt += 'Podes saludarlo por su nombre si lo tenes, y si tiene sentido en la charla ofrecele repetir lo de la ultima vez (el mismo pedido, o el mismo motivo/profesional del ultimo turno) - pero no lo fuerces si no viene al caso, y si te dice que quiere otra cosa segui con eso sin insistir.\n\n';
@@ -495,8 +500,9 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
   // Si el negocio configuro premios para el ranking, nos fijamos si este cliente esta en el top 3
   // segun el criterio elegido, para que el asistente se lo pueda hacer saber.
   let posicionRanking = null;
+  function tienePremio(p) { return p && (p.texto || p.descuentoPorcentaje > 0); }
   const premiosConfigurados = negocio.ranking && negocio.ranking.premios &&
-    (negocio.ranking.premios.top1 || negocio.ranking.premios.top2 || negocio.ranking.premios.top3);
+    (tienePremio(negocio.ranking.premios.top1) || tienePremio(negocio.ranking.premios.top2) || tienePremio(negocio.ranking.premios.top3));
   if (clienteConocido && premiosConfigurados) {
     try {
       const criterio = (negocio.ranking && negocio.ranking.criterioActivo) || 'compras';
