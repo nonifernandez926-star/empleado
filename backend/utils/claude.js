@@ -2,6 +2,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const Pedido = require('../models/Pedido');
 const Turno = require('../models/Turno');
 const Cliente = require('../models/Cliente');
+const PreguntaFrecuente = require('../models/PreguntaFrecuente');
 const { calcularHorariosDisponibles } = require('./turnos');
 const { calcularTop10 } = require('../routes/ranking');
 
@@ -157,7 +158,7 @@ function descripcionModoVendedor(modoVendedor) {
   return 'Modo vendedor: NORMAL. Guiá la conversación de forma natural hacia cerrar el pedido/turno cuando el cliente muestre interés, sin ser insistente ni pasivo.';
 }
 
-function construirSystemPrompt(negocio, clienteConocido, productos, posicionRanking) {
+function construirSystemPrompt(negocio, clienteConocido, productos, premiosDelCliente, preguntasFrecuentes) {
   const nombre = (negocio.formData && negocio.formData.nombreNegocio) || 'el negocio';
   const mostrarPrecios = negocio.formData && negocio.formData.mostrarPrecios;
   const permisos = negocio.permisos || {};
@@ -170,6 +171,14 @@ function construirSystemPrompt(negocio, clienteConocido, productos, posicionRank
 
   prompt += 'REGLA MAS IMPORTANTE - NUNCA LA ROMPAS:\n';
   prompt += 'Solo podes usar la informacion que aparece abajo en "INFORMACION DEL NEGOCIO". Si te preguntan algo que no esta ahi (un precio, un horario, un servicio, una promocion, disponibilidad), NUNCA lo inventes. Respondé algo como: "No tengo esa informacion en este momento, te recomiendo consultarlo directamente con el negocio." No pidas disculpas de mas ni des rodeos, solo indicalo con naturalidad y ofrece ayudar en otra cosa.\n\n';
+
+  if (preguntasFrecuentes && preguntasFrecuentes.length) {
+    prompt += 'PREGUNTAS FRECUENTES YA RESPONDIDAS POR EL DUEÑO (usa esto como fuente valida, igual que el resto de la info del negocio):\n';
+    preguntasFrecuentes.forEach(function (p) {
+      prompt += '- Pregunta: "' + p.pregunta + '" -> Respuesta: "' + p.respuesta + '"\n';
+    });
+    prompt += 'Si un cliente pregunta algo parecido a alguna de estas, respondé con esa informacion (adaptando el tono a la conversacion), no hace falta decir que no sabes.\n\n';
+  }
 
   if (mostrarPrecios === false) {
     prompt += 'Este negocio decidio NO informar precios por chat. Si preguntan precios, indica que deben consultarlo directamente con el negocio. Nunca uses precios en un pedido si no los tenes.\n\n';
@@ -244,16 +253,19 @@ function construirSystemPrompt(negocio, clienteConocido, productos, posicionRank
     if (clienteConocido.ultimaDireccion) {
       prompt += 'La ultima vez que pidio delivery, la direccion fue: "' + clienteConocido.ultimaDireccion + '". Si vuelve a pedir delivery, podes preguntarle si es la misma direccion en vez de pedirsela de cero - pero confirmala siempre, nunca la des por sentada sin preguntar.\n';
     }
-    if (posicionRanking && negocio.ranking && negocio.ranking.premios) {
-      const premio = negocio.ranking.premios['top' + posicionRanking];
-      if (premio && (premio.texto || premio.descuentoPorcentaje)) {
-        prompt += 'IMPORTANTE: este cliente esta en el puesto #' + posicionRanking + ' del ranking de clientes de este negocio.';
-        if (premio.texto) prompt += ' Su premio: "' + premio.texto + '".';
-        if (premio.descuentoPorcentaje > 0) {
-          prompt += ' Ademas tiene un ' + premio.descuentoPorcentaje + '% de descuento en esta compra. Cuando le digas el total a pagar (ya sea de un pedido o de un servicio con precio), calculalo SIEMPRE con este descuento ya aplicado, y decile los dos numeros con claridad: el precio original y el precio final con el descuento restado (ejemplo: "el total es $10.000, pero con tu ' + premio.descuentoPorcentaje + '% de descuento por ser cliente top, queda en $9.000"). Si usas la herramienta de registrar el pedido, el monto que le cobres/muestres al cliente debe ser el que ya tiene el descuento aplicado.';
-        }
-        prompt += ' Haceselo saber de forma natural en algun momento de la charla (por ejemplo cuando confirmes su pedido/turno, o al saludarlo) - no lo repitas si ya se lo dijiste antes en esta misma conversacion.\n';
+    if (premiosDelCliente && premiosDelCliente.length) {
+      const ETIQUETAS_CRITERIO_RANKING = { dinero: 'dinero gastado', compras: 'cantidad de compras', visitas: 'visitas', fidelidad: 'fidelidad' };
+      prompt += 'IMPORTANTE - este cliente esta en el TOP 3 del ranking de clientes en mas de un aspecto:\n';
+      let mejorDescuento = 0;
+      premiosDelCliente.forEach(function (item) {
+        const etiqueta = ETIQUETAS_CRITERIO_RANKING[item.criterio] || item.criterio;
+        prompt += '- Puesto #' + item.posicion + ' en ' + etiqueta + (item.premio.texto ? ': premio "' + item.premio.texto + '"' : '') + (item.premio.descuentoPorcentaje > 0 ? ' (' + item.premio.descuentoPorcentaje + '% de descuento)' : '') + '\n';
+        if (item.premio.descuentoPorcentaje > mejorDescuento) mejorDescuento = item.premio.descuentoPorcentaje;
+      });
+      if (mejorDescuento > 0) {
+        prompt += 'Este cliente tiene un ' + mejorDescuento + '% de descuento en esta compra (el mas alto entre los que califica - los descuentos NO se suman entre si, se usa solo el mayor). Cuando le digas el total a pagar (ya sea de un pedido o de un servicio con precio), calculalo SIEMPRE con este descuento ya aplicado, y decile los dos numeros con claridad: el precio original y el precio final con el descuento restado (ejemplo: "el total es $10.000, pero con tu ' + mejorDescuento + '% de descuento por ser cliente top, queda en $9.000"). Si usas la herramienta de registrar el pedido, el monto que le cobres/muestres al cliente debe ser el que ya tiene el descuento aplicado.\n';
       }
+      prompt += 'Haceselo saber de forma natural en algun momento de la charla (por ejemplo cuando confirmes su pedido/turno, o al saludarlo) - no lo repitas si ya se lo dijiste antes en esta misma conversacion.\n';
     }
     prompt += 'Podes saludarlo por su nombre si lo tenes, y si tiene sentido en la charla ofrecele repetir lo de la ultima vez (el mismo pedido, o el mismo motivo/profesional del ultimo turno) - pero no lo fuerces si no viene al caso, y si te dice que quiere otra cosa segui con eso sin insistir.\n\n';
   }
@@ -361,6 +373,7 @@ async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
   const pedido = await Pedido.create({
     negocioId: negocio._id,
     sesionClienteId: sesionClienteId,
+    esPrueba: !!negocio.esPruebaActual,
     items: items,
     total: total,
     nombreCliente: input.nombreCliente,
@@ -410,6 +423,7 @@ async function ejecutarConsultarTurnosDisponibles(negocio, input) {
     negocioId: negocio._id,
     fecha: input.fecha,
     estado: { $in: ['pendiente', 'confirmado'] },
+    esPrueba: { $ne: true },
   });
 
   const horarios = calcularHorariosDisponibles({
@@ -439,6 +453,7 @@ async function ejecutarRegistrarTurno(negocio, sesionClienteId, input) {
     turno = await Turno.create({
       negocioId: negocio._id,
       sesionClienteId: sesionClienteId,
+      esPrueba: !!negocio.esPruebaActual,
       fecha: input.fecha,
       hora: input.hora,
       duracionMinutos: duracionMinutos,
@@ -497,24 +512,50 @@ async function buscarClienteConocido(negocio, sesionClienteId) {
 async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesionClienteId, productos) {
   const clienteConocido = await buscarClienteConocido(negocio, sesionClienteId);
 
-  // Si el negocio configuro premios para el ranking, nos fijamos si este cliente esta en el top 3
-  // segun el criterio elegido, para que el asistente se lo pueda hacer saber.
-  let posicionRanking = null;
+  // Si el negocio activo criterios de ranking con premios cargados, nos fijamos si este cliente esta
+  // en el top 3 de CADA UNO de esos criterios (puede estarlo en mas de uno a la vez), para que el
+  // asistente le pueda avisar y aplicar el descuento que corresponda.
+  const premiosDelCliente = [];
   function tienePremio(p) { return p && (p.texto || p.descuentoPorcentaje > 0); }
-  const premiosConfigurados = negocio.ranking && negocio.ranking.premios &&
-    (tienePremio(negocio.ranking.premios.top1) || tienePremio(negocio.ranking.premios.top2) || tienePremio(negocio.ranking.premios.top3));
-  if (clienteConocido && premiosConfigurados) {
-    try {
-      const criterio = (negocio.ranking && negocio.ranking.criterioActivo) || 'compras';
-      const top10 = await calcularTop10(negocio._id, criterio);
-      const indice = top10.findIndex(function (c) { return c.sesionClienteId === sesionClienteId; });
-      if (indice !== -1 && indice < 3) posicionRanking = indice + 1;
-    } catch (error) {
-      console.error('Error calculando ranking:', error);
+  const criteriosActivos = (negocio.ranking && negocio.ranking.criteriosActivos && negocio.ranking.criteriosActivos.length)
+    ? negocio.ranking.criteriosActivos
+    : [];
+  if (clienteConocido && criteriosActivos.length && negocio.ranking.premiosPorCriterio) {
+    for (const criterio of criteriosActivos) {
+      const premiosCriterio = negocio.ranking.premiosPorCriterio[criterio];
+      if (!premiosCriterio) continue;
+      const hayAlgunPremio = tienePremio(premiosCriterio.top1) || tienePremio(premiosCriterio.top2) || tienePremio(premiosCriterio.top3);
+      if (!hayAlgunPremio) continue;
+      try {
+        const top10 = await calcularTop10(negocio._id, criterio);
+        const indice = top10.findIndex(function (c) { return c.sesionClienteId === sesionClienteId; });
+        if (indice !== -1 && indice < 3) {
+          const posicion = indice + 1;
+          const premio = premiosCriterio['top' + posicion];
+          if (tienePremio(premio)) {
+            premiosDelCliente.push({ criterio: criterio, posicion: posicion, premio: premio });
+          }
+        }
+      } catch (error) {
+        console.error('Error calculando ranking:', error);
+      }
     }
   }
 
-  const systemPrompt = construirSystemPrompt(negocio, clienteConocido, productos || [], posicionRanking);
+  // En "Probar al asistente" el dueño puede simular ser un cliente top (puesto 1, 2 o 3 de un criterio)
+  // para ver cómo avisa el premio y calcula el descuento, sin que exista un cliente real en el ranking.
+  if (negocio.esPruebaActual && negocio.simularPuesto && negocio.ranking && negocio.ranking.premiosPorCriterio) {
+    const sim = negocio.simularPuesto;
+    const premiosCriterio = negocio.ranking.premiosPorCriterio[sim.criterio];
+    const premioSim = premiosCriterio && premiosCriterio['top' + sim.posicion];
+    if (tienePremio(premioSim)) {
+      premiosDelCliente.push({ criterio: sim.criterio, posicion: sim.posicion, premio: premioSim });
+    }
+  }
+
+  const preguntasFrecuentes = await PreguntaFrecuente.find({ negocioId: negocio._id, respuesta: { $ne: '' } }).limit(50).lean();
+
+  const systemPrompt = construirSystemPrompt(negocio, clienteConocido, productos || [], premiosDelCliente, preguntasFrecuentes);
 
   const messages = historialMensajes.map(function (m) {
     return { role: m.rol === 'cliente' ? 'user' : 'assistant', content: m.contenido };
