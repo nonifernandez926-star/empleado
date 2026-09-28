@@ -165,30 +165,12 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('avatar-topbar').addEventListener('click', abrirModalFoto);
   document.getElementById('avatar-drawer').addEventListener('click', () => { cerrarDrawer(); abrirModalFoto(); });
 
-  // Acordeones de "Herramientas" y "Ajustes": abrir/cerrar el panel de cada fila
-  document.querySelectorAll('.list-row[data-panel]').forEach((fila) => {
-    fila.addEventListener('click', () => {
-      const panel = document.getElementById(fila.dataset.panel);
-      const yaAbierto = panel.classList.contains('abierto');
-      // cerramos los demás paneles del mismo grupo de lista, para que quede como un acordeón prolijo
-      const tarjetaLista = fila.closest('.list-card');
-      if (tarjetaLista) {
-        tarjetaLista.querySelectorAll('.list-row-panel.abierto').forEach((p) => p.classList.remove('abierto'));
-        tarjetaLista.querySelectorAll('.list-row.abierta').forEach((f) => f.classList.remove('abierta'));
-      }
-      if (!yaAbierto) {
-        panel.classList.add('abierto');
-        fila.classList.add('abierta');
-      }
-    });
+  // Todas las opciones de Herramientas, Negocio y Ajustes abren su contenido en pantalla completa,
+  // con una flechita para volver arriba a la izquierda.
+  document.querySelectorAll('.list-row[data-fullscreen]').forEach((fila) => {
+    fila.addEventListener('click', () => abrirPantallaCompleta(fila.dataset.fullscreen, fila.dataset.titulo));
   });
-
-  // "Negocio" funciona distinto: cada fila abre su contenido en pantalla completa (no se despliega
-  // abajo como en Herramientas/Ajustes), con una flechita para volver arriba a la derecha.
-  document.querySelectorAll('#negocio-vista .list-row[data-fullscreen]').forEach((fila) => {
-    fila.addEventListener('click', () => abrirSubpantallaNegocio(fila.dataset.fullscreen, fila.dataset.titulo));
-  });
-  document.getElementById('btn-cerrar-subpantalla-negocio').addEventListener('click', cerrarSubpantallaNegocio);
+  document.getElementById('btn-cerrar-pantalla-completa').addEventListener('click', cerrarPantallaCompleta);
 
   // Copiar enlace de chat / código de vinculación con un botón (en vez de seleccionar texto a mano)
   document.getElementById('btn-copiar-link').addEventListener('click', () => copiarAlPortapapeles('link-chat', 'btn-copiar-link', '📋 Copiar enlace'));
@@ -241,7 +223,8 @@ function mostrarSeccion(nombre) {
   document.querySelectorAll('.app-seccion').forEach((sec) => { sec.style.display = 'none'; });
   document.getElementById(`seccion-${nombre}`).style.display = 'block';
 
-  if (nombre === 'negocio') { cerrarEdicionNegocio(); cerrarSubpantallaNegocio(); }
+  if (nombre === 'negocio') cerrarEdicionNegocio();
+  cerrarPantallaCompleta();
 
   // La barra de arriba muestra el nombre de la sección actual (como en Herramientas/Ajustes),
   // y solo en Inicio muestra el nombre del negocio junto con el estado del plan (PRUEBA/ACTIVA/VENCIDA).
@@ -301,17 +284,9 @@ async function mostrarPanel() {
   const pill = document.getElementById('estado-suscripcion-pill');
   pill.textContent = estado.toUpperCase();
   pill.className = `pill-estado ${estado}`;
-  document.getElementById('estado-suscripcion').textContent = estado.toUpperCase();
   document.getElementById('drawer-estado-negocio').textContent = ETIQUETAS_PLAN[estado] || estado;
-  document.getElementById('ajustes-resumen-plan').textContent = ETIQUETAS_PLAN[estado] || estado;
 
-  if (estado === 'vencida') {
-    document.getElementById('aviso-vencida').style.display = 'block';
-  }
-  if (negocioActual.suscripcion.fechaVencimiento) {
-    const fecha = new Date(negocioActual.suscripcion.fechaVencimiento).toLocaleDateString('es-AR');
-    document.getElementById('fecha-vencimiento').textContent = `Vence: ${fecha}`;
-  }
+  actualizarEstadoSuscripcionUI();
   const linkChat = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
   document.getElementById('link-chat').textContent = linkChat;
   document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
@@ -354,55 +329,344 @@ async function mostrarPanel() {
   cargarExperiencia();
   cargarRanking();
   cargarPlanes();
+  actualizarEstadoSuscripcionUI();
   cargarResumenDiario();
-  cargarPreguntasSinRespuesta();
+  cargarPreguntasFrecuentes();
   iniciarNotificacionesPedidos();
   cargarDefinicionCampos();
 
   mostrarSeccion('inicio');
 }
 
-function renderizarChartSemana(pedidosUltimos7Dias) {
-  const contenedor = document.getElementById('chart-pedidos-semana');
-  if (!pedidosUltimos7Dias || !pedidosUltimos7Dias.length) {
-    contenedor.innerHTML = `<p class="ayuda">Sin datos todavía.</p>`;
+// =====================================================================
+// Helpers compartidos
+// =====================================================================
+function escHtml(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const fmtPesos = (n) => '$' + Number(n || 0).toLocaleString('es-AR');
+function fmtCorto(n) {
+  n = Number(n || 0);
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1).replace('.0', '') + 'M';
+  if (n >= 1000) return '$' + (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace('.0', '') + 'k';
+  return '$' + n;
+}
+function capitalizar(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
+
+// =====================================================================
+// INICIO: KPIs + gráficos (donut interactivo, barras de la semana, actividad por hora)
+// =====================================================================
+const PALETA_DONUT = ['#2454ff', '#7c3aed', '#06b6d4', '#f59e0b', '#16a34a', '#ef4444', '#ec4899', '#64748b'];
+const ETIQUETAS_DONUT = {
+  pendiente: 'Pendientes', confirmado: 'Confirmados', en_preparacion: 'En preparación', listo: 'Listos',
+  entregado: 'Entregados', rechazado: 'Rechazados', cancelado: 'Cancelados',
+  delivery: 'Delivery', retiro: 'Retiro en local',
+};
+
+let resumenDatos = null;
+let donutVista = 'estado';
+let donutSeleccion = -1;
+let semanaModo = 'cantidad';
+
+const ICONO_KPI = {
+  chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  caja: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v9l9 5 9-5V8"/><path d="M12 13v9"/></svg>',
+  plata: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.5-.8-1.4-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8 0 2.4 5 1.2 5 3.6 0 1.1-1.1 1.8-2.5 1.8-1.1 0-2.1-.5-2.6-1.3"/><path d="M12 6.5V8m0 8v1.5"/></svg>',
+  reloj: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+};
+
+function renderizarKPIs(r) {
+  const esTurnos = r.tipoOperacion === 'turnos';
+  const cont = document.getElementById('resumen-diario');
+  const tarjetas = [
+    { clase: 'kpi-azul', icono: ICONO_KPI.chat, valor: r.conversacionesHoy, etiqueta: 'Conversaciones hoy' },
+    { clase: 'kpi-violeta', icono: ICONO_KPI.caja, valor: r.pedidosHoy, etiqueta: esTurnos ? 'Consultas hoy' : 'Pedidos hoy' },
+  ];
+  if (!esTurnos) {
+    tarjetas.push({ clase: 'kpi-verde', icono: ICONO_KPI.plata, valor: (r.facturacionHoy || 0) >= 1000000 ? fmtCorto(r.facturacionHoy) : fmtPesos(r.facturacionHoy || 0), etiqueta: 'Facturado hoy' });
+  } else {
+    tarjetas.push({ clase: 'kpi-verde', icono: ICONO_KPI.reloj, valor: r.horaPico || '—', etiqueta: 'Horario más activo' });
+  }
+
+  const insights = [];
+  if (!esTurnos && r.productoMasPedido) insights.push(`<div class="insight"><span>Más pedido hoy</span><strong>${escHtml(r.productoMasPedido.nombre)} (${r.productoMasPedido.cantidad}x)</strong></div>`);
+  if (!esTurnos && r.horaPico) insights.push(`<div class="insight"><span>Horario más activo</span><strong>${escHtml(r.horaPico)}</strong></div>`);
+
+  cont.innerHTML = tarjetas.map((t) => `
+    <div class="kpi-card ${t.clase}">
+      <div class="kpi-icono">${t.icono}</div>
+      <div class="kpi-valor">${t.valor}</div>
+      <div class="kpi-etiqueta">${t.etiqueta}</div>
+    </div>
+  `).join('') + (insights.length ? `<div class="insights">${insights.join('')}</div>` : '');
+}
+
+// ---------- Donut interactivo ----------
+function opcionesDonut() {
+  const esTurnos = resumenDatos.tipoOperacion === 'turnos';
+  const dist = resumenDatos.distribuciones || {};
+  const tabs = esTurnos
+    ? [['estado', 'Estado'], ['motivo', 'Motivo']]
+    : [['estado', 'Estado'], ['entrega', 'Entrega'], ['pago', 'Pago'], ['productos', 'Productos']];
+  if (esTurnos && (dist.profesional || []).length > 1) tabs.push(['profesional', 'Profesional']);
+  return tabs;
+}
+
+function renderizarTabsDonut() {
+  const cont = document.getElementById('donut-tabs');
+  cont.innerHTML = opcionesDonut().map(([clave, texto]) => `<button class="dash-tab ${clave === donutVista ? 'activo' : ''}" data-vista="${clave}">${texto}</button>`).join('');
+  cont.querySelectorAll('.dash-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      donutVista = btn.dataset.vista;
+      donutSeleccion = -1;
+      renderizarTabsDonut();
+      renderizarDonut();
+    });
+  });
+}
+
+function seleccionarSegmentoDonut(i) {
+  donutSeleccion = donutSeleccion === i ? -1 : i;
+  const cont = document.getElementById('donut-contenedor');
+  const datos = cont._datos || [];
+  const total = cont._total || 0;
+
+  cont.querySelectorAll('.donut-seg').forEach((seg) => {
+    const idx = Number(seg.dataset.i);
+    seg.classList.toggle('sel', idx === donutSeleccion);
+    seg.classList.toggle('dim', donutSeleccion !== -1 && idx !== donutSeleccion);
+  });
+  cont.querySelectorAll('.donut-fila').forEach((fila) => {
+    const idx = Number(fila.dataset.i);
+    fila.classList.toggle('sel', idx === donutSeleccion);
+    fila.classList.toggle('dim', donutSeleccion !== -1 && idx !== donutSeleccion);
+  });
+
+  const valorEl = document.getElementById('donut-centro-valor');
+  const textoEl = document.getElementById('donut-centro-texto');
+  const pctEl = document.getElementById('donut-centro-pct');
+  if (donutSeleccion === -1) {
+    valorEl.textContent = total;
+    textoEl.textContent = 'en total';
+    pctEl.textContent = 'Tocá un color';
+  } else {
+    const d = datos[donutSeleccion];
+    valorEl.textContent = d.valor;
+    textoEl.textContent = d.nombre;
+    pctEl.textContent = `${Math.round((d.valor / total) * 100)}% del total`;
+  }
+}
+
+function renderizarDonut() {
+  const cont = document.getElementById('donut-contenedor');
+  const crudos = ((resumenDatos.distribuciones || {})[donutVista]) || [];
+  const datos = crudos.map((d) => ({ nombre: ETIQUETAS_DONUT[d.nombre] || capitalizar(d.nombre), valor: d.valor }));
+  const total = datos.reduce((acc, d) => acc + d.valor, 0);
+
+  if (!total) {
+    cont.innerHTML = `
+      <div class="donut-vacio">
+        <svg viewBox="0 0 200 200" width="170" height="170"><circle cx="100" cy="100" r="70" fill="none" stroke="#e5e9f7" stroke-width="26" stroke-dasharray="6 8"/></svg>
+        <p>Todavía no hay datos para mostrar.<br>Cuando lleguen ${resumenDatos.tipoOperacion === 'turnos' ? 'consultas' : 'pedidos'}, acá vas a ver cómo se reparten.</p>
+      </div>`;
     return;
   }
 
-  const maximo = Math.max(...pedidosUltimos7Dias.map((d) => d.cantidad), 1);
+  const R = 70;
+  const C = 2 * Math.PI * R;
+  const hueco = datos.length > 1 ? 4 : 0;
+  let acumulado = 0;
 
-  contenedor.innerHTML = pedidosUltimos7Dias.map((d) => `
-    <div class="chart-barra-col">
-      <div class="chart-barra-valor">${d.cantidad}</div>
-      <div class="chart-barra" style="height:${Math.max((d.cantidad / maximo) * 100, 3)}%;"></div>
-      <div class="chart-barra-etiqueta">${d.etiqueta}</div>
+  const segmentos = datos.map((d, i) => {
+    const fraccion = d.valor / total;
+    const largo = Math.max(fraccion * C - hueco, 0.5);
+    const desplazamiento = -acumulado;
+    acumulado += fraccion * C;
+    const color = PALETA_DONUT[i % PALETA_DONUT.length];
+    return `<circle class="donut-seg" data-i="${i}" data-largo="${largo}" cx="100" cy="100" r="${R}" fill="none" stroke="${color}" stroke-width="26" stroke-dasharray="0 ${C}" stroke-dashoffset="${desplazamiento}" transform="rotate(-90 100 100)"/>`;
+  }).join('');
+
+  const filas = datos.map((d, i) => {
+    const pct = Math.round((d.valor / total) * 100);
+    const color = PALETA_DONUT[i % PALETA_DONUT.length];
+    return `
+      <button class="donut-fila" data-i="${i}">
+        <span class="donut-punto" style="background:${color}"></span>
+        <span class="donut-nombre">${escHtml(d.nombre)}</span>
+        <span class="donut-cifra">${d.valor}</span>
+        <span class="donut-pct">${pct}%</span>
+        <span class="donut-barra"><i style="width:${pct}%; background:${color}"></i></span>
+      </button>`;
+  }).join('');
+
+  cont._datos = datos;
+  cont._total = total;
+  cont.innerHTML = `
+    <div class="donut-wrap">
+      <svg viewBox="0 0 200 200" class="donut-svg">${segmentos}</svg>
+      <div class="donut-centro">
+        <strong id="donut-centro-valor">${total}</strong>
+        <span id="donut-centro-texto">en total</span>
+        <em id="donut-centro-pct">Tocá un color</em>
+      </div>
+    </div>
+    <div class="donut-leyenda">${filas}</div>
+  `;
+
+  cont.querySelectorAll('.donut-seg, .donut-fila').forEach((el) => {
+    el.addEventListener('click', () => seleccionarSegmentoDonut(Number(el.dataset.i)));
+  });
+
+  // Animación de entrada: los arcos "se dibujan" de a uno
+  requestAnimationFrame(() => {
+    cont.querySelectorAll('.donut-seg').forEach((seg) => {
+      const largo = Number(seg.dataset.largo);
+      seg.style.strokeDasharray = `${largo} ${C - largo}`;
+    });
+  });
+}
+
+// ---------- Barras de la semana ----------
+function renderizarChartSemana(r) {
+  const contenedor = document.getElementById('chart-pedidos-semana');
+  const detalle = document.getElementById('chart-semana-detalle');
+  const esTurnos = r.tipoOperacion === 'turnos';
+  const serie = semanaModo === 'monto'
+    ? (r.ingresosUltimos7Dias || []).map((d) => ({ etiqueta: d.etiqueta, valor: d.monto }))
+    : (r.pedidosUltimos7Dias || []).map((d) => ({ etiqueta: d.etiqueta, valor: d.cantidad }));
+
+  if (!serie.length) {
+    contenedor.innerHTML = `<p class="ayuda">Sin datos todavía.</p>`;
+    detalle.textContent = '';
+    return;
+  }
+
+  const maximo = Math.max(...serie.map((d) => d.valor), 1);
+  const todoCero = serie.every((d) => d.valor === 0);
+  const unidad = esTurnos ? 'consultas' : 'pedidos';
+
+  contenedor.innerHTML = serie.map((d, i) => `
+    <div class="chart-barra-col" data-i="${i}">
+      <div class="chart-barra-valor">${semanaModo === 'monto' ? fmtCorto(d.valor) : d.valor}</div>
+      <div class="chart-barra ${i === serie.length - 1 ? 'hoy' : ''}" style="height:${Math.max((d.valor / maximo) * 100, 3)}%;"></div>
+      <div class="chart-barra-etiqueta">${escHtml(d.etiqueta)}</div>
     </div>
   `).join('');
+
+  const mostrarDetalle = (i) => {
+    const d = serie[i];
+    contenedor.querySelectorAll('.chart-barra-col').forEach((c) => c.classList.toggle('sel', Number(c.dataset.i) === i));
+    detalle.innerHTML = semanaModo === 'monto'
+      ? `<strong>${escHtml(d.etiqueta)}</strong> · ${fmtPesos(d.valor)} facturados`
+      : `<strong>${escHtml(d.etiqueta)}</strong> · ${d.valor} ${unidad}`;
+  };
+  contenedor.querySelectorAll('.chart-barra-col').forEach((col) => col.addEventListener('click', () => mostrarDetalle(Number(col.dataset.i))));
+  mostrarDetalle(serie.length - 1);
+  if (todoCero) detalle.innerHTML += ' <span class="dash-nota">(todavía sin movimiento esta semana)</span>';
+}
+
+// ---------- Actividad por hora (área suave) ----------
+function renderizarChartHoras(r) {
+  const cont = document.getElementById('chart-horas');
+  const horas = r.actividadPorHora || [];
+  const max = Math.max(...horas, 0);
+  if (!max) {
+    cont.innerHTML = `<p class="ayuda">Cuando tus clientes empiecen a escribir, vas a ver acá en qué horarios hay más movimiento.</p>`;
+    return;
+  }
+
+  const W = 320, H = 130, PAD_X = 12, BASE = 104, ALTO = 78;
+  const paso = (W - PAD_X * 2) / 23;
+  const puntos = horas.map((v, i) => ({ x: PAD_X + i * paso, y: BASE - (v / max) * ALTO, v }));
+
+  let linea = `M ${puntos[0].x} ${puntos[0].y}`;
+  for (let i = 1; i < puntos.length; i++) {
+    const p0 = puntos[i - 1], p1 = puntos[i];
+    const cx = (p0.x + p1.x) / 2;
+    linea += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
+  }
+  const area = `${linea} L ${puntos[puntos.length - 1].x} ${BASE} L ${puntos[0].x} ${BASE} Z`;
+  const pico = horas.indexOf(max);
+  const etiquetas = [0, 6, 12, 18, 23].map((h) => `<text x="${PAD_X + h * paso}" y="${H - 8}" text-anchor="middle" class="horas-eje">${h}h</text>`).join('');
+  const zonas = puntos.map((p, i) => `<rect class="horas-zona" data-h="${i}" x="${p.x - paso / 2}" y="0" width="${paso}" height="${BASE}" fill="transparent"/>`).join('');
+
+  cont.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="horas-svg">
+      <defs>
+        <linearGradient id="grad-horas" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2454ff" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#2454ff" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      <line x1="${PAD_X}" x2="${W - PAD_X}" y1="${BASE}" y2="${BASE}" stroke="#e5e9f7"/>
+      <path d="${area}" fill="url(#grad-horas)"/>
+      <path d="${linea}" fill="none" stroke="#2454ff" stroke-width="2.5" stroke-linecap="round"/>
+      <circle id="horas-punto" cx="${puntos[pico].x}" cy="${puntos[pico].y}" r="5" fill="#fff" stroke="#2454ff" stroke-width="3"/>
+      ${etiquetas}
+      ${zonas}
+    </svg>
+    <div id="horas-detalle" class="dash-detalle"></div>
+  `;
+
+  const punto = document.getElementById('horas-punto');
+  const detalle = document.getElementById('horas-detalle');
+  const mostrar = (h) => {
+    punto.setAttribute('cx', puntos[h].x);
+    punto.setAttribute('cy', puntos[h].y);
+    const v = horas[h];
+    detalle.innerHTML = `<strong>${h}:00 a ${h + 1}:00</strong> · ${v} conversación${v === 1 ? '' : 'es'}${h === pico ? ' <span class="dash-nota">(tu horario más activo)</span>' : ''}`;
+  };
+  cont.querySelectorAll('.horas-zona').forEach((z) => z.addEventListener('click', () => mostrar(Number(z.dataset.h))));
+  mostrar(pico);
 }
 
 async function cargarResumenDiario() {
   const contenedor = document.getElementById('resumen-diario');
   try {
     const res = await fetch(`${API_URL}/estadisticas/resumen`, { headers: headersAuth(), cache: 'no-store' });
+    if (!res.ok) throw new Error('resumen');
     const r = await res.json();
+    resumenDatos = r;
 
-    contenedor.innerHTML = `
-      <div class="resumen-grid">
-        <div class="resumen-item"><div class="valor">${r.conversacionesHoy}</div><div class="etiqueta">Conversaciones hoy</div></div>
-        <div class="resumen-item"><div class="valor">${r.pedidosHoy}</div><div class="etiqueta">Pedidos hoy</div></div>
-        ${r.facturacionHoy ? `<div class="resumen-item"><div class="valor">$${r.facturacionHoy.toLocaleString('es-AR')}</div><div class="etiqueta">Facturado hoy (${r.pedidosConTotal} pedidos con precio)</div></div>` : ''}
-        ${r.productoMasPedido ? `<div class="resumen-item"><div class="valor">${r.productoMasPedido.cantidad}x</div><div class="etiqueta">${r.productoMasPedido.nombre} (el más pedido hoy)</div></div>` : ''}
-        ${r.horaPico ? `<div class="resumen-item"><div class="valor">${r.horaPico}</div><div class="etiqueta">Horario con más actividad</div></div>` : ''}
-      </div>
-      ${r.preguntasSinRespuestaHoy.length ? `<p class="ayuda" style="margin-top:14px;">Hoy hubo ${r.preguntasSinRespuestaHoy.length} pregunta(s) que el asistente no pudo responder. Mirá la sección de abajo para verlas.</p>` : ''}
-    `;
+    // El tab "Ingresos" no tiene sentido en negocios de turnos (no manejan un total por turno)
+    const tabIngresos = document.querySelector('#semana-tabs [data-modo="monto"]');
+    const tabCantidad = document.getElementById('semana-tab-cantidad');
+    if (tabIngresos) tabIngresos.style.display = r.tipoOperacion === 'turnos' ? 'none' : '';
+    if (tabCantidad) tabCantidad.textContent = r.tipoOperacion === 'turnos' ? 'Consultas' : 'Pedidos';
+    if (r.tipoOperacion === 'turnos') semanaModo = 'cantidad';
 
-    renderizarChartSemana(r.pedidosUltimos7Dias);
+    renderizarKPIs(r);
+    renderizarTabsDonut();
+    renderizarDonut();
+    renderizarChartSemana(r);
+    renderizarChartHoras(r);
     actualizarBannerAnimo(r);
   } catch (error) {
     contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el resumen.</p>`;
   }
 }
+
+document.querySelectorAll('#semana-tabs .dash-tab').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    semanaModo = btn.dataset.modo;
+    document.querySelectorAll('#semana-tabs .dash-tab').forEach((b) => b.classList.toggle('activo', b === btn));
+    if (resumenDatos) renderizarChartSemana(resumenDatos);
+  });
+});
+
+function actualizarChipPreguntas(cantidad) {
+  const cont = document.getElementById('chip-preguntas-inicio');
+  if (!cont) return;
+  if (!cantidad) { cont.innerHTML = ''; return; }
+  cont.innerHTML = `
+    <button class="chip-atencion" id="btn-chip-preguntas">
+      <span class="chip-atencion-num">${cantidad}</span>
+      <span class="chip-atencion-texto"><strong>${cantidad === 1 ? 'Pregunta sin responder' : 'Preguntas sin responder'}</strong><small>Respondelas para que tu asistente aprenda</small></span>
+      <span class="chip-atencion-cta">Responder</span>
+    </button>`;
+  document.getElementById('btn-chip-preguntas').addEventListener('click', () => abrirPantallaCompleta('panel-preguntas', 'Preguntas frecuentes'));
+}
+
 
 function actualizarBannerAnimo(r) {
   const emoji = document.getElementById('banner-animo-emoji');
@@ -416,28 +680,6 @@ function actualizarBannerAnimo(r) {
     emoji.textContent = '🚀';
     titulo.textContent = '¡Sigue así!';
     texto.textContent = `Hoy ya tuviste ${r.conversacionesHoy} conversación(es) y ${r.pedidosHoy} pedido(s).`;
-  }
-}
-
-async function cargarPreguntasSinRespuesta() {
-  const contenedor = document.getElementById('preguntas-sin-respuesta');
-  try {
-    const res = await fetch(`${API_URL}/estadisticas/preguntas-sin-respuesta`, { headers: headersAuth(), cache: 'no-store' });
-    const preguntas = await res.json();
-
-    if (!preguntas.length) {
-      contenedor.innerHTML = `<p class="ayuda">Todavía no hay preguntas sin responder. 🎉</p>`;
-      return;
-    }
-
-    contenedor.innerHTML = preguntas.map((p) => `
-      <div class="pregunta-item">
-        "${p.texto}"
-        <div class="pregunta-fecha">${new Date(p.fecha).toLocaleString('es-AR')}</div>
-      </div>
-    `).join('');
-  } catch (error) {
-    contenedor.innerHTML = `<p class="ayuda">No se pudieron cargar las preguntas.</p>`;
   }
 }
 
@@ -527,22 +769,195 @@ function iniciarNotificacionesPedidos() {
   }, 20000);
 }
 
+// =====================================================================
+// SUSCRIPCIÓN: tiempo restante, avisos antes de vencer, renovar antes, planes
+// =====================================================================
+const NOMBRES_PLAN = { basico: 'Período de prueba', '1_mes': 'Plan Mensual', '3_meses': 'Plan Trimestral', '5_meses': 'Plan de 5 meses', '6_meses': 'Plan Semestral' };
+const MESES_PLAN = { '1_mes': 1, '3_meses': 3, '5_meses': 5, '6_meses': 6 };
+const DIAS_AVISO_VENCIMIENTO = 7;
+
+function infoSuscripcion() {
+  const s = (negocioActual && negocioActual.suscripcion) || {};
+  const venc = s.fechaVencimiento ? new Date(s.fechaVencimiento) : null;
+  const dias = venc ? Math.ceil((venc - new Date()) / 86400000) : null;
+  const limite = s.limiteMensajesPrueba || 0;
+  const usados = s.mensajesUsadosPrueba || 0;
+  let estado = s.estado || 'prueba';
+  if (estado === 'activa' && dias !== null && dias <= 0) estado = 'vencida';
+  return { estado, plan: s.plan, venc, dias, limite, usados, restantesPrueba: Math.max(0, limite - usados) };
+}
+
+function textoTiempoRestante(info) {
+  if (info.estado === 'activa') return info.dias === 1 ? 'Queda 1 día' : `Quedan ${info.dias} días`;
+  if (info.estado === 'prueba') return `${info.restantesPrueba} mensajes de prueba`;
+  return 'Vencida';
+}
+
+function abrirPlanes() { abrirPantallaCompleta('panel-planes', 'Elegí tu plan'); }
+
+function actualizarEstadoSuscripcionUI() {
+  const info = infoSuscripcion();
+  const fechaTxt = info.venc ? info.venc.toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+
+  // Resumen en la fila de Ajustes
+  const resumen = document.getElementById('ajustes-resumen-plan');
+  if (resumen) resumen.textContent = info.estado === 'activa' ? `${NOMBRES_PLAN[info.plan] || 'Plan activo'} · ${textoTiempoRestante(info).toLowerCase()}` : (info.estado === 'prueba' ? `Período de prueba · ${textoTiempoRestante(info)}` : 'Suscripción vencida · renovala para reactivar');
+
+  // Cabecera del Inicio
+  const hero = document.getElementById('inicio-hero-estado');
+  if (hero) {
+    const etiqueta = { activa: 'Plan activo', prueba: 'En prueba', vencida: 'Vencida' }[info.estado];
+    hero.innerHTML = `<span class="hero-pill ${info.estado}">${etiqueta}</span><span class="hero-dias">${textoTiempoRestante(info)}</span>`;
+  }
+  const fecha = document.getElementById('inicio-fecha');
+  if (fecha) fecha.textContent = capitalizar(new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }));
+
+  // Aviso destacado en Inicio
+  let tono = null, titulo = '', detalle = '', cta = '';
+  if (info.estado === 'vencida') {
+    tono = 'urgente'; titulo = 'Tu suscripción venció';
+    detalle = 'Tu asistente está pausado y no responde a tus clientes. Renová para reactivarlo.'; cta = 'Renovar ahora';
+  } else if (info.estado === 'activa' && info.dias <= DIAS_AVISO_VENCIMIENTO) {
+    tono = info.dias <= 3 ? 'urgente' : 'atencion';
+    titulo = info.dias === 1 ? 'Tu suscripción vence mañana' : `Tu suscripción vence en ${info.dias} días`;
+    detalle = 'Renová ahora: los meses nuevos se suman al tiempo que te queda, no perdés nada.'; cta = 'Renovar';
+  } else if (info.estado === 'prueba' && info.limite && info.usados / info.limite >= 0.8) {
+    tono = 'atencion'; titulo = info.restantesPrueba === 0 ? 'Se terminó tu prueba' : `Te quedan ${info.restantesPrueba} mensajes de prueba`;
+    detalle = 'Activá un plan para que tu asistente siga atendiendo a tus clientes.'; cta = 'Activar plan';
+  }
+
+  const aviso = document.getElementById('aviso-suscripcion-inicio');
+  if (aviso) {
+    aviso.innerHTML = tono ? `
+      <div class="aviso-susc ${tono}">
+        <div class="aviso-susc-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+        <div class="aviso-susc-texto"><strong>${titulo}</strong><span>${detalle}</span></div>
+        <button class="aviso-susc-btn" id="btn-aviso-renovar">${cta}</button>
+      </div>` : '';
+    const btn = document.getElementById('btn-aviso-renovar');
+    if (btn) btn.addEventListener('click', abrirPlanes);
+  }
+
+  // Notificación del navegador (una vez por día) mientras el panel está abierto
+  if (tono) notificarSuscripcionUnaVezPorDia(titulo, detalle);
+
+  renderizarSuscripcion(info, fechaTxt);
+  renderizarTiempoEnPlanes(info, fechaTxt);
+}
+
+function notificarSuscripcionUnaVezPorDia(titulo, texto) {
+  try {
+    const hoy = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem('ev_aviso_suscripcion') === hoy) return;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(titulo, { body: texto });
+      localStorage.setItem('ev_aviso_suscripcion', hoy);
+    }
+  } catch (e) { /* si el navegador bloquea el storage, simplemente no avisamos por acá */ }
+}
+
+function renderizarSuscripcion(info, fechaTxt) {
+  const cont = document.getElementById('suscripcion-contenido');
+  if (!cont) return;
+
+  let tono = info.estado, valor, unidad, fraccion, titulo, sub, cta, etiqueta;
+  if (info.estado === 'activa') {
+    const total = Math.max(30, (MESES_PLAN[info.plan] || 1) * 30);
+    valor = info.dias; unidad = info.dias === 1 ? 'día' : 'días'; fraccion = Math.min(1, info.dias / total);
+    titulo = NOMBRES_PLAN[info.plan] || 'Plan activo'; sub = `Vence el ${fechaTxt}`;
+    cta = 'Renovar antes de que venza'; etiqueta = 'Plan activo';
+  } else if (info.estado === 'prueba') {
+    valor = info.restantesPrueba; unidad = 'mensajes'; fraccion = info.limite ? info.restantesPrueba / info.limite : 0;
+    titulo = 'Período de prueba'; sub = `Usaste ${info.usados} de ${info.limite} mensajes de prueba`;
+    cta = 'Activar mi plan'; etiqueta = 'En prueba';
+  } else {
+    valor = 0; unidad = 'días'; fraccion = 0;
+    titulo = 'Suscripción vencida'; sub = fechaTxt ? `Venció el ${fechaTxt}` : 'Activá un plan para reactivar tu asistente';
+    cta = 'Reactivar mi asistente'; etiqueta = 'Vencida';
+  }
+
+  const R = 52, C = 2 * Math.PI * R;
+  cont.innerHTML = `
+    <div class="susc-hero susc-${tono}">
+      <div class="susc-anillo">
+        <svg viewBox="0 0 120 120">
+          <circle class="susc-anillo-fondo" cx="60" cy="60" r="${R}"/>
+          <circle class="susc-anillo-valor" cx="60" cy="60" r="${R}" stroke-dasharray="${fraccion * C} ${C}" transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="susc-anillo-centro"><strong>${valor}</strong><span>${unidad}</span></div>
+      </div>
+      <div class="susc-hero-texto">
+        <span class="susc-etiqueta">${etiqueta}</span>
+        <h3>${titulo}</h3>
+        <p>${sub}</p>
+      </div>
+    </div>
+    <button class="btn ancho susc-btn" id="btn-renovar-ahora">${cta}</button>
+    <div class="susc-datos">
+      <div class="susc-dato"><span>Estado</span><strong>${etiqueta}</strong></div>
+      <div class="susc-dato"><span>Plan</span><strong>${NOMBRES_PLAN[info.plan] || '—'}</strong></div>
+      <div class="susc-dato"><span>${info.estado === 'prueba' ? 'Mensajes' : 'Vencimiento'}</span><strong>${info.estado === 'prueba' ? `${info.usados}/${info.limite}` : (info.venc ? info.venc.toLocaleDateString('es-AR') : '—')}</strong></div>
+    </div>
+    <div class="susc-nota"><strong>Renová cuando quieras.</strong> Si lo hacés antes de que se termine, los meses nuevos se suman al final del tiempo que ya tenés. Y cuanto más largo el plan, menos pagás por mes.</div>
+  `;
+  document.getElementById('btn-renovar-ahora').addEventListener('click', abrirPlanes);
+}
+
+function renderizarTiempoEnPlanes(info, fechaTxt) {
+  const cont = document.getElementById('planes-resumen-tiempo');
+  if (!cont) return;
+  if (info.estado === 'activa') {
+    cont.innerHTML = `<div class="planes-tiempo ${info.dias <= DIAS_AVISO_VENCIMIENTO ? 'aviso' : ''}"><strong>${textoTiempoRestante(info)}</strong><span>Tu plan vence el ${fechaTxt}</span></div>`;
+  } else if (info.estado === 'prueba') {
+    cont.innerHTML = `<div class="planes-tiempo"><strong>Estás en período de prueba</strong><span>Te quedan ${info.restantesPrueba} mensajes de prueba</span></div>`;
+  } else {
+    cont.innerHTML = `<div class="planes-tiempo aviso"><strong>Tu suscripción venció</strong><span>Elegí un plan para reactivar tu asistente</span></div>`;
+  }
+}
+
+function fraseAhorroPlan(plan, precioMensualBase) {
+  if (!plan.ahorro) return 'Ideal para empezar, sin compromiso.';
+  const mesesEquivalentes = plan.ahorro / precioMensualBase;
+  if (mesesEquivalentes >= 1) {
+    const n = Math.floor(mesesEquivalentes);
+    return `¡Ahorrás ${fmtPesos(plan.ahorro)}! Es como llevarte más de ${n === 1 ? 'un mes' : n + ' meses'} gratis.`;
+  }
+  return `Ahorrás ${fmtPesos(plan.ahorro)} frente a pagar mes a mes.`;
+}
+
 async function cargarPlanes() {
   const grid = document.getElementById('grid-planes');
   try {
     const res = await fetch(`${API_URL}/suscripcion/planes`, { cache: 'no-store' });
     const planes = await res.json();
+    const entradas = Object.entries(planes);
+    const primero = entradas[0] ? entradas[0][1] : null;
+    const base = primero ? primero.precio / primero.meses : 0;
 
-    grid.innerHTML = Object.entries(planes).map(([clave, plan]) => `
-      <div class="opcion-rubro" data-plan="${clave}">
-        <strong>${plan.label}</strong>
-        <small>$${plan.precio.toLocaleString('es-AR')} ARS</small>
-      </div>
-    `).join('');
+    grid.innerHTML = entradas.map(([clave, plan]) => {
+      const insignia = plan.meses === 6 ? 'Mejor precio' : (plan.meses === 3 ? 'Popular' : '');
+      const destacado = plan.meses === 6;
+      return `
+        <div class="plan-card ${destacado ? 'destacado' : ''}">
+          ${insignia ? `<div class="plan-insignia">${insignia}</div>` : ''}
+          <div class="plan-cabecera">
+            <div>
+              <div class="plan-nombre">${escHtml(plan.label)}</div>
+              <div class="plan-duracion">${plan.meses === 1 ? '1 mes' : plan.meses + ' meses'}</div>
+            </div>
+            ${plan.descuentoPorcentaje ? `<div class="plan-descuento">${plan.descuentoPorcentaje}% OFF</div>` : ''}
+          </div>
+          <div class="plan-precio-fila">
+            <span class="plan-precio">${fmtPesos(plan.precio)}</span>
+            ${plan.ahorro ? `<span class="plan-precio-tachado">${fmtPesos(plan.precioSinDescuento)}</span>` : ''}
+          </div>
+          <div class="plan-por-mes">${plan.meses === 1 ? 'Precio por mes' : `Equivale a <strong>${fmtPesos(plan.precioPorMes)}</strong> por mes`}</div>
+          <div class="plan-frase">${fraseAhorroPlan(plan, base)}</div>
+          <button class="btn ancho plan-boton ${destacado ? '' : 'secundario'}" data-plan="${clave}">Elegir ${escHtml(plan.label.toLowerCase())}</button>
+        </div>`;
+    }).join('');
 
-    document.querySelectorAll('#grid-planes .opcion-rubro').forEach((div) => {
-      div.addEventListener('click', () => iniciarPago(div.dataset.plan));
-    });
+    grid.querySelectorAll('.plan-boton').forEach((btn) => btn.addEventListener('click', () => iniciarPago(btn.dataset.plan)));
   } catch (error) {
     grid.innerHTML = `<p class="ayuda">No se pudieron cargar los planes.</p>`;
   }
@@ -1653,26 +2068,55 @@ function recolectarHorariosEdicion() {
 
 // Cada opción de "Negocio" (Productos, Fotos, Promociones, etc.) vive en un <div class="list-row-panel">
 // que ya tiene todo su HTML e inputs armados desde antes. En vez de duplicar ese contenido, lo
-// MOVEMOS al contenedor de la subpantalla y lo mostramos ahí, en pantalla completa.
-function abrirSubpantallaNegocio(panelId, titulo) {
+// Cada opción (de Herramientas, Negocio o Ajustes) vive en un <div class="list-row-panel"> que ya
+// tiene todo su HTML e inputs armados desde antes. En vez de duplicar ese contenido, lo MOVEMOS al
+// contenedor de la pantalla completa y lo mostramos ahí. Guardamos cuál está abierto para poder
+// ocultarlo bien (antes había un bug: se abría uno nuevo sin cerrar el anterior, y quedaban los dos).
+let panelAbiertoActualId = null;
+
+function abrirPantallaCompleta(panelId, titulo) {
   const panel = document.getElementById(panelId);
-  const contenedor = document.getElementById('negocio-subpantalla-contenido');
+  const contenedor = document.getElementById('pantalla-completa-contenido');
   if (!panel || !contenedor) return;
+
+  if (panelAbiertoActualId && panelAbiertoActualId !== panelId) {
+    const anterior = document.getElementById(panelAbiertoActualId);
+    if (anterior) anterior.style.display = 'none';
+  }
+  panelAbiertoActualId = panelId;
 
   contenedor.appendChild(panel);
   panel.style.display = 'block';
   panel.style.padding = '0';
   panel.style.background = 'transparent';
 
-  document.getElementById('negocio-subpantalla-titulo').textContent = titulo;
-  document.getElementById('negocio-vista').style.display = 'none';
-  document.getElementById('negocio-subpantalla').style.display = 'block';
+  document.getElementById('pantalla-completa-titulo').textContent = titulo;
+
+  // Encabezado visual de la opción (ícono + descripción): evita que las opciones con poco contenido
+  // se vean vacías y le da a todas la misma presencia profesional.
+  const hero = document.getElementById('pantalla-completa-hero');
+  const fila = document.querySelector(`.list-row[data-fullscreen="${panelId}"]`);
+  const icono = fila && fila.querySelector('.list-row-icono');
+  const descripcion = fila && fila.querySelector('.list-row-texto span');
+  hero.innerHTML = icono ? `
+    <div class="fs-hero">
+      <div class="${icono.className} fs-hero-icono">${icono.innerHTML}</div>
+      <div class="fs-hero-texto">${escHtml(descripcion ? descripcion.textContent : '')}</div>
+    </div>` : '';
+
+  if (panelId === 'panel-ranking') renderizarBloquesRanking(true);
+  document.getElementById('pantalla-completa').style.display = 'block';
   document.querySelector('.app-contenido').scrollTop = 0;
+  document.getElementById('pantalla-completa').scrollTop = 0;
 }
 
-function cerrarSubpantallaNegocio() {
-  document.getElementById('negocio-subpantalla').style.display = 'none';
-  document.getElementById('negocio-vista').style.display = 'block';
+function cerrarPantallaCompleta() {
+  document.getElementById('pantalla-completa').style.display = 'none';
+  if (panelAbiertoActualId) {
+    const panel = document.getElementById(panelAbiertoActualId);
+    if (panel) panel.style.display = 'none';
+  }
+  panelAbiertoActualId = null;
 }
 
 function abrirEdicionNegocio() {
@@ -1847,16 +2291,18 @@ async function cargarExperiencia() {
 
 
 async function cargarEstadisticas() {
-  const res = await fetch(`${API_URL}/estadisticas`, {
-    headers: headersAuth(),
-  });
-  const stats = await res.json();
-
-  document.getElementById('tabla-stats').innerHTML = `
-    <tr><td>Conversaciones totales</td><td>${stats.totalConversaciones}</td></tr>
-    <tr><td>Mensajes de clientes</td><td>${stats.totalMensajesCliente}</td></tr>
-    <tr><td>Plan actual</td><td>${stats.suscripcion.plan}</td></tr>
-  `;
+  const contenedor = document.getElementById('tabla-stats');
+  try {
+    const res = await fetch(`${API_URL}/estadisticas`, { headers: headersAuth() });
+    const stats = await res.json();
+    contenedor.innerHTML = `
+      <div class="stat-chip"><strong>${stats.totalConversaciones}</strong><span>Conversaciones totales</span></div>
+      <div class="stat-chip"><strong>${stats.totalMensajesCliente}</strong><span>Mensajes de clientes</span></div>
+      <div class="stat-chip"><strong>${NOMBRES_PLAN[stats.suscripcion.plan] || stats.suscripcion.plan}</strong><span>Plan actual</span></div>
+    `;
+  } catch (error) {
+    contenedor.innerHTML = `<p class="ayuda">No se pudieron cargar las estadísticas.</p>`;
+  }
 }
 
 // --- Probar al asistente (simulación, no guarda nada real) ---
@@ -1869,6 +2315,26 @@ document.querySelectorAll('#grid-modo-prueba .opcion-aprobacion').forEach((el) =
     document.querySelectorAll('#grid-modo-prueba .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
   });
 });
+
+let puestoSimulado = 0;
+document.querySelectorAll('#grid-simular-puesto .opcion-aprobacion').forEach((el) => {
+  el.addEventListener('click', () => {
+    puestoSimulado = Number(el.dataset.puesto);
+    document.querySelectorAll('#grid-simular-puesto .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
+  });
+});
+
+// Busca, entre los criterios activos, el primero que tenga un premio cargado para el puesto simulado
+function buscarSimulacionPuesto() {
+  if (!puestoSimulado) return null;
+  const ranking = negocioActual.ranking || {};
+  const criterios = (ranking.criteriosActivos && ranking.criteriosActivos.length) ? ranking.criteriosActivos : ['compras'];
+  const criterio = criterios.find((c) => {
+    const p = ranking.premiosPorCriterio && ranking.premiosPorCriterio[c] && ranking.premiosPorCriterio[c]['top' + puestoSimulado];
+    return p && (p.texto || p.descuentoPorcentaje > 0);
+  });
+  return criterio ? { criterio, posicion: puestoSimulado } : null;
+}
 
 function agregarMensajePrueba(texto, rol) {
   const contenedor = document.getElementById('chat-prueba-mensajes');
@@ -1885,6 +2351,9 @@ async function enviarMensajePrueba() {
   if (!texto) return;
 
   agregarMensajePrueba(texto, 'cliente');
+  if (puestoSimulado && !buscarSimulacionPuesto()) {
+    agregarMensajePrueba(`🧪 Todavía no guardaste ningún premio para el puesto ${puestoSimulado}° en Clientes destacados, así que el asistente te va a tratar como cliente normal.`, 'asistente');
+  }
   historialPrueba.push({ rol: 'cliente', contenido: texto });
   input.value = '';
   input.disabled = true;
@@ -1893,12 +2362,18 @@ async function enviarMensajePrueba() {
     const res = await fetch(`${API_URL}/chat/prueba`, {
       method: 'POST',
       headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ mensaje: texto, historial: historialPrueba, modoVendedor: modoPruebaActual }),
+      body: JSON.stringify({ mensaje: texto, historial: historialPrueba, modoVendedor: modoPruebaActual, simularPuesto: buscarSimulacionPuesto() }),
     });
     const data = await res.json();
     if (res.ok) {
       agregarMensajePrueba(data.respuesta, 'asistente');
       historialPrueba.push({ rol: 'asistente', contenido: data.respuesta });
+      if (data.pedidoCreado && data.pedidoCreado.exito) {
+        agregarMensajePrueba('🧪 Pedido DE PRUEBA registrado (no aparece en tus pedidos reales)', 'asistente');
+      }
+      if (data.turnoCreado && data.turnoCreado.exito) {
+        agregarMensajePrueba('🧪 Turno DE PRUEBA registrado (no aparece en tu agenda real)', 'asistente');
+      }
     } else {
       agregarMensajePrueba('No se pudo generar la respuesta de prueba.', 'asistente');
     }
@@ -1972,9 +2447,11 @@ document.getElementById('btn-agregar-zona-delivery')?.addEventListener('click', 
   precioInput.value = '';
 });
 
-// --- Clientes destacados (ranking + premios) ---
-let criterioRankingActual = 'compras';
-let ultimoTop10 = [];
+// --- Clientes destacados (ranking multi-criterio + premios) ---
+let criteriosActivosActual = ['compras'];
+let cacheTop10Ranking = {};      // { criterio: [top10] } - se pide al servidor solo lo que falta
+let premiosEnEdicion = {};       // lo que el dueño está escribiendo (todavía sin guardar)
+let rankingConfigServidor = null;
 
 const ETIQUETAS_CRITERIO = {
   compras: 'compras',
@@ -1982,12 +2459,60 @@ const ETIQUETAS_CRITERIO = {
   visitas: 'visitas',
   fidelidad: 'cliente desde',
 };
+const NOMBRES_CRITERIO = {
+  compras: 'Compras',
+  dinero: 'Dinero gastado',
+  visitas: 'Visitas',
+  fidelidad: 'Fidelidad',
+};
+
+// Lee lo que hay escrito en los campos de premios y lo guarda en memoria, así no se pierde
+// cuando el dueño activa/desactiva un criterio y la pantalla se vuelve a dibujar.
+function capturarPremiosDelDOM() {
+  document.querySelectorAll('.premio-texto').forEach((inp) => {
+    const c = inp.dataset.criterio, p = 'top' + inp.dataset.puesto;
+    premiosEnEdicion[c] = premiosEnEdicion[c] || {};
+    premiosEnEdicion[c][p] = premiosEnEdicion[c][p] || { texto: '', descuentoPorcentaje: 0 };
+    premiosEnEdicion[c][p].texto = inp.value;
+  });
+  document.querySelectorAll('.premio-descuento').forEach((inp) => {
+    const c = inp.dataset.criterio, p = 'top' + inp.dataset.puesto;
+    premiosEnEdicion[c] = premiosEnEdicion[c] || {};
+    premiosEnEdicion[c][p] = premiosEnEdicion[c][p] || { texto: '', descuentoPorcentaje: 0 };
+    premiosEnEdicion[c][p].descuentoPorcentaje = inp.value ? Number(inp.value) : 0;
+  });
+}
+
+function premiosParaMostrar(criterio) {
+  if (premiosEnEdicion[criterio]) return premiosEnEdicion[criterio];
+  const guardados = rankingConfigServidor && rankingConfigServidor.premiosPorCriterio;
+  return (guardados && guardados[criterio]) || null;
+}
+
+function pintarSeleccionCriterios() {
+  document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((e) => {
+    e.classList.toggle('seleccionado', criteriosActivosActual.includes(e.dataset.criterio));
+  });
+}
 
 document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((el) => {
-  el.addEventListener('click', () => {
-    criterioRankingActual = el.dataset.criterio;
-    document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((e) => e.classList.toggle('seleccionado', e === el));
-    cargarRanking();
+  el.addEventListener('click', async () => {
+    const criterio = el.dataset.criterio;
+    capturarPremiosDelDOM();
+
+    if (criteriosActivosActual.includes(criterio)) {
+      if (criteriosActivosActual.length === 1) {
+        const msg = document.getElementById('ranking-msg');
+        msg.innerHTML = `<p class="ayuda" style="color:var(--advertencia); font-weight:600;">Dejá al menos un criterio activo.</p>`;
+        setTimeout(() => { msg.innerHTML = ''; }, 2200);
+        return;
+      }
+      criteriosActivosActual = criteriosActivosActual.filter((c) => c !== criterio);
+    } else {
+      criteriosActivosActual = [...criteriosActivosActual, criterio];
+    }
+    pintarSeleccionCriterios();
+    await renderizarBloquesRanking(false);
   });
 });
 
@@ -1998,10 +2523,9 @@ function valorRankingTexto(c, criterio) {
   return `${c.valor} ${ETIQUETAS_CRITERIO[criterio]}`;
 }
 
-function renderizarPodio(top3, criterio) {
+function htmlPodio(top3, criterio) {
   const clases = { 1: 'oro', 2: 'plata', 3: 'bronce' };
-  const contenedor = document.getElementById('podio-ranking');
-  contenedor.innerHTML = [1, 2, 3].map((puesto) => {
+  return [1, 2, 3].map((puesto) => {
     const c = top3[puesto - 1];
     const nombre = c ? (c.nombre || 'Cliente sin identificar') : '—';
     const valor = c ? valorRankingTexto(c, criterio) : 'Todavía nadie';
@@ -2018,20 +2542,18 @@ function renderizarPodio(top3, criterio) {
   }).join('');
 }
 
-function renderizarPremiosPuestos(premios) {
-  const clases = { 1: 'oro', 2: 'plata', 3: 'bronce' };
+function htmlPremiosPuestos(criterio, premios) {
   const colores = { 1: '#f59e0b', 2: '#94a3b8', 3: '#b8703f' };
-  const contenedor = document.getElementById('premios-ranking');
-  contenedor.innerHTML = [1, 2, 3].map((puesto) => {
+  return [1, 2, 3].map((puesto) => {
     const premio = (premios && premios['top' + puesto]) || { texto: '', descuentoPorcentaje: 0 };
     return `
       <div class="premio-puesto-fila">
         <div class="premio-puesto-medalla" style="background:${colores[puesto]}">${puesto}°</div>
         <div class="premio-puesto-campos">
-          <input type="text" class="premio-texto" data-puesto="${puesto}" placeholder="Ej: Envío gratis, un producto de regalo..." value="${premio.texto || ''}">
+          <input type="text" class="premio-texto" data-criterio="${criterio}" data-puesto="${puesto}" placeholder="Ej: Envío gratis, un producto de regalo..." value="${premio.texto || ''}">
           <div class="premio-puesto-descuento-wrap">
-            <input type="number" class="premio-descuento" data-puesto="${puesto}" min="0" max="100" placeholder="0" value="${premio.descuentoPorcentaje || ''}">
-            <span>% de descuento (opcional, el asistente lo calcula y aplica solo)</span>
+            <input type="number" class="premio-descuento" data-criterio="${criterio}" data-puesto="${puesto}" min="0" max="100" placeholder="0" value="${premio.descuentoPorcentaje || ''}">
+            <span>% de descuento (opcional)</span>
           </div>
         </div>
       </div>
@@ -2039,62 +2561,80 @@ function renderizarPremiosPuestos(premios) {
   }).join('');
 }
 
-async function cargarRanking() {
-  const contenedorResto = document.getElementById('lista-ranking');
+function htmlListaResto(resto, criterio) {
+  if (!resto.length) return '';
+  return `<div style="margin-top:14px;">${resto.map((c, i) => {
+    const nombre = c.nombre || 'Cliente sin identificar';
+    return `
+      <div class="ranking-card">
+        <div class="ranking-puesto">${i + 4}</div>
+        <div class="ranking-info">
+          <strong>${nombre}</strong>
+          <span>${valorRankingTexto(c, criterio)}</span>
+        </div>
+      </div>
+    `;
+  }).join('')}</div>`;
+}
+
+async function renderizarBloquesRanking(recargarTodo) {
+  const contenedor = document.getElementById('ranking-por-criterio');
   try {
-    const res = await fetch(`${API_URL}/ranking?criterio=${criterioRankingActual}`, { headers: headersAuth() });
-    const data = await res.json();
-    ultimoTop10 = data.top10 || [];
-
-    document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((e) => {
-      e.classList.toggle('seleccionado', e.dataset.criterio === data.criterio);
-    });
-
-    renderizarPodio(ultimoTop10.slice(0, 3), data.criterio);
-    renderizarPremiosPuestos(data.config && data.config.premios);
-
-    const resto = ultimoTop10.slice(3);
-    if (!resto.length) {
-      contenedorResto.innerHTML = ultimoTop10.length
-        ? ''
-        : `<p class="ayuda">Todavía no hay clientes suficientes para armar un ranking.</p>`;
-      return;
+    if (recargarTodo || !rankingConfigServidor) {
+      contenedor.innerHTML = `<p class="ayuda">Cargando...</p>`;
+      const res = await fetch(`${API_URL}/ranking/activos`, { headers: headersAuth(), cache: 'no-store' });
+      const data = await res.json();
+      rankingConfigServidor = data.config;
+      criteriosActivosActual = data.criteriosActivos && data.criteriosActivos.length ? data.criteriosActivos : ['compras'];
+      cacheTop10Ranking = data.porCriterio || {};
+      premiosEnEdicion = {};
     }
 
-    contenedorResto.innerHTML = resto.map((c, i) => {
-      const nombre = c.nombre || 'Cliente sin identificar';
+    // Si el dueño activó un criterio nuevo, pedimos solo el TOP de ese (sin pisar lo que ya eligió)
+    const faltan = criteriosActivosActual.filter((c) => !cacheTop10Ranking[c]);
+    if (faltan.length) {
+      const res = await fetch(`${API_URL}/ranking/activos?criterios=${faltan.join(',')}`, { headers: headersAuth(), cache: 'no-store' });
+      const data = await res.json();
+      Object.assign(cacheTop10Ranking, data.porCriterio || {});
+    }
+
+    pintarSeleccionCriterios();
+
+    contenedor.innerHTML = criteriosActivosActual.map((criterio) => {
+      const top10 = cacheTop10Ranking[criterio] || [];
+      const premios = premiosParaMostrar(criterio);
       return `
-        <div class="ranking-card">
-          <div class="ranking-puesto">${i + 4}</div>
-          <div class="ranking-info">
-            <strong>${nombre}</strong>
-            <span>${valorRankingTexto(c, data.criterio)}</span>
-          </div>
+        <div class="ranking-bloque-criterio" data-criterio-bloque="${criterio}">
+          <div class="ranking-bloque-titulo">${NOMBRES_CRITERIO[criterio]}</div>
+          <div class="podio-ranking">${htmlPodio(top10.slice(0, 3), criterio)}</div>
+          ${htmlPremiosPuestos(criterio, premios)}
+          ${top10.length ? htmlListaResto(top10.slice(3), criterio) : `<p class="ayuda">Todavía no hay clientes suficientes para este criterio.</p>`}
         </div>
       `;
     }).join('');
   } catch (error) {
-    contenedorResto.innerHTML = `<p class="ayuda">No se pudo cargar el ranking.</p>`;
+    contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el ranking.</p>`;
   }
+}
+
+async function cargarRanking() {
+  await renderizarBloquesRanking(true);
 }
 
 document.getElementById('btn-guardar-ranking')?.addEventListener('click', async () => {
   const msgDiv = document.getElementById('ranking-msg');
-  const premios = {};
-  [1, 2, 3].forEach((puesto) => {
-    const texto = document.querySelector(`.premio-texto[data-puesto="${puesto}"]`).value;
-    const descuento = document.querySelector(`.premio-descuento[data-puesto="${puesto}"]`).value;
-    premios['top' + puesto] = { texto, descuentoPorcentaje: descuento ? Number(descuento) : 0 };
-  });
+  capturarPremiosDelDOM();
 
   try {
     const res = await fetch(`${API_URL}/ranking/config`, {
       method: 'PUT',
       headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ criterioActivo: criterioRankingActual, premios }),
+      body: JSON.stringify({ criteriosActivos: criteriosActivosActual, premiosPorCriterio: premiosEnEdicion }),
     });
     if (!res.ok) throw new Error('Error al guardar');
     negocioActual = (await res.json()).negocio;
+    rankingConfigServidor = negocioActual.ranking;
+    premiosEnEdicion = {};
     msgDiv.innerHTML = `<p class="exito">Guardado. El asistente ya va a avisar y aplicar estos premios.</p>`;
     setTimeout(() => { msgDiv.innerHTML = ''; }, 2500);
   } catch (error) {
@@ -2102,3 +2642,75 @@ document.getElementById('btn-guardar-ranking')?.addEventListener('click', async 
   }
 });
 
+// --- Preguntas frecuentes (el dueño responde lo que el asistente no supo) ---
+async function cargarPreguntasFrecuentes() {
+  const contenedor = document.getElementById('lista-preguntas-frecuentes');
+  if (!contenedor) return;
+  try {
+    const res = await fetch(`${API_URL}/preguntas`, { headers: headersAuth(), cache: 'no-store' });
+    const preguntas = await res.json();
+
+    if (!preguntas.length) {
+      actualizarChipPreguntas(0);
+      contenedor.innerHTML = `<p class="ayuda">Todavía no hay preguntas. Cuando un cliente pregunte algo que el asistente no sepa, va a aparecer acá.</p>`;
+      return;
+    }
+
+    const sinResponder = preguntas.filter((p) => !p.respuesta);
+    const respondidas = preguntas.filter((p) => p.respuesta);
+    actualizarChipPreguntas(sinResponder.length);
+
+    const htmlSinResponder = sinResponder.map((p) => `
+      <div class="pregunta-card" data-id="${p._id}">
+        <strong>"${escHtml(p.pregunta)}"</strong>
+        <span class="pregunta-card-fecha">${new Date(p.createdAt).toLocaleString('es-AR')}</span>
+        <textarea class="pregunta-respuesta-input" placeholder="Escribí acá la respuesta para tu asistente..."></textarea>
+        <div class="pregunta-card-acciones">
+          <button class="btn-pregunta-quitar" data-id="${p._id}">Quitar</button>
+          <button class="btn-pregunta-responder" data-id="${p._id}">Guardar respuesta</button>
+        </div>
+      </div>
+    `).join('');
+
+    const htmlRespondidas = respondidas.map((p) => `
+      <div class="pregunta-card respondida" data-id="${p._id}">
+        <strong>"${escHtml(p.pregunta)}"</strong>
+        <p class="pregunta-card-respuesta">${escHtml(p.respuesta)}</p>
+        <div class="pregunta-card-acciones">
+          <button class="btn-pregunta-quitar" data-id="${p._id}">Quitar</button>
+        </div>
+      </div>
+    `).join('');
+
+    contenedor.innerHTML = `
+      ${sinResponder.length ? `<h3>Sin responder (${sinResponder.length})</h3>${htmlSinResponder}` : `<p class="ayuda">No tenés preguntas sin responder.</p>`}
+      ${respondidas.length ? `<h3 style="margin-top:20px;">Ya respondidas (${respondidas.length})</h3>${htmlRespondidas}` : ''}
+    `;
+
+    contenedor.querySelectorAll('.btn-pregunta-responder').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const card = btn.closest('.pregunta-card');
+        const respuesta = card.querySelector('.pregunta-respuesta-input').value.trim();
+        if (!respuesta) { alert('Escribí la respuesta antes de guardar.'); return; }
+        const r = await fetch(`${API_URL}/preguntas/${btn.dataset.id}`, {
+          method: 'PUT',
+          headers: headersAuth({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ respuesta }),
+        });
+        if (r.ok) cargarPreguntasFrecuentes();
+        else alert('No se pudo guardar la respuesta.');
+      });
+    });
+
+    contenedor.querySelectorAll('.btn-pregunta-quitar').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('¿Quitar esta pregunta?')) return;
+        const r = await fetch(`${API_URL}/preguntas/${btn.dataset.id}`, { method: 'DELETE', headers: headersAuth() });
+        if (r.ok) cargarPreguntasFrecuentes();
+        else alert('No se pudo quitar la pregunta.');
+      });
+    });
+  } catch (error) {
+    contenedor.innerHTML = `<p class="ayuda">No se pudieron cargar las preguntas.</p>`;
+  }
+}
