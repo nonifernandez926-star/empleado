@@ -1,6 +1,7 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const Pedido = require('../models/Pedido');
 const Turno = require('../models/Turno');
+const { ahoraArgentina, estadoDeMisTurnos } = require('./fila');
 const Cliente = require('../models/Cliente');
 const PreguntaFrecuente = require('../models/PreguntaFrecuente');
 const { calcularHorariosDisponibles } = require('./turnos');
@@ -83,7 +84,7 @@ const HERRAMIENTAS_PEDIDOS = [
             required: ['producto', 'cantidad'],
           },
         },
-        nombreCliente: { type: 'string', description: 'Nombre del cliente que hace el pedido' },
+        nombreCliente: { type: 'string', description: 'Nombre del cliente que hace el pedido (el que te dio al principio de la charla)' },
         telefonoCliente: { type: 'string', description: 'Telefono de contacto del cliente (siempre pedirlo, es obligatorio)' },
         tipoEntrega: { type: 'string', enum: ['delivery', 'retiro'], description: 'Si el cliente pidio delivery o retira en el local' },
         direccionEntrega: { type: 'string', description: 'Direccion de entrega, solo si es delivery' },
@@ -126,6 +127,11 @@ const HERRAMIENTAS_TURNOS = [
       },
       required: ['fecha', 'hora', 'motivo', 'nombreCliente', 'telefonoCliente'],
     },
+  },
+  {
+    name: 'consultar_mi_fila',
+    description: 'Consulta en que lugar de la fila del dia esta el cliente que te escribe (cuantas personas hay antes que el y a que hora se lo atendera aproximadamente). Usar cuando pregunta cuanto falta, si ya lo atienden, si hay demora, o cuando le confirmas un turno para HOY. No necesita datos: identifica al cliente solo.',
+    input_schema: { type: 'object', properties: {} },
   },
 ];
 
@@ -318,8 +324,15 @@ function construirSystemPrompt(negocio, clienteConocido, productos, premiosDelCl
         prompt += 'Este negocio confirma los turnos automaticamente apenas se reservan. Podes decirle al cliente que su turno quedo confirmado.\n\n';
       }
     }
+    prompt += 'FILA VIRTUAL DEL DIA: cuando un cliente tiene turno para HOY, existe una fila en el local. Usa la herramienta \"consultar_mi_fila\" (nunca adivines) cuando pregunte cuanto falta, si ya lo atienden o si hay demora, y tambien al confirmarle un turno de hoy para decirle en que lugar queda. Explicalo simple: cuantas personas hay antes que el y a que hora aproximada lo atenderian (siempre decilo como aproximado, nunca como promesa). Si la respuesta trae puedeAdelantar=true, avisale que se libero un hueco y que si puede llegar a la horaEstimada lo atienden antes de su horario. Si trae atrasoMinutos mayor a 10, avisale con amabilidad que hay una demora de unos minutos. Si la situacion es \"sos_el_siguiente\", decile que es el proximo y que se acerque. IMPORTANTE: la fila es solo del local fisico. Tu atencion por chat NUNCA hace esperar a nadie: podes atender a muchas personas al mismo tiempo, asi que jamas le digas a un cliente que espere porque estas atendiendo a otro. Tampoco prometas que le vas a avisar solo cuando le toque (no podes escribirle si cierra el chat): decile que puede volver a preguntarte cuando quiera o mirar su lugar en la fila arriba en este chat.\n\n';
     prompt += 'Si un cliente ya esta a mitad de sacar un turno o haciendo una consulta y llega OTRO cliente nuevo en una conversacion distinta, no hay problema - son conversaciones separadas y cada una se atiende de forma independiente, no hace falta avisarle a nadie que espere.\n\n';
   } else {
+    prompt += 'NOMBRE DEL CLIENTE (importante):\n';
+    if (clienteConocido && clienteConocido.nombre) {
+      prompt += 'Ya sabes que se llama ' + clienteConocido.nombre + ': llamalo asi durante toda la charla y usa ese nombre en la herramienta de registrar el pedido. No se lo vuelvas a preguntar.\n\n';
+    } else {
+      prompt += 'Todavia NO sabes como se llama este cliente. En cuanto muestre intencion de pedir algo (su primer pedido), preguntale el nombre ANTES de juntar los demas datos, de forma calida y breve (por ejemplo: \"¡Genial! Antes de arrancar, ¿cómo te llamo?\"). Apenas te lo diga, usalo para dirigirte a el por su nombre durante el resto de la charla. Explicale en una frase que es para anotarlo en su pedido. Si el cliente se niega a darlo, no insistas mas de una vez y segui con el pedido usando \"Cliente\". Usa ese mismo nombre en la herramienta de registrar el pedido.\n\n';
+    }
     prompt += 'COMO TOMAR UN PEDIDO (esto es central en tu trabajo):\n';
     prompt += 'Si el cliente quiere pedir algo, guialo conversacionalmente para juntar todos los datos necesarios: que producto/servicio y cantidad, si es delivery o retiro (y la direccion si es delivery), forma de pago, nombre, telefono (siempre obligatorio, sin excepcion) y cualquier observacion. Para ir mas rapido y no cansar al cliente, agrupa varias preguntas juntas en un mismo mensaje (por ejemplo "¿Es para delivery o retiras? ¿A que direccion, y a que nombre y telefono lo anoto?") en vez de preguntar un solo dato por mensaje - pero segui siendo natural, si el cliente ya te dio algo no se lo vuelvas a preguntar, y si la situacion pide ir de a un dato por vez (por ejemplo porque el pedido es confuso) esta bien hacerlo asi tambien.\n\n';
     prompt += 'Cuando tengas todos los datos, mostrale un resumen claro antes de confirmar, con emojis y ordenado (incluyendo el total a pagar si hay precios cargados, sumando el costo de envio si corresponde), y preguntale si confirma.\n\n';
@@ -389,11 +402,13 @@ async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
   // Actualizamos (o creamos) el perfil de cliente recurrente para este negocio,
   // salvo que el dueño haya apagado la memoria de clientes.
   if (negocio.memoriaActiva !== false) {
+    // El nombre que dio en su primer pedido es el que queda (así el ranking no cambia de nombre si un día pide para otra persona)
+    const clienteExistente = await Cliente.findOne({ negocioId: negocio._id, sesionClienteId: sesionClienteId }).select('nombre').lean();
     await Cliente.findOneAndUpdate(
       { negocioId: negocio._id, sesionClienteId: sesionClienteId },
       {
         $set: {
-          nombre: input.nombreCliente,
+          nombre: (clienteExistente && clienteExistente.nombre) || input.nombreCliente,
           telefono: input.telefonoCliente,
           ultimoPedido: {
             fecha: new Date(),
@@ -441,6 +456,16 @@ async function ejecutarConsultarTurnosDisponibles(negocio, input) {
   return { horariosDisponibles: horarios, duracionMinutos: motivoConfig.duracionMinutos };
 }
 
+// Ejecuta consultar_mi_fila: devuelve el lugar del cliente en la fila de hoy (se calcula en el momento,
+// asi que siempre refleja cancelaciones, ausencias y demoras reales).
+async function ejecutarConsultarMiFila(negocio, sesionClienteId) {
+  const { fecha } = ahoraArgentina();
+  const turnosHoy = await Turno.find({ negocioId: negocio._id, fecha: fecha, esPrueba: negocio.esPruebaActual ? true : { $ne: true } });
+  const mios = estadoDeMisTurnos(turnosHoy, sesionClienteId, new Date());
+  if (!mios.length) return { tieneTurnoHoy: false, mensaje: 'Este cliente no tiene un turno para hoy. Si pregunta por otro dia, no hay fila: los turnos de otros dias son a horario fijo.' };
+  return { tieneTurnoHoy: true, turnos: mios };
+}
+
 // Ejecuta registrar_turno: reserva el horario DE VERDAD (si ya lo tomo otro cliente, el indice
 // unico de Mongo rechaza la creacion, asi evitamos que dos personas se lleven el mismo horario).
 async function ejecutarRegistrarTurno(negocio, sesionClienteId, input) {
@@ -473,11 +498,12 @@ async function ejecutarRegistrarTurno(negocio, sesionClienteId, input) {
   }
 
   if (negocio.memoriaActiva !== false) {
+    const clienteExistenteT = await Cliente.findOne({ negocioId: negocio._id, sesionClienteId: sesionClienteId }).select('nombre').lean();
     await Cliente.findOneAndUpdate(
       { negocioId: negocio._id, sesionClienteId: sesionClienteId },
       {
         $set: {
-          nombre: input.nombreCliente,
+          nombre: (clienteExistenteT && clienteExistenteT.nombre) || input.nombreCliente,
           telefono: input.telefonoCliente,
           ultimoTurno: {
             fecha: input.fecha,
@@ -594,6 +620,8 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
         pedidoCreado = resultadoHerramienta;
       } else if (bloqueHerramienta.name === 'consultar_turnos_disponibles') {
         resultadoHerramienta = await ejecutarConsultarTurnosDisponibles(negocio, bloqueHerramienta.input);
+      } else if (bloqueHerramienta.name === 'consultar_mi_fila') {
+        resultadoHerramienta = await ejecutarConsultarMiFila(negocio, sesionClienteId);
       } else if (bloqueHerramienta.name === 'registrar_turno') {
         resultadoHerramienta = await ejecutarRegistrarTurno(negocio, sesionClienteId, bloqueHerramienta.input);
         turnoCreado = resultadoHerramienta;
