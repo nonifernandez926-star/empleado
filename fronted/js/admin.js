@@ -287,6 +287,7 @@ async function mostrarPanel() {
   document.getElementById('drawer-estado-negocio').textContent = ETIQUETAS_PLAN[estado] || estado;
 
   actualizarEstadoSuscripcionUI();
+  esperarConfirmacionPago();
   const linkChat = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
   document.getElementById('link-chat').textContent = linkChat;
   document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
@@ -313,11 +314,13 @@ async function mostrarPanel() {
   // ofrecer descuentos en consultas médicas); en el resto de los negocios de turnos sí aplica.
   document.getElementById('tarjeta-promociones').style.display = negocioActual.rubroCategoria === 'Salud' ? 'none' : 'block';
   document.getElementById('tarjeta-zonas-delivery').style.display = negocioActual.tipoOperacion === 'turnos' ? 'none' : 'block';
+  aplicarEjemplosPorRubro();
 
   cargarEstadisticas();
   if (esTurnos) {
     prepararBloqueoTurno();
     cargarTurnos();
+    cargarFila();
   } else {
     cargarPedidos();
   }
@@ -364,7 +367,6 @@ const ETIQUETAS_DONUT = {
 };
 
 let resumenDatos = null;
-let donutVista = 'estado';
 let donutSeleccion = -1;
 let semanaModo = 'cantidad';
 
@@ -402,27 +404,36 @@ function renderizarKPIs(r) {
 }
 
 // ---------- Donut interactivo ----------
-function opcionesDonut() {
-  const esTurnos = resumenDatos.tipoOperacion === 'turnos';
-  const dist = resumenDatos.distribuciones || {};
-  const tabs = esTurnos
-    ? [['estado', 'Estado'], ['motivo', 'Motivo']]
-    : [['estado', 'Estado'], ['entrega', 'Entrega'], ['pago', 'Pago'], ['productos', 'Productos']];
-  if (esTurnos && (dist.profesional || []).length > 1) tabs.push(['profesional', 'Profesional']);
-  return tabs;
+// Un solo gráfico: cada color es un grupo. Al tocar un color (en el círculo o en la lista)
+// aparece abajo el detalle de ese grupo con su cantidad, porcentaje y datos propios.
+function filaDetalleDonut(etiqueta, valor) {
+  return `<div class="dd-fila"><span>${escHtml(etiqueta)}</span><strong>${valor}</strong></div>`;
 }
 
-function renderizarTabsDonut() {
-  const cont = document.getElementById('donut-tabs');
-  cont.innerHTML = opcionesDonut().map(([clave, texto]) => `<button class="dash-tab ${clave === donutVista ? 'activo' : ''}" data-vista="${clave}">${texto}</button>`).join('');
-  cont.querySelectorAll('.dash-tab').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      donutVista = btn.dataset.vista;
-      donutSeleccion = -1;
-      renderizarTabsDonut();
-      renderizarDonut();
-    });
-  });
+function listaCorta(lista, formato) {
+  return (lista || []).map((x) => `${escHtml(formato ? formato(x.nombre) : capitalizar(x.nombre))} ${x.valor}`).join(' · ');
+}
+
+function htmlDetalleDonut(d, total, color) {
+  const pct = Math.round((d.valor / total) * 100);
+  const det = d.detalle || {};
+  const esTurnos = resumenDatos.tipoOperacion === 'turnos';
+  const filas = [
+    filaDetalleDonut(esTurnos ? 'Consultas' : 'Pedidos', d.valor),
+    filaDetalleDonut('Del total', `${pct}%`),
+  ];
+  if (!esTurnos) {
+    if (det.monto) filas.push(filaDetalleDonut('Facturado', fmtPesos(det.monto)));
+    if (det.topProducto) filas.push(filaDetalleDonut('Más pedido', `${escHtml(det.topProducto.nombre)} (${det.topProducto.cantidad}x)`));
+    if ((det.entrega || []).length) filas.push(filaDetalleDonut('Entrega', listaCorta(det.entrega, (n) => ETIQUETAS_DONUT[n] || capitalizar(n))));
+    if ((det.pago || []).length) filas.push(filaDetalleDonut('Pago', listaCorta(det.pago)));
+  } else {
+    if ((det.motivo || []).length) filas.push(filaDetalleDonut('Motivo', listaCorta(det.motivo)));
+    if ((det.profesional || []).length) filas.push(filaDetalleDonut('Profesional', listaCorta(det.profesional)));
+  }
+  return `
+    <div class="dd-titulo"><span class="donut-punto" style="background:${color}"></span>${escHtml(d.nombre)}</div>
+    ${filas.join('')}`;
 }
 
 function seleccionarSegmentoDonut(i) {
@@ -445,23 +456,32 @@ function seleccionarSegmentoDonut(i) {
   const valorEl = document.getElementById('donut-centro-valor');
   const textoEl = document.getElementById('donut-centro-texto');
   const pctEl = document.getElementById('donut-centro-pct');
+  const detalleEl = document.getElementById('donut-detalle');
   if (donutSeleccion === -1) {
     valorEl.textContent = total;
     textoEl.textContent = 'en total';
     pctEl.textContent = 'Tocá un color';
+    detalleEl.classList.remove('abierto');
+    detalleEl.innerHTML = `<p class="dd-hint">Tocá un color del gráfico para ver sus datos.</p>`;
   } else {
     const d = datos[donutSeleccion];
+    const color = PALETA_DONUT[donutSeleccion % PALETA_DONUT.length];
     valorEl.textContent = d.valor;
     textoEl.textContent = d.nombre;
     pctEl.textContent = `${Math.round((d.valor / total) * 100)}% del total`;
+    detalleEl.classList.add('abierto');
+    detalleEl.style.setProperty('--dd-color', color);
+    detalleEl.innerHTML = htmlDetalleDonut(d, total, color);
   }
 }
 
 function renderizarDonut() {
   const cont = document.getElementById('donut-contenedor');
-  const crudos = ((resumenDatos.distribuciones || {})[donutVista]) || [];
-  const datos = crudos.map((d) => ({ nombre: ETIQUETAS_DONUT[d.nombre] || capitalizar(d.nombre), valor: d.valor }));
+  const detalleEstado = resumenDatos.detalleEstado || {};
+  const crudos = ((resumenDatos.distribuciones || {}).estado) || [];
+  const datos = crudos.map((d) => ({ nombre: ETIQUETAS_DONUT[d.nombre] || capitalizar(d.nombre), valor: d.valor, detalle: detalleEstado[d.nombre] || {} }));
   const total = datos.reduce((acc, d) => acc + d.valor, 0);
+  donutSeleccion = -1;
 
   if (!total) {
     cont.innerHTML = `
@@ -510,6 +530,7 @@ function renderizarDonut() {
         <em id="donut-centro-pct">Tocá un color</em>
       </div>
     </div>
+    <div class="donut-detalle" id="donut-detalle"><p class="dd-hint">Tocá un color del gráfico para ver sus datos.</p></div>
     <div class="donut-leyenda">${filas}</div>
   `;
 
@@ -636,11 +657,9 @@ async function cargarResumenDiario() {
     if (r.tipoOperacion === 'turnos') semanaModo = 'cantidad';
 
     renderizarKPIs(r);
-    renderizarTabsDonut();
     renderizarDonut();
     renderizarChartSemana(r);
     renderizarChartHoras(r);
-    actualizarBannerAnimo(r);
   } catch (error) {
     contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el resumen.</p>`;
   }
@@ -668,20 +687,161 @@ function actualizarChipPreguntas(cantidad) {
 }
 
 
-function actualizarBannerAnimo(r) {
-  const emoji = document.getElementById('banner-animo-emoji');
-  const titulo = document.getElementById('banner-animo-titulo');
-  const texto = document.getElementById('banner-animo-texto');
-  if (!r.conversacionesHoy && !r.pedidosHoy) {
-    emoji.textContent = '👋';
-    titulo.textContent = 'Todavía no hay actividad hoy';
-    texto.textContent = 'Cuando tengas conversaciones o pedidos, los vas a ver acá.';
-  } else {
-    emoji.textContent = '🚀';
-    titulo.textContent = '¡Sigue así!';
-    texto.textContent = `Hoy ya tuviste ${r.conversacionesHoy} conversación(es) y ${r.pedidosHoy} pedido(s).`;
+
+// =====================================================================
+// EJEMPLOS SEGÚN EL RUBRO: los textos de ayuda (placeholders) se adaptan al negocio
+// =====================================================================
+const EJEMPLOS_RUBRO = {
+  gastronomia: {
+    promoTitulo: 'Ej: 2x1 en postres los martes', promoDesc: 'Contá los detalles: qué días aplica, si es para llevar o para comer en el local, etc.', promoAplica: 'Ej: Menú del día + bebida',
+    productoNombre: 'Ej: Milanesa con papas fritas', productoCategoria: 'Ej: Platos principales, Bebidas, Postres', productoIncluye: 'Ej: Plato + bebida + postre',
+    disponibilidad: 'Ej: hoy no hay flan, se agotó el asado', variante: 'Ej: Porción grande', bloqueo: 'Ej: Evento privado, cierre por mantenimiento',
+  },
+  gastronomia_heladeria: { promoTitulo: 'Ej: 2x1 en helados los martes', promoAplica: 'Ej: Cucurucho doble', productoNombre: 'Ej: Cuarto kilo de helado', productoCategoria: 'Ej: Helados, Postres helados, Bebidas', disponibilidad: 'Ej: hoy no hay dulce de leche granizado' },
+  gastronomia_pizzeria: { promoTitulo: 'Ej: 2x1 en pizzas muzzarella los martes', promoAplica: 'Ej: Pizza grande + gaseosa', productoNombre: 'Ej: Pizza muzzarella', productoCategoria: 'Ej: Pizzas, Empanadas, Bebidas', disponibilidad: 'Ej: hoy no hay pizza de rúcula' },
+  gastronomia_cafeteria: { promoTitulo: 'Ej: Café + medialuna a precio especial de 15 a 18 hs', promoAplica: 'Ej: Café + medialuna', productoNombre: 'Ej: Café con leche', productoCategoria: 'Ej: Cafés, Tostados, Pastelería', disponibilidad: 'Ej: hoy no hay cheesecake' },
+  gastronomia_panaderia: { promoTitulo: 'Ej: Docena de facturas con 15% de descuento', promoAplica: 'Ej: Docena de facturas', productoNombre: 'Ej: Docena de medialunas', productoCategoria: 'Ej: Pan, Facturas, Tortas', disponibilidad: 'Ej: hoy no hay pan de campo' },
+  gastronomia_hamburgueseria: { promoTitulo: 'Ej: 2x1 en hamburguesas clásicas los martes', promoAplica: 'Ej: Hamburguesa clásica', productoNombre: 'Ej: Hamburguesa clásica', productoCategoria: 'Ej: Hamburguesas, Papas, Bebidas', disponibilidad: 'Ej: hoy no hay hamburguesa vegetariana' },
+  gastronomia_parrilla: { promoTitulo: 'Ej: Parrillada para 2 con bebida incluida', promoAplica: 'Ej: Parrillada para 2', productoNombre: 'Ej: Parrillada para 2', productoCategoria: 'Ej: Parrilladas, Achuras, Guarniciones', disponibilidad: 'Ej: hoy no hay vacío' },
+  salud: {
+    promoTitulo: 'Ej: 10% de descuento en la primera consulta', promoDesc: 'Contá los detalles: quiénes pueden usarla, condiciones, etc.', promoAplica: 'Ej: Primera consulta',
+    productoNombre: 'Ej: Consulta general', productoCategoria: 'Ej: Consultas, Estudios, Tratamientos', productoIncluye: 'Ej: Consulta + control',
+    disponibilidad: 'Ej: hoy no atiende la Dra. Pérez', variante: 'Ej: Consulta de control', bloqueo: 'Ej: Congreso médico, vacaciones',
+  },
+  hogar: {
+    promoTitulo: 'Ej: 10% de descuento en la primera visita', promoDesc: 'Contá los detalles: zonas, días, condiciones, etc.', promoAplica: 'Ej: Visita técnica + presupuesto',
+    productoNombre: 'Ej: Instalación de toma corriente', productoCategoria: 'Ej: Instalaciones, Reparaciones, Mantenimiento', productoIncluye: 'Ej: Mano de obra + materiales básicos',
+    disponibilidad: 'Ej: esta semana no tomamos trabajos en altura', variante: 'Ej: Con materiales incluidos', bloqueo: 'Ej: Feriado, trabajo largo en obra',
+  },
+  automotor: {
+    promoTitulo: 'Ej: Alineación y balanceo con 15% de descuento', promoDesc: 'Contá los detalles: qué días aplica, tipos de vehículo, etc.', promoAplica: 'Ej: Alineación + balanceo',
+    productoNombre: 'Ej: Cambio de aceite y filtro', productoCategoria: 'Ej: Mantenimiento, Frenos, Neumáticos', productoIncluye: 'Ej: Aceite + filtro + revisión de niveles',
+    disponibilidad: 'Ej: hoy no hay turnos para service completo', variante: 'Ej: Aceite sintético', bloqueo: 'Ej: Feriado, mantenimiento del taller',
+  },
+  belleza: {
+    promoTitulo: 'Ej: 20% de descuento en color los miércoles', promoDesc: 'Contá los detalles: qué días aplica, condiciones, etc.', promoAplica: 'Ej: Corte + barba',
+    productoNombre: 'Ej: Corte de pelo', productoCategoria: 'Ej: Cortes, Color, Uñas', productoIncluye: 'Ej: Lavado + corte + peinado',
+    disponibilidad: 'Ej: hoy no atiende Sofía, no hay turnos de color', variante: 'Ej: Pelo largo', bloqueo: 'Ej: Capacitación, vacaciones',
+  },
+  comercio: {
+    promoTitulo: 'Ej: 2x1 en remeras de la temporada pasada', promoDesc: 'Contá los detalles: qué días aplica, stock limitado, etc.', promoAplica: 'Ej: Remeras y camisas',
+    productoNombre: 'Ej: Remera básica de algodón', productoCategoria: 'Ej: Remeras, Pantalones, Accesorios', productoIncluye: 'Ej: Producto + envoltorio de regalo',
+    disponibilidad: 'Ej: se agotó el talle M en jeans negros', variante: 'Ej: Talle 42', bloqueo: 'Ej: Inventario, feriado',
+  },
+  'servicios profesionales': {
+    promoTitulo: 'Ej: Primera consulta sin cargo', promoDesc: 'Contá los detalles: para quién aplica, condiciones, etc.', promoAplica: 'Ej: Primera consulta',
+    productoNombre: 'Ej: Consulta inicial', productoCategoria: 'Ej: Consultas, Trámites, Asesoramiento', productoIncluye: 'Ej: Consulta + informe escrito',
+    disponibilidad: 'Ej: esta semana no hay turnos para trámites urgentes', variante: 'Ej: Consulta virtual', bloqueo: 'Ej: Audiencia, feriado',
+  },
+  educacion: {
+    promoTitulo: 'Ej: Matrícula gratis si te anotás esta semana', promoDesc: 'Contá los detalles: cursos incluidos, fechas, condiciones, etc.', promoAplica: 'Ej: Cursos de inglés',
+    productoNombre: 'Ej: Clase de apoyo escolar', productoCategoria: 'Ej: Clases, Cursos, Talleres', productoIncluye: 'Ej: Clase + material de estudio',
+    disponibilidad: 'Ej: el curso de los sábados ya no tiene cupo', variante: 'Ej: Modalidad virtual', bloqueo: 'Ej: Feriado, receso',
+  },
+  'eventos y fiestas': {
+    promoTitulo: 'Ej: 15% de descuento reservando con 30 días de anticipación', promoDesc: 'Contá los detalles: fechas, cantidad de invitados, condiciones, etc.', promoAplica: 'Ej: Paquete cumpleaños infantil',
+    productoNombre: 'Ej: Paquete cumpleaños infantil', productoCategoria: 'Ej: Paquetes, Decoración, Catering', productoIncluye: 'Ej: Salón + decoración + animación',
+    disponibilidad: 'Ej: el salón no está disponible el 15 de este mes', variante: 'Ej: Para 30 invitados', bloqueo: 'Ej: Evento ya reservado, feriado',
+  },
+};
+
+function normalizarRubro(t) {
+  return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function aplicarEjemplosPorRubro() {
+  const cat = normalizarRubro(negocioActual.rubroCategoria);
+  const sub = normalizarRubro(negocioActual.rubroSubrubro);
+  const base = EJEMPLOS_RUBRO[cat] || EJEMPLOS_RUBRO.comercio;
+  const ej = Object.assign({}, base, EJEMPLOS_RUBRO[`${cat}_${sub}`] || {});
+  const poner = (id, texto) => { const el = document.getElementById(id); if (el && texto) el.placeholder = texto; };
+  poner('promo-titulo', ej.promoTitulo);
+  poner('promo-descripcion', ej.promoDesc);
+  poner('promo-aplica-a', ej.promoAplica);
+  poner('producto-nombre', ej.productoNombre);
+  poner('producto-categoria', ej.productoCategoria);
+  poner('producto-incluye', ej.productoIncluye);
+  poner('disponibilidad-hoy', ej.disponibilidad);
+  poner('nueva-variante-nombre', ej.variante);
+  poner('bloqueo-motivo', ej.bloqueo);
+}
+
+
+// =====================================================================
+// FILA VIRTUAL DE HOY (solo negocios de turnos)
+// =====================================================================
+function htmlColaFila(cola, variosProfesionales) {
+  const atendiendo = cola.atendiendo;
+  const bloqueAtendiendo = atendiendo ? `
+    <div class="fila-atendiendo ${atendiendo.demorado ? 'demorado' : ''}">
+      <div class="fila-atendiendo-info">
+        <span class="fila-etiqueta">Atendiendo ahora</span>
+        <strong>${escHtml(atendiendo.nombreCliente)}</strong>
+        <small>${escHtml(atendiendo.motivo || 'Turno')} · ${atendiendo.transcurridos} min de ${atendiendo.duracionMinutos}${atendiendo.demorado ? ' · se pasó del tiempo' : ''}</small>
+      </div>
+      <button class="fila-btn principal" data-fila-accion="finalizar" data-id="${atendiendo.id}">Finalizar</button>
+    </div>` : `<div class="fila-libre">Nadie se está atendiendo en este momento</div>`;
+
+  const items = cola.esperando.map((e) => `
+    <div class="fila-item ${e.posicion === 1 ? 'siguiente' : ''}">
+      <div class="fila-num">${e.posicion}</div>
+      <div class="fila-item-info">
+        <strong>${escHtml(e.nombreCliente)}</strong>
+        <small>${escHtml(e.motivo || 'Turno')} · agendado ${e.hora}${e.horaEstimada !== e.hora ? ` · estimado ${e.horaEstimada}` : ''}${e.puedeAdelantar ? ' · <span class="fila-adelanto">puede adelantarse</span>' : ''}${e.atrasoMinutos > 10 ? ` · <span class="fila-demora">demora ~${e.atrasoMinutos} min</span>` : ''}</small>
+      </div>
+      <div class="fila-acciones">
+        <button class="fila-btn principal" data-fila-accion="iniciar" data-id="${e.id}">Atender</button>
+        <button class="fila-btn suave" data-fila-accion="ausente" data-id="${e.id}" title="No vino">No vino</button>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="fila-cola">
+      ${variosProfesionales ? `<div class="fila-prof">${escHtml(cola.profesional || 'General')}</div>` : ''}
+      ${bloqueAtendiendo}
+      ${items ? `<div class="fila-lista">${items}</div>` : `<p class="ayuda" style="margin:10px 0 0;">No hay nadie esperando.</p>`}
+      <div class="fila-resumen"><span><strong>${cola.atendidos}</strong> atendidos</span><span><strong>${cola.ausentes}</strong> no vinieron</span><span><strong>${cola.cancelados}</strong> cancelados</span></div>
+    </div>`;
+}
+
+let filaCargando = false;
+async function cargarFila() {
+  const cont = document.getElementById('fila-contenido');
+  if (!cont || !negocioActual || negocioActual.tipoOperacion !== 'turnos' || filaCargando) return;
+  filaCargando = true;
+  try {
+    const res = await fetch(`${API_URL}/fila`, { headers: headersAuth(), cache: 'no-store' });
+    if (!res.ok) throw new Error('fila');
+    const data = await res.json();
+    const colas = data.colas || [];
+    const aviso = data.pendientesDeConfirmar ? `<div class="fila-aviso">Tenés ${data.pendientesDeConfirmar} turno(s) de hoy sin confirmar: no entran en la fila hasta que los apruebes.</div>` : '';
+    if (!colas.length) {
+      cont.innerHTML = `${aviso}<div class="fila-vacia"><strong>Hoy no hay turnos en la fila</strong><span>Cuando tus clientes saquen turno para hoy, van a aparecer acá en orden.</span></div>`;
+    } else {
+      cont.innerHTML = aviso + colas.map((c) => htmlColaFila(c, colas.length > 1)).join('');
+      cont.querySelectorAll('[data-fila-accion]').forEach((btn) => btn.addEventListener('click', () => accionFila(btn)));
+    }
+  } catch (e) {
+    cont.innerHTML = `<p class="ayuda">No se pudo cargar la fila.</p>`;
+  } finally {
+    filaCargando = false;
   }
 }
+
+async function accionFila(btn) {
+  btn.disabled = true;
+  try {
+    await fetch(`${API_URL}/fila/${btn.dataset.id}/atencion`, {
+      method: 'PUT',
+      headers: headersAuth({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ accion: btn.dataset.filaAccion }),
+    });
+  } catch (e) { /* si falla, el próximo refresco muestra el estado real */ }
+  cargarFila();
+}
+
+// La fila se refresca sola cada 15 segundos mientras el panel está a la vista.
+setInterval(() => { if (!document.hidden && negocioActual && negocioActual.tipoOperacion === 'turnos') cargarFila(); }, 15000);
 
 // Notificación de pedido nuevo mientras el panel está abierto: revisa cada 20s si hay
 // un pedido más reciente que el último que vimos, y avisa con sonido + notificación del navegador.
@@ -718,6 +878,14 @@ function reproducirSonidoAviso() {
   } catch (error) {
     // si el navegador bloquea audio sin interacción previa, no pasa nada grave
   }
+}
+
+function mostrarToast(texto) {
+  const div = document.createElement('div');
+  div.className = 'notif-flotante';
+  div.textContent = texto;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 6000);
 }
 
 function mostrarNotificacionFlotante(texto) {
@@ -936,14 +1104,16 @@ async function cargarPlanes() {
 
     grid.innerHTML = entradas.map(([clave, plan]) => {
       const insignia = plan.meses === 6 ? 'Mejor precio' : (plan.meses === 3 ? 'Popular' : '');
-      const destacado = plan.meses === 6;
       return `
-        <div class="plan-card ${destacado ? 'destacado' : ''}">
+        <div class="plan-card" data-plan="${clave}">
           ${insignia ? `<div class="plan-insignia">${insignia}</div>` : ''}
           <div class="plan-cabecera">
-            <div>
-              <div class="plan-nombre">${escHtml(plan.label)}</div>
-              <div class="plan-duracion">${plan.meses === 1 ? '1 mes' : plan.meses + ' meses'}</div>
+            <div class="plan-titulo-fila">
+              <span class="plan-radio"></span>
+              <div>
+                <div class="plan-nombre">${escHtml(plan.label)}</div>
+                <div class="plan-duracion">${plan.meses === 1 ? '1 mes' : plan.meses + ' meses'}</div>
+              </div>
             </div>
             ${plan.descuentoPorcentaje ? `<div class="plan-descuento">${plan.descuentoPorcentaje}% OFF</div>` : ''}
           </div>
@@ -951,13 +1121,27 @@ async function cargarPlanes() {
             <span class="plan-precio">${fmtPesos(plan.precio)}</span>
             ${plan.ahorro ? `<span class="plan-precio-tachado">${fmtPesos(plan.precioSinDescuento)}</span>` : ''}
           </div>
-          <div class="plan-por-mes">${plan.meses === 1 ? 'Precio por mes' : `Equivale a <strong>${fmtPesos(plan.precioPorMes)}</strong> por mes`}</div>
+          <div class="plan-por-mes"><strong>${fmtPesos(plan.precioPorMes)}</strong> por mes</div>
           <div class="plan-frase">${fraseAhorroPlan(plan, base)}</div>
-          <button class="btn ancho plan-boton ${destacado ? '' : 'secundario'}" data-plan="${clave}">Elegir ${escHtml(plan.label.toLowerCase())}</button>
+          <div class="plan-accion"></div>
         </div>`;
     }).join('');
 
-    grid.querySelectorAll('.plan-boton').forEach((btn) => btn.addEventListener('click', () => iniciarPago(btn.dataset.plan)));
+    // El botón de pago aparece recién cuando el dueño elige un plan, y solo en el plan elegido.
+    grid.querySelectorAll('.plan-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        if (card.classList.contains('seleccionado')) return;
+        grid.querySelectorAll('.plan-card').forEach((c) => {
+          c.classList.remove('seleccionado');
+          c.querySelector('.plan-accion').innerHTML = '';
+        });
+        card.classList.add('seleccionado');
+        const plan = planes[card.dataset.plan];
+        const accion = card.querySelector('.plan-accion');
+        accion.innerHTML = `<button class="btn ancho plan-boton" data-plan="${card.dataset.plan}">Obtener ${escHtml(plan.label.toLowerCase())}</button>`;
+        accion.querySelector('.plan-boton').addEventListener('click', (e) => { e.stopPropagation(); iniciarPago(card.dataset.plan); });
+      });
+    });
   } catch (error) {
     grid.innerHTML = `<p class="ayuda">No se pudieron cargar los planes.</p>`;
   }
@@ -984,6 +1168,53 @@ async function iniciarPago(plan) {
   } catch (error) {
     msgDiv.innerHTML = `<div class="error-msg">Error de conexión, intentá de nuevo.</div>`;
   }
+}
+
+// Al volver de Mercado Pago (?pago=exito|pendiente|fallo en la URL), el webhook puede tardar
+// unos segundos en llegar. En vez de mostrar el estado viejo, esperamos y consultamos de nuevo
+// hasta ver la suscripción activada (o avisamos si tarda más de lo normal).
+async function esperarConfirmacionPago() {
+  const params = new URLSearchParams(window.location.search);
+  const resultado = params.get('pago');
+  if (!resultado) return;
+
+  history.replaceState({}, '', window.location.pathname); // limpiamos el parámetro para no repetir esto si recarga
+
+  if (resultado === 'fallo') {
+    mostrarToast('El pago no se pudo completar. Podés intentar de nuevo desde "Mi plan".');
+    return;
+  }
+  if (negocioActual.suscripcion.estado === 'activa') return; // ya estaba activa (por ejemplo, si tardó en volver)
+
+  const banner = document.createElement('div');
+  banner.className = 'aviso-info';
+  banner.id = 'aviso-confirmando-pago';
+  banner.textContent = 'Confirmando tu pago con Mercado Pago...';
+  document.getElementById('vista-panel').prepend(banner);
+
+  const maxIntentos = 10; // 10 x 3s = 30 segundos
+  for (let intento = 0; intento < maxIntentos; intento++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const res = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth(), cache: 'no-store' });
+      if (res.ok) {
+        negocioActual = await res.json();
+        if (negocioActual.suscripcion.estado === 'activa') {
+          banner.remove();
+          mostrarToast('¡Pago confirmado! Tu suscripción ya está activa.');
+          const estado = negocioActual.suscripcion.estado;
+          const pill = document.getElementById('estado-suscripcion-pill');
+          pill.textContent = estado.toUpperCase();
+          pill.className = `pill-estado ${estado}`;
+          actualizarEstadoSuscripcionUI();
+          return;
+        }
+      }
+    } catch (error) {
+      // reintenta en la próxima vuelta
+    }
+  }
+  banner.textContent = 'Tu pago está siendo procesado. Puede demorar unos minutos: recargá esta página en un rato.';
 }
 
 function renderizarFotos() {
@@ -1817,6 +2048,7 @@ async function cargarTurnos() {
     const res = await fetch(`${API_URL}/turnos`, { headers: headersAuth() });
     turnosCache = await res.json();
     renderizarTurnos();
+    cargarFila();
   } catch (error) {
     contenedor.innerHTML = `<div class="error-msg">No se pudieron cargar los turnos.</div>`;
   }
@@ -2105,6 +2337,7 @@ function abrirPantallaCompleta(panelId, titulo) {
     </div>` : '';
 
   if (panelId === 'panel-ranking') renderizarBloquesRanking(true);
+  if (panelId === 'panel-tendencias') cargarTendencias();
   document.getElementById('pantalla-completa').style.display = 'block';
   document.querySelector('.app-contenido').scrollTop = 0;
   document.getElementById('pantalla-completa').scrollTop = 0;
@@ -2713,4 +2946,123 @@ async function cargarPreguntasFrecuentes() {
   } catch (error) {
     contenedor.innerHTML = `<p class="ayuda">No se pudieron cargar las preguntas.</p>`;
   }
+}
+
+
+// =====================================================================
+// Tendencias (fase 8A): todo sale de los datos del propio negocio, sin internet ni IA
+// =====================================================================
+async function cargarTendencias() {
+  const cont = document.getElementById('tendencias-contenido');
+  if (!cont) return;
+  cont.innerHTML = '<p class="ayuda">Calculando...</p>';
+  try {
+    const res = await fetch(`${API_URL}/tendencias`, { headers: headersAuth(), cache: 'no-store' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error');
+    cont.innerHTML = htmlTendencias(data);
+  } catch (error) {
+    cont.innerHTML = '<p class="ayuda">No se pudieron cargar las tendencias. Probá de nuevo en un rato.</p>';
+  }
+}
+
+function tendFecha(f) {
+  const [, m, d] = String(f).split('-');
+  return `${d}/${m}`;
+}
+
+function tendBadge(m) {
+  if (m.tendencia === 'sin_base') return '<span class="tend-badge neutro">Sin base</span>';
+  if (m.tendencia === 'igual') return '<span class="tend-badge neutro">Parecido</span>';
+  const sube = m.tendencia === 'sube';
+  const bueno = m.subeEsMalo ? !sube : sube;
+  return `<span class="tend-badge ${bueno ? 'bueno' : 'malo'}">${sube ? '▲' : '▼'} ${Math.abs(m.variacion)}%</span>`;
+}
+
+function tendCard(titulo, subtitulo, cuerpo) {
+  return `<div class="tend-card"><div class="tend-titulo">${escHtml(titulo)}</div>${subtitulo ? `<p class="ayuda">${subtitulo}</p>` : ''}${cuerpo}</div>`;
+}
+
+function htmlTendencias(d) {
+  const esTurnos = d.tipoOperacion === 'turnos';
+  const cosas = esTurnos ? 'servicios' : 'productos';
+  const partes = [];
+
+  // Resumen en frases
+  if (d.resumen && d.resumen.length) {
+    partes.push(tendCard('Resumen', '', `<ul class="tend-frases">${d.resumen.map((f) => `<li class="tend-frase ${f.tipo}">${escHtml(f.texto)}</li>`).join('')}</ul>`));
+  } else {
+    partes.push(tendCard('Resumen', '', '<p class="ayuda">Todavía no hay suficientes datos para mostrar tendencias. A medida que tu asistente vaya tomando ' + (esTurnos ? 'turnos' : 'pedidos') + ', esto se va completando solo.</p>'));
+  }
+
+  // Esta semana contra la anterior
+  const filasSemana = d.semanas.metricas.map((m) => {
+    const fmt = (n) => (m.esDinero ? fmtPesos(n) : n);
+    return `<div class="tend-fila"><div><strong>${escHtml(m.nombre)}</strong><small>${fmt(m.actual)} ahora · ${fmt(m.anterior)} antes${m.nota ? ' · ' + escHtml(m.nota) : ''}</small></div>${tendBadge(m)}</div>`;
+  }).join('');
+  partes.push(tendCard('Esta semana contra la anterior', 'Los últimos 7 días contra los 7 anteriores.', filasSemana + (d.semanas.pocosDatos ? '<p class="ayuda" style="margin-top:8px;">Hay muy pocos datos todavía: tomá estos números como orientativos.</p>' : '')));
+
+  // Qué sube y qué baja
+  const grupo = (titulo, lista, signo) => (lista.length
+    ? `<div class="tend-grupo">${titulo}</div>` + lista.map((x) => `<div class="tend-fila"><div><strong>${escHtml(x.nombre)}</strong><small>${x.actual} esta semana · ${x.anterior} la anterior</small></div>${x.variacion !== null ? `<span class="tend-badge ${signo > 0 ? 'bueno' : 'malo'}">${signo > 0 ? '▲' : '▼'} ${Math.abs(x.variacion)}%</span>` : ''}</div>`).join('')
+    : '');
+  const itemsHtml = grupo('Suben', d.items.suben, 1) + grupo('Bajan', d.items.bajan, -1) + grupo('Nuevos esta semana', d.items.nuevos, 1) + grupo('Dejaron de pedirse', d.items.dejaron, -1);
+  partes.push(tendCard(`Qué ${cosas} suben y bajan`, `Se comparan solo los que tuvieron movimiento suficiente.`,
+    itemsHtml || `<p class="ayuda">${d.items.pocosDatos ? 'Todavía no hay datos para comparar.' : `Ningún ${esTurnos ? 'servicio' : 'producto'} cambió lo suficiente esta semana.`}</p>`));
+
+  // Días de la semana
+  const p = d.patron;
+  if (p.pocosDatos) {
+    partes.push(tendCard('Días más flojos', '', `<p class="ayuda">Se activa con al menos ${p.minimo} ${esTurnos ? 'turnos' : 'pedidos'} en 28 días (llevás ${p.totalEventos}).</p>`));
+  } else {
+    const max = Math.max(...p.dias.map((x) => x.promedio || 0), 1);
+    const barras = p.dias.map((x) => {
+      const clase = (p.diasFlojos || []).includes(x.nombre) ? 'flojo' : ((p.diasFuertes || []).includes(x.nombre) ? 'fuerte' : '');
+      return `<div class="tend-barra-fila"><span>${escHtml(x.nombre)}</span><div class="tend-barra"><span class="${clase}" style="width:${Math.round(((x.promedio || 0) / max) * 100)}%"></span></div><strong>${x.promedio}</strong></div>`;
+    }).join('');
+    partes.push(tendCard('Días más flojos', `Promedio de ${esTurnos ? 'turnos' : 'pedidos'} por día, en los últimos 28 días (naranja: más flojo, verde: más fuerte).`, barras));
+  }
+
+  // Horas
+  if (!p.pocosDatos) {
+    if (p.horas) {
+      const filasHora = (lista) => lista.map((h) => `<div class="tend-fila"><span>${escHtml(h.franja)}</span><small>${h.total} en 28 días</small></div>`).join('');
+      const cuerpo = (p.horas.fuertes.length ? `<div class="tend-grupo">Más movimiento</div>${filasHora(p.horas.fuertes)}` : '')
+        + (p.horas.flojas.length ? `<div class="tend-grupo">Más flojas</div>${filasHora(p.horas.flojas)}` : '');
+      partes.push(tendCard('Horas del día', 'Solo se cuentan las horas dentro de tu horario de atención.', cuerpo || '<p class="ayuda">Tus horas están bastante parejas.</p>'));
+    } else {
+      partes.push(tendCard('Horas del día', '', '<p class="ayuda">Cargá tus horarios de atención (en Información del negocio) para ver qué horas son más flojas.</p>'));
+    }
+  }
+
+  // Cambios de precio (solo negocios de pedidos)
+  if (d.precios) {
+    if (!d.precios.hayPrecios) {
+      partes.push(tendCard('Cambios de precio', '', '<p class="ayuda">Se activa cuando tu asistente informa precios y los pedidos los registran.</p>'));
+    } else if (!d.precios.cambios.length) {
+      partes.push(tendCard('Cambios de precio', '', '<p class="ayuda">No detectamos cambios de precio en los últimos 90 días.</p>'));
+    } else {
+      const textoVeredicto = { baja: 'La demanda bajó.', sube: 'La demanda subió.', igual: 'La demanda se mantuvo parecida.', pocos_datos: 'Se vendió poco en ambos períodos: no alcanza para sacar conclusiones.' };
+      const filas = d.precios.cambios.map((c) => {
+        const efecto = c.efecto
+          ? `<small>${c.efecto.dias} días antes: ${c.efecto.antes} vendidos (${c.efecto.porSemanaAntes} por semana). ${c.efecto.dias} días después: ${c.efecto.despues} (${c.efecto.porSemanaDespues} por semana). <strong>${textoVeredicto[c.efecto.veredicto]}</strong></small>`
+          : '<small>Es muy reciente: todavía es pronto para ver cómo cambió la demanda.</small>';
+        return `<div class="tend-fila"><div><strong>${escHtml(c.producto)}</strong><small>${c.sube ? 'Subió' : 'Bajó'} de ${fmtPesos(c.precioAnterior)} a ${fmtPesos(c.precioNuevo)} (${c.variacionPrecio > 0 ? '+' : ''}${c.variacionPrecio}%) el ${tendFecha(c.fecha)}</small>${efecto}</div></div>`;
+      }).join('');
+      partes.push(tendCard('Cambios de precio', 'Sale de los precios que quedaron registrados en tus pedidos. Ojo: la temporada o las promociones también influyen, no todo es por el precio.', filas));
+    }
+  }
+
+  // Ausentismo (solo negocios de turnos)
+  if (d.ausentismo) {
+    const a = d.ausentismo;
+    let cuerpo;
+    if (a.pocosDatos) cuerpo = `<p class="ayuda">Se activa con al menos ${a.minimo} turnos ya cerrados (atendidos o marcados "No vino"). Llevás ${a.turnosCerrados}.</p>`;
+    else cuerpo = `<div class="tend-fila"><div><strong>${a.tasa}% de ausentes</strong><small>${a.ausentes} de ${a.turnosCerrados} turnos cerrados en los últimos 28 días</small></div></div>`
+      + (a.diaConMasAusentes ? `<p class="ayuda" style="margin-top:8px;">El día con más ausentes fue el ${escHtml(a.diaConMasAusentes.nombre)} (${a.diaConMasAusentes.ausentes}).</p>` : '');
+    partes.push(tendCard('Ausentismo', 'Cuenta los turnos que marcaste como atendidos o "No vino" en la fila del día.', cuerpo));
+  }
+
+  partes.push('<p class="ayuda" style="margin-top:12px;">Los pedidos y turnos de prueba no se cuentan. Todo se calcula en el momento con tus datos.</p>');
+  return partes.join('');
 }
