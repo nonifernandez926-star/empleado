@@ -134,7 +134,21 @@ router.get('/resumen', requiereAdmin, async (req, res) => {
         detalleEstado[e] = { motivo: ordenar(a.motivo, 3), profesional: ordenar(a.profesional, 3) };
       });
     } else {
-      const pedidos30 = await Pedido.find({ negocioId, createdAt: { $gte: hace30Dias, $lte: finHoy }, esPrueba: { $ne: true } });
+      let pedidos30 = await Pedido.find({ negocioId, createdAt: { $gte: hace30Dias, $lte: finHoy }, esPrueba: { $ne: true } });
+
+      // Filtros opcionales del gráfico circular: por tipo de entrega y/o forma de pago.
+      // ?filtroEntrega=delivery|retiro  ?filtroPago=transferencia|efectivo (efectivo = "lo que no es transferencia": efectivo, tarjeta, etc.)
+      const { filtroEntrega, filtroPago } = req.query;
+      if (filtroEntrega === 'delivery' || filtroEntrega === 'retiro') {
+        pedidos30 = pedidos30.filter((p) => p.tipoEntrega === filtroEntrega);
+      }
+      if (filtroPago === 'transferencia' || filtroPago === 'efectivo') {
+        pedidos30 = pedidos30.filter((p) => {
+          const esTransferencia = /transfer/i.test(p.formaPago || '');
+          return filtroPago === 'transferencia' ? esTransferencia : !esTransferencia;
+        });
+      }
+
       const conteoProd = {};
       pedidos30.forEach((p) => p.items.forEach((i) => { conteoProd[i.producto] = (conteoProd[i.producto] || 0) + i.cantidad; }));
       const productosOrdenados = Object.entries(conteoProd).map(([nombre, valor]) => ({ nombre, valor })).sort((a, b) => b.valor - a.valor);

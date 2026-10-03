@@ -12,7 +12,8 @@ const pedidoSchema = new mongoose.Schema({
   sesionClienteId: { type: String, required: true },
 
   items: { type: [itemPedidoSchema], default: [] },
-  total: { type: Number }, // opcional, se calcula si hay precios cargados
+  costoEnvio: { type: Number, default: 0 }, // segun la zona de entrega, ya sumado al total
+  total: { type: Number }, // opcional, se calcula si hay precios cargados (items + costoEnvio)
 
   nombreCliente: { type: String, required: true },
   telefonoCliente: { type: String, required: true }, // siempre se pide: sirve como respaldo ante cualquier problema (ej. transferencia falsa)
