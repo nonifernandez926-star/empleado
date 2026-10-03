@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mi Asistente — Tu negocio, atendido 24hs</title>
+    <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1638c9">
+  <link rel="icon" href="/img/icono-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="pantalla">
+    <div class="pantalla-hero">
+      <div class="marca-fila">
+        <span class="marca-icono">
+          <svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><use href="#robot-mi-asistente"/></svg>
+        </span>
+        <span class="marca">Mi Asistente</span>
+      </div>
+      <h1>Un empleado virtual con inteligencia artificial, entrenado para tu negocio</h1>
+      <p>Respondé a tus clientes las 24 horas, sin inventar precios ni horarios. Configurá tu asistente en minutos y probalo gratis antes de pagar.</p>
+
+      <svg class="robot-hero" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><use href="#robot-mi-asistente"/></svg>
+
+      <!-- Robot de marca, dibujado una sola vez y reutilizado arriba con <use> -->
+      <svg width="0" height="0" style="position:absolute">
+        <defs>
+          <g id="robot-mi-asistente">
+            <ellipse cx="50" cy="94" rx="21" ry="3.4" fill="#04124f" opacity="0.14"/>
+            <!-- orejas: capsulas simples, iguales a las del icono de la app -->
+            <rect x="9" y="35" width="11" height="23" rx="5.5" fill="#c7d7ff"/>
+            <rect x="80" y="35" width="11" height="23" rx="5.5" fill="#c7d7ff"/>
+            <!-- cuerpo: pastilla blanca lisa -->
+            <path d="M31 70q-1.5 21 19 23q20.5-2 19-23q-1-15-19-16q-18 1-19 16z" fill="url(#robotCuerpoGrad)"/>
+            <!-- cabeza: cuadrado bien redondeado -->
+            <rect x="15" y="8" width="70" height="58" rx="26" fill="url(#robotCabezaGrad)"/>
+            <!-- pantalla oscura, con margen parejo -->
+            <rect x="23" y="16" width="54" height="42" rx="19" fill="url(#robotVisorGrad)"/>
+            <!-- ojitos felices en arco -->
+            <path d="M37 34q4.5-7 9 0" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" fill="none"/>
+            <path d="M54 34q4.5-7 9 0" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" fill="none"/>
+            <!-- sonrisa -->
+            <path d="M42 44q8 7 16 0" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" fill="none"/>
+          </g>
+          <linearGradient id="robotCabezaGrad" x1="16" y1="10" x2="84" y2="66" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#dce6ff"/>
+          </linearGradient>
+          <linearGradient id="robotCuerpoGrad" x1="32" y1="68" x2="68" y2="92" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#eef3ff"/>
+            <stop offset="1" stop-color="#cdd9ff"/>
+          </linearGradient>
+          <linearGradient id="robotVisorGrad" x1="25" y1="19" x2="75" y2="57" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#16266b"/>
+            <stop offset="1" stop-color="#0a1440"/>
+          </linearGradient>
+        </defs>
+      </svg>
+
+    </div>
+
+    <div class="pantalla-contenido" id="pantalla-inicio-contenido">
+      <div class="tarjeta">
+        <div class="tarjeta-titulo-icono">
+          <span class="icono-circulo ic-azul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg></span>
+          <h2>¿Cómo funciona?</h2>
+        </div>
+        <div class="pasos-numerados">
+          <div class="paso-numerado"><span class="paso-numero">1</span><p>Elegís el rubro de tu negocio.</p></div>
+          <div class="paso-numerado"><span class="paso-numero">2</span><p>Completás un formulario con la info de tu negocio (horarios, servicios, precios, etc.).</p></div>
+          <div class="paso-numerado"><span class="paso-numero">3</span><p>Probás tu asistente en privado, gratis, con un límite de mensajes.</p></div>
+          <div class="paso-numerado"><span class="paso-numero">4</span><p>Si te convence, activás la suscripción mensual y tu asistente queda disponible para tus clientes.</p></div>
+        </div>
+        <button type="button" class="btn ancho btn-con-flecha" id="btn-empezar"><span>Empezar</span><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Pantalla de elección: Registrarme o Iniciar sesión. Con botón de volver arriba a la izquierda. -->
+    <div id="pantalla-elegir" style="display:none;">
+      <div class="pantalla-topbar">
+        <button class="volver" id="btn-volver-elegir" aria-label="Volver"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
+        <span class="marca">Mi Asistente</span>
+      </div>
+      <div class="pantalla-contenido" style="margin-top:0;">
+        <div class="tarjeta tarjeta-google-entrada">
+          <div class="tarjeta-titulo-icono">
+            <span class="icono-circulo ic-azul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 16 0v1"/></svg></span>
+            <h2>Entrá con tu cuenta de Google</h2>
+          </div>
+          <p class="ayuda" style="margin-bottom:20px;">Si ya tenés un asistente creado, te llevamos directo a tu panel. Si es tu primera vez, seguimos para elegir el rubro de tu negocio.</p>
+          <div class="google-btn-centrado" id="boton-google-entrada"></div>
+          <p class="ayuda-chica" id="google-entrada-estado" style="text-align:center; min-height:18px; margin-top:12px;"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="js/config.js"></script>
+  <script>
+    document.getElementById('btn-empezar').addEventListener('click', () => {
+      document.getElementById('pantalla-inicio-contenido').closest('.pantalla').querySelector('.pantalla-hero').style.display = 'none';
+      document.getElementById('pantalla-inicio-contenido').style.display = 'none';
+      document.getElementById('pantalla-elegir').style.display = 'block';
+      history.pushState({ vista: 'elegir' }, '');
+    });
+    function volverAlInicio() {
+      document.getElementById('pantalla-elegir').style.display = 'none';
+      document.querySelector('.pantalla-hero').style.display = 'block';
+      document.getElementById('pantalla-inicio-contenido').style.display = 'block';
+    }
+    document.getElementById('btn-volver-elegir').addEventListener('click', () => history.back());
+    window.addEventListener('popstate', volverAlInicio);
+
+    // Único punto de entrada: Google decide si es un negocio existente (login) o nuevo (registro).
+    function alRecibirGoogleEntrada(respuesta) {
+      procesarGoogleEntrada(respuesta.credential);
+    }
+
+    async function procesarGoogleEntrada(idToken) {
+      const estado = document.getElementById('google-entrada-estado');
+      estado.textContent = 'Verificando tu cuenta...';
+      try {
+        const res = await fetch(`${API_URL}/auth/google/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          // Ya tiene un negocio creado: guardamos la sesión y vamos directo al panel.
+          localStorage.setItem('jwtToken', data.token);
+          estado.textContent = '¡Listo! Entrando a tu panel...';
+          window.location.href = 'admin.html';
+          return;
+        }
+
+        if (data.error === 'sin_negocio_vinculado') {
+          // Primera vez con esta cuenta: pasamos el token a la pantalla de registro
+          // para que no tenga que volver a elegir la cuenta de Google.
+          sessionStorage.setItem('googleIdTokenPendiente', idToken);
+          sessionStorage.setItem('googleEmailPendiente', data.email || '');
+          estado.textContent = 'Cuenta verificada. Elegí el rubro de tu negocio...';
+          window.location.href = 'registro.html';
+          return;
+        }
+
+        estado.textContent = 'No se pudo verificar la cuenta. Probá de nuevo.';
+      } catch (error) {
+        estado.textContent = 'Error de conexión. Probá de nuevo.';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.google && GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.startsWith('TU_CLIENT_ID')) {
+        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: alRecibirGoogleEntrada });
+        google.accounts.id.renderButton(document.getElementById('boton-google-entrada'), { theme: 'filled_blue', size: 'large', shape: 'pill', width: 280 });
+      }
+    });
+  </script>
+</body>
+</html>
