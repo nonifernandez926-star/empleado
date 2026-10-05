@@ -3,7 +3,6 @@ const router = express.Router();
 const Negocio = require('../models/Negocio');
 const Cliente = require('../models/Cliente');
 const Resena = require('../models/Resena');
-const Notificacion = require('../models/Notificacion');
 const { requiereAdmin } = require('../middleware/auth');
 
 // Arma la pregunta de seguimiento segun la calificacion. Es un mensaje fijo (no pasa por la IA)
@@ -38,14 +37,6 @@ router.post('/:codigoPublico', async (req, res) => {
       nombreCliente: cliente ? cliente.nombre : undefined,
       estrellas: estrellasNum,
     });
-
-    Notificacion.create({
-      negocioId: negocio._id,
-      tipo: 'resena',
-      titulo: `Nueva calificación: ${'⭐'.repeat(estrellasNum)}`,
-      mensaje: (cliente && cliente.nombre) ? `De ${cliente.nombre}` : 'De un cliente',
-      referenciaId: resena._id,
-    }).catch((e) => console.error('No se pudo crear la notificacion:', e));
 
     res.status(201).json({ resenaId: resena._id, preguntaSeguimiento: preguntaSeguimiento(estrellasNum) });
   } catch (error) {

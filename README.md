@@ -393,42 +393,20 @@ Ya estaba la lógica que detecta clientes "indecisos" (hablaron y no compraron/r
 - Esto es lo que hacía falta para dos cosas a la vez: que el ícono de las notificaciones push no salga en blanco, y que una herramienta como Bubblewrap o PWABuilder pueda empaquetar el sitio como app para Play Store (TWA), que es el camino gratis (aparte de los 25 USD de la cuenta de desarrollador).
 - Falta: subir el sitio a su dominio final (Bubblewrap necesita una URL real, no funciona con `file://`), y el archivo `assetlinks.json` que confirma que el dominio y la app son tuyos (eso se genera recién al final, con la clave de firma que crea Bubblewrap).
 
-## Rediseño de entrada y ajustes (fase 8b)
 
-**Login sin códigos**
-- `index.html` ahora tiene un único botón "Continuar con Google". El sistema decide solo: si la cuenta ya tiene un negocio creado, entra directo al panel; si es la primera vez, pasa a elegir el rubro en `registro.html` sin volver a pedir la cuenta.
-- `admin.html` (login) ya no tiene el campo de código de administración: solo el botón de Google, centrado, con flecha para volver arriba a la izquierda.
-- El código de administración se sigue generando como respaldo en el registro (por si alguien no quiere usar Google), pero ya no hay forma de iniciar sesión escribiéndolo.
+## Agenda del dueño (nueva)
 
-**Robot e ícono**
-- El robot de `index.html` se rehizo para parecerse al ícono de la app (cabeza redondeada, ojos en arco, sonrisa simple, orejas en cápsula).
-- Los archivos `icono-96.png`, `icono-192.png` y `icono-512.png` ahora son el logo "M" proporcionado.
+Pestaña **Agenda** del panel: un centro de organización personal del dueño, que se adapta al rubro del negocio.
 
-**Herramientas y Negocio más equilibrados**
-- Se movieron "Fotos del negocio", "Disponibilidad de hoy" y "Tendencias" de Negocio a Herramientas. Quedaron 8 opciones en cada sección.
+- **Hoy / Semana / Tareas:** eventos con título, fecha, hora, duración, persona, notas y recordatorio; tareas que se marcan como hechas. En "Hoy" también se ven (solo lectura) los turnos de clientes si el negocio trabaja con turnos. Los pedidos NO están acá: siguen en su sección.
+- **Adaptación por rubro:** tipos de evento y tareas sugeridas distintas para gastronomía, salud, hogar, automotor, belleza, comercio, servicios profesionales, educación y eventos (`backend/utils/agendaPerfiles.js`).
+- **Importar desde foto:** el dueño sube una foto de su agenda de papel; Claude propone los eventos y tareas que ve y el dueño los revisa, edita y confirma antes de guardar (nada se guarda solo). La foto no se almacena: se analiza y se descarta.
+- **Agregar desde un mensaje:** "El jueves a las 16 reunión con Martín" → propuesta para confirmar.
+- **Organizar mi día** (plan del día con avisos si hay poco margen entre eventos) y **preguntarle a la agenda** ("¿qué tengo pendiente esta semana?").
+- **Recordatorios:** el panel los revisa cada minuto mientras está abierto y avisa dentro de la app y, si el dueño lo permite, con una notificación del navegador.
+- Las funciones con IA usan `ANTHROPIC_API_KEY` y `CLAUDE_MODEL` (ya configuradas en Render), con un tope de 40 usos por hora por negocio.
+- Rutas nuevas: `/api/agenda/*` (todas requieren sesión de administrador del negocio). Modelo: `AgendaItem`.
 
-**Categoría Salud**
-- Se quitaron los subrubros que piden datos médicos personales de una persona (Clínica, Consultorio médico, Odontología, Laboratorio, Kinesiología, Psicología, Nutrición, Otros). Quedaron solo Farmacia (pedidos) y Veterinaria (turnos), que no manejan historia clínica de personas.
-- Como consecuencia, las promociones ya no se ocultan para esta categoría (tiene sentido en farmacia y veterinaria).
+## Integración con Mi Zona
 
-**Pendiente para una próxima vuelta**
-- Rediseño visual "espectacular" del resto de pantallas del panel: lo de arriba fue puntual (entrada, robot, ícono, balance de menús, categoría Salud). Un rediseño integral de cada pantalla es un trabajo grande aparte; decime por cuál pantalla preferís que empiece.
-
-## Agenda — fase 1: base sin IA (dentro de Herramientas)
-
-- Nueva opción "Agenda" en Herramientas, arriba de todo. Abre un panel con 3 pestañas: **Hoy**, **Próximos** y **Tareas**.
-- Un evento tiene título, fecha, hora opcional, persona relacionada opcional y notas opcionales. Una tarea es lo mismo pero se puede tildar como hecha; si queda sin tildar y su fecha ya pasó, se marca "⚠️ Atrasada" en la pestaña Hoy.
-- Todo se carga a mano con el botón "+ Agregar evento o tarea" (sin "Confirmar pedido" en los ejemplos, como pediste, porque eso ya está en Pedidos).
-- Se puede borrar cualquier evento o tarea con la ✕.
-- Archivos nuevos: `backend/models/EventoAgenda.js`, `backend/routes/agenda.js`. En el frontend, todo vive dentro de `panel-agenda` en `admin.html`, con su lógica al final de `admin.js` y su CSS al final de `style.css`.
-
-**A propósito, no implementado en esta fase** (según lo charlado): adaptación por rubro, recordatorios inteligentes, "agregar desde mensaje" con IA, importar desde foto de agenda en papel, y el resumen "organizar mi día". Quedan para las próximas fases.
-
-
-## Fase 2 de la agenda: categorías sugeridas por rubro
-
-Al cargar un evento o tarea, ahora aparecen chips de categoría sugeridos según el rubro del negocio (ej: un taller ve "Vehículos, Repuestos, Mantenimientos pendientes"; una peluquería ve "Clientes, Tratamientos, Compra de productos"). Es opcional: se puede no elegir ninguno, o escribir cualquier otro texto a mano.
-
-- **Archivos nuevos/tocados:** `backend/data/categoriasAgenda.js` (el mapeo), `backend/models/EventoAgenda.js` (campo `categoria`), `backend/routes/agenda.js` (lo devuelve en `GET /api/agenda` y lo guarda), `frontend/admin.html` y `frontend/js/admin.js` (chips seleccionables), `frontend/css/style.css`.
-- **Cómo resuelve las categorías:** primero busca si ese subrubro exacto tiene un set propio (ej. `reparacion_celulares` dentro de "Comercio" tiene categorías de service técnico, distintas al resto del rubro); si no, usa las de su categoría general (Gastronomía, Belleza, Automotor, etc.); si el rubro no tiene nada cargado, usa un set genérico (Clientes, Proveedores, Compras, Pagos, Personal).
-- Probado: los 6 casos de resolución de categorías (subrubro con override, categoría general, genérico) y el flujo completo en el navegador (click en un chip, guardar, y volver a tocar el chip lo destilda).
+Rutas privadas `/api/integracion/*`, protegidas con `INTEGRACION_KEY` (la misma clave en los dos servidores): `cuenta`, `estado-asistentes` y `conversaciones-cliente`. Las conversaciones de los clientes nunca se borran al vencer la suscripción: al renovar, el asistente retoma el historial.

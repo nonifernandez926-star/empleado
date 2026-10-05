@@ -13,8 +13,6 @@ const pushRoutes = require('./routes/push');
 const pedidosRoutes = require('./routes/pedidos');
 const turnosRoutes = require('./routes/turnos');
 const filaRoutes = require('./routes/fila');
-const notificacionesRoutes = require('./routes/notificaciones');
-const agendaRoutes = require('./routes/agenda');
 const productosRoutes = require('./routes/productos');
 const oportunidadesRoutes = require('./routes/oportunidades');
 const resenasRoutes = require('./routes/resenas');
@@ -23,6 +21,8 @@ const preguntasRoutes = require('./routes/preguntas');
 const suscripcionRoutes = require('./routes/suscripcion');
 const authRoutes = require('./routes/auth');
 const vinculacionRoutes = require('./routes/vinculacion');
+const integracionRoutes = require('./routes/integracion');
+const agendaRoutes = require('./routes/agenda');
 
 const app = express();
 
@@ -46,8 +46,6 @@ app.use('/api/push', pushRoutes);
 app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/turnos', turnosRoutes);
 app.use('/api/fila', filaRoutes);
-app.use('/api/notificaciones', notificacionesRoutes);
-app.use('/api/agenda', agendaRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/oportunidades', oportunidadesRoutes);
 app.use('/api/resenas', resenasRoutes);
@@ -56,6 +54,8 @@ app.use('/api/preguntas', preguntasRoutes);
 app.use('/api/suscripcion', suscripcionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/vinculacion', vinculacionRoutes);
+app.use('/api/integracion', integracionRoutes);
+app.use('/api/agenda', agendaRoutes);
 
 const PORT = process.env.PORT || 5000;
 

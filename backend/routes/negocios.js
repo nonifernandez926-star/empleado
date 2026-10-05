@@ -4,7 +4,8 @@ const multer = require('multer');
 const Negocio = require('../models/Negocio');
 const { RUBROS } = require('../data/rubros');
 const { generarCodigoAdmin, generarCodigoPublico, generarCodigoVinculacion } = require('../utils/generarCodigo');
-const { generarToken } = require('../utils/jwt');
+const { generarToken, verificarToken } = require('../utils/jwt');
+const Usuario = require('../models/Usuario');
 const { requiereAdmin } = require('../middleware/auth');
 const { storage, cloudinary } = require('../config/cloudinary');
 
@@ -40,9 +41,36 @@ router.post('/', async (req, res) => {
         const datosGoogle = await verificarIdTokenGoogle(googleIdToken);
         googleId = datosGoogle.googleId;
         emailPropietario = datosGoogle.email;
+
+        // Si esa cuenta de Google ya tiene un negocio creado, no generamos uno nuevo (quedaría
+        // una segunda cuenta "fantasma" con el mismo Google, y el login después no sabría cuál
+        // de las dos devolver). "Registrarme" es solo para cuentas nuevas.
+        const negocioExistente = await Negocio.findOne({ googleId }).select('_id');
+        if (negocioExistente) {
+          return res.status(409).json({
+            error: 'negocio_ya_existe',
+            mensaje: 'Esta cuenta de Google ya tiene un negocio creado. Iniciá sesión en vez de registrarte de nuevo.',
+          });
+        }
       } catch (error) {
         console.error('No se pudo verificar el token de Google al registrar:', error);
         // seguimos igual sin vincular Google, el dueño se queda con el código admin como respaldo
+      }
+    }
+
+    // Si la persona ya inició sesión (Google o correo), el negocio queda ligado a su cuenta
+    let usuarioId = null;
+    const authH = req.headers['authorization'] || '';
+    const sesion = authH.startsWith('Bearer ') ? verificarToken(authH.slice(7)) : null;
+    if (sesion && sesion.uid) {
+      const u = await Usuario.findById(sesion.uid);
+      if (u && (sesion.v || 0) === (u.tokenVersion || 0)) {
+        if (await Negocio.findOne({ usuarioId: u._id }).select('_id')) {
+          return res.status(409).json({ error: 'negocio_ya_existe', mensaje: 'Tu cuenta ya tiene un asistente creado. Entrá a tu panel.' });
+        }
+        usuarioId = u._id;
+        emailPropietario = u.email;
+        if (u.proveedor === 'google') googleId = u.googleId;
       }
     }
 
@@ -65,6 +93,7 @@ router.post('/', async (req, res) => {
       codigoPublico,
       codigoVinculacion,
       googleId,
+      usuarioId,
       emailPropietario,
       rubroCategoria: match.categoria,
       rubroSubrubro: match.subrubro,
@@ -89,7 +118,7 @@ router.post('/', async (req, res) => {
       codigoVinculacion: negocio.codigoVinculacion,
     };
 
-    if (googleId) {
+    if (googleId || usuarioId) {
       respuesta.token = generarToken(negocio._id.toString());
       respuesta.googleVinculado = true;
     }

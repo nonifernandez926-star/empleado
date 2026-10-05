@@ -1,4 +1,5 @@
 const Negocio = require('../models/Negocio');
+const Usuario = require('../models/Usuario');
 const { verificarToken } = require('../utils/jwt');
 
 // Protege las rutas de administración. Acepta dos formas de identificarse:
@@ -12,7 +13,16 @@ async function requiereAdmin(req, res, next) {
       const payload = verificarToken(token);
       if (!payload) return res.status(401).json({ error: 'Sesión inválida o vencida, iniciá sesión de nuevo' });
 
-      const negocio = await Negocio.findById(payload.negocioId);
+      let negocio = null;
+      if (payload.uid) {
+        // sesión de persona (Google o correo): su negocio es el que tiene vinculado
+        const usuario = await Usuario.findById(payload.uid);
+        if (!usuario || (payload.v || 0) !== (usuario.tokenVersion || 0)) return res.status(401).json({ error: 'Sesión inválida o vencida, iniciá sesión de nuevo' });
+        negocio = await Negocio.findOne({ usuarioId: usuario._id });
+        if (!negocio) return res.status(403).json({ error: 'sin_negocio', mensaje: 'Todavía no creaste tu asistente.' });
+      } else {
+        negocio = await Negocio.findById(payload.negocioId);
+      }
       if (!negocio) return res.status(403).json({ error: 'Negocio no encontrado' });
 
       req.negocio = negocio;

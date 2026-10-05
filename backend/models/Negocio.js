@@ -15,6 +15,7 @@ const negocioSchema = new mongoose.Schema({
   // Vinculación con cuenta de Google, para poder iniciar sesión sin el código admin
   googleId: { type: String, index: true, sparse: true },
   emailPropietario: { type: String },
+  usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Usuario', index: true, sparse: true }, // cuenta (Google o correo) dueña del negocio
 
   // Identificación
   codigoAdmin: { type: String, required: true, unique: true }, // ej: ADM-82KX-91PL-7QW (privado, del dueño, sirve como respaldo)

@@ -4,7 +4,6 @@ const multer = require('multer');
 const Pedido = require('../models/Pedido');
 const { requiereAdmin } = require('../middleware/auth');
 const { storage } = require('../config/cloudinary');
-const Notificacion = require('../models/Notificacion');
 
 const upload = multer({ storage });
 const ESTADOS_VALIDOS = ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'entregado'];
@@ -34,16 +33,6 @@ router.post('/:id/comprobante', upload.single('foto'), async (req, res) => {
     pedido.pagoDeclarado = true;
     pedido.estadoPago = 'comprobante_recibido';
     await pedido.save();
-
-    if (!pedido.esPrueba) {
-      Notificacion.create({
-        negocioId: pedido.negocioId,
-        tipo: 'comprobante',
-        titulo: 'Comprobante recibido de ' + (pedido.nombreCliente || 'un cliente'),
-        mensaje: 'Revisá que la transferencia haya llegado antes de confirmar el pedido.',
-        referenciaId: pedido._id,
-      }).catch((e) => console.error('No se pudo crear la notificacion:', e));
-    }
 
     res.json({ mensaje: 'Comprobante recibido, el negocio lo va a revisar', url: req.file.path });
   } catch (error) {
