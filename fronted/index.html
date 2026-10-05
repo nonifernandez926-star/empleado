@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mi Asistente — Tu negocio, atendido 24hs</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#050b2a">
+  <link rel="icon" href="/img/icono-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/inicio.css">
+</head>
+<body class="ini">
+  <div class="pantalla">
+    <div class="ini-fondo" aria-hidden="true"><i></i><i></i><i></i></div>
+
+    <!-- INICIO -->
+    <main class="ini-vista" id="ini-vista">
+      <div class="ini-marca">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5b8bff"/><stop offset="1" stop-color="#17c6ff"/></linearGradient></defs><rect width="40" height="40" rx="12" fill="url(#mg)"/><rect x="8" y="11" width="24" height="18" rx="8" fill="#08123f"/><ellipse cx="15.5" cy="20" rx="2.6" ry="3.2" fill="#7df3ff"/><ellipse cx="24.5" cy="20" rx="2.6" ry="3.2" fill="#7df3ff"/></svg>
+        Mi Asistente
+      </div>
+
+      <section class="ini-hero">
+        <div class="ini-robot-caja">
+          <div class="ini-halo"></div><div class="ini-orbita"></div><div class="ini-orbita b"></div>
+          <svg class="ini-robot" viewBox="0 0 220 240" role="img" aria-label="Asistente virtual con inteligencia artificial">
+            <defs>
+              <linearGradient id="rMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".55" stop-color="#dfe8fb"/><stop offset="1" stop-color="#a9b9de"/></linearGradient>
+              <linearGradient id="rMetal2" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#9fb0d6"/><stop offset=".45" stop-color="#eef3ff"/><stop offset="1" stop-color="#8ea0cb"/></linearGradient>
+              <linearGradient id="rVisor" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#16266b"/><stop offset="1" stop-color="#050b2a"/></linearGradient>
+              <linearGradient id="rCristal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".38"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/></linearGradient>
+              <radialGradient id="rNucleo"><stop stop-color="#e8fbff"/><stop offset=".4" stop-color="#4fd8ff"/><stop offset="1" stop-color="#2454ff" stop-opacity="0"/></radialGradient>
+              <filter id="rBrillo" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <ellipse cx="110" cy="230" rx="52" ry="7" fill="#000" opacity=".35"/>
+            <!-- brazos -->
+            <rect x="38" y="160" width="26" height="58" rx="13" fill="url(#rMetal2)"/>
+            <rect x="156" y="160" width="26" height="58" rx="13" fill="url(#rMetal2)"/>
+            <circle cx="51" cy="214" r="12" fill="#1a2a73"/><circle cx="169" cy="214" r="12" fill="#1a2a73"/>
+            <circle cx="51" cy="158" r="17" fill="url(#rMetal)"/><circle cx="169" cy="158" r="17" fill="url(#rMetal)"/>
+            <!-- torso -->
+            <path d="M64 146h92q10 0 10 12v50q0 14-14 14H68q-14 0-14-14v-50q0-12 10-12z" fill="url(#rMetal)"/>
+            <rect x="76" y="158" width="68" height="44" rx="16" fill="#0a1440"/>
+            <rect x="76" y="158" width="68" height="44" rx="16" fill="none" stroke="#3d6bff" stroke-opacity=".6"/>
+            <circle class="r-nucleo" cx="110" cy="180" r="17" fill="url(#rNucleo)" filter="url(#rBrillo)"/>
+            <circle cx="110" cy="180" r="6" fill="#e8fbff"/>
+            <path d="M88 192h10M122 192h10" stroke="#4fd8ff" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>
+            <!-- cuello -->
+            <rect x="96" y="126" width="28" height="22" rx="6" fill="#16266b"/>
+            <path d="M96 134h28M96 140h28" stroke="#3d6bff" stroke-opacity=".5"/>
+            <!-- antena -->
+            <path d="M110 40V22" stroke="#9fb0d6" stroke-width="4" stroke-linecap="round"/>
+            <circle class="r-antena" cx="110" cy="17" r="6" fill="#5ee7ff" filter="url(#rBrillo)"/>
+            <!-- orejas y micrófono -->
+            <rect x="24" y="68" width="18" height="40" rx="9" fill="url(#rMetal2)"/><rect x="29" y="76" width="8" height="24" rx="4" fill="#3d6bff" opacity=".9"/>
+            <rect x="178" y="68" width="18" height="40" rx="9" fill="url(#rMetal2)"/><rect x="183" y="76" width="8" height="24" rx="4" fill="#3d6bff" opacity=".9"/>
+            <path d="M30 106q-2 26 30 26" stroke="#1a2a73" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+            <circle cx="64" cy="132" r="5" fill="#1a2a73"/><circle cx="64" cy="132" r="2" fill="#5ee7ff"/>
+            <!-- cabeza -->
+            <rect x="38" y="38" width="144" height="98" rx="44" fill="url(#rMetal)"/>
+            <rect x="38" y="38" width="144" height="98" rx="44" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.5"/>
+            <rect x="52" y="52" width="116" height="70" rx="32" fill="url(#rVisor)"/>
+            <rect x="52" y="52" width="116" height="70" rx="32" fill="none" stroke="#4f7bff" stroke-opacity=".55"/>
+            <g filter="url(#rBrillo)">
+              <rect class="r-ojo" x="78" y="76" width="18" height="24" rx="9" fill="#7df3ff"/>
+              <rect class="r-ojo" x="124" y="76" width="18" height="24" rx="9" fill="#7df3ff"/>
+            </g>
+            <path d="M99 108q11 7 22 0" stroke="#7df3ff" stroke-width="3.2" fill="none" stroke-linecap="round" opacity=".85"/>
+            <rect class="r-escaner" x="106" y="56" width="8" height="62" rx="4" fill="#7df3ff" opacity="0"/>
+            <path d="M58 60q26-12 56-6" stroke="url(#rCristal)" stroke-width="9" stroke-linecap="round" fill="none"/>
+            <rect x="52" y="52" width="116" height="70" rx="32" fill="url(#rCristal)" opacity=".5"/>
+          </svg>
+        </div>
+        <h1>Tu empleado virtual, atendiendo a tus clientes las 24 horas</h1>
+        <p>Una inteligencia artificial entrenada con la información de tu negocio. Responde precios y horarios reales, sin inventar nada.</p>
+      </section>
+
+      <div class="ini-pasos">
+        <div class="ini-paso"><b>1</b><span>Elegís el rubro de tu negocio.</span></div>
+        <div class="ini-paso"><b>2</b><span>Cargás tus horarios, servicios y precios.</span></div>
+        <div class="ini-paso"><b>3</b><span>Probás tu asistente en privado y gratis.</span></div>
+        <div class="ini-paso"><b>4</b><span>Si te convence, lo activás para tus clientes.</span></div>
+      </div>
+
+      <button type="button" class="ini-cta" id="btn-empezar">
+        <span>Empezar</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+      </button>
+    </main>
+
+    <!-- ACCESO: mismo sistema que Mi Zona -->
+    <section class="ini-acceso" id="ini-acceso">
+      <div class="ini-acceso-barra">
+        <button class="ini-volver" id="ini-volver" aria-label="Volver"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
+        Mi Asistente
+      </div>
+      <div class="ini-hoja">
+        <h2>Entrá a tu cuenta</h2>
+        <p class="sub">Creá tu asistente o entrá a tu panel.</p>
+
+        <button class="ini-google" id="btn-google">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          <span id="btn-google-txt">Acceder con Google</span>
+        </button>
+        <p class="ini-error" id="ini-error-google" style="text-align:center; margin-top:8px;"></p>
+
+        <div class="ini-o">o con tu correo</div>
+        <div class="ini-form" id="ini-form"></div>
+
+        <p class="ini-registro">¿No tenés cuenta? <button class="ini-link" id="btn-registrarme">Registrarme</button></p>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/acceso.js"></script>
+</body>
+</html>
