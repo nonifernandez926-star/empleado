@@ -96,6 +96,30 @@
           <div class="inicio-hero-estado" id="inicio-hero-estado"></div>
         </div>
 
+        <!-- Asistente: protagonista del inicio -->
+        <div class="ia-card" id="ia-card">
+          <div class="ia-card-cab">
+            <div class="ia-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg><i class="ia-pulso"></i></div>
+            <div class="ia-card-texto">
+              <strong>Tu asistente está trabajando</strong>
+              <span id="ia-resumen">Atendiendo a tus clientes las 24 horas.</span>
+            </div>
+          </div>
+          <div class="ia-habilidades" id="ia-habilidades"></div>
+          <div class="ia-acciones">
+            <button type="button" class="ia-accion" data-ir="fullscreen:panel-probar-asistente"><span><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/></svg></span>Probar</button>
+            <button type="button" class="ia-accion" data-ir="seccion:pedidos"><span><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/></svg></span><b id="ia-accion-pedidos">Pedidos</b></button>
+            <button type="button" class="ia-accion" data-ir="fullscreen:panel-qr"><span><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3M21 14v.01M14 21h.01M17 21h4v-4"/></svg></span>Compartir</button>
+            <button type="button" class="ia-accion" data-ir="fullscreen:panel-productos"><span><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></span>Catálogo</button>
+          </div>
+        </div>
+
+        <div class="atencion-card" id="atencion-card" style="display:none;">
+          <div class="atencion-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <div class="atencion-texto"><small>Necesita tu atención</small><strong id="atencion-texto">—</strong></div>
+          <button type="button" class="atencion-btn" data-ir="seccion:pedidos">Ver</button>
+        </div>
+
         <p id="aviso-vencida" class="error-msg" style="display:none;">Tu asistente está pausado. Renová tu suscripción en la pestaña Ajustes para reactivarlo.</p>
         <div id="aviso-suscripcion-inicio"></div>
         <div id="chip-preguntas-inicio"></div>
@@ -108,22 +132,22 @@
             <span class="dash-card-sub">Últimos 30 días</span>
           </div>
           <div class="donut-filtros" id="donut-filtros" style="display:none;">
-            <div class="seg-bloque">
-              <span class="seg-etiqueta">Entrega</span>
-              <div class="seg donut-filtro-grupo" data-i="0">
-                <i class="seg-thumb"></i>
-                <button class="donut-filtro-chip activo" data-grupo="entrega" data-valor="">Todos</button>
-                <button class="donut-filtro-chip" data-grupo="entrega" data-valor="delivery">Con delivery</button>
-                <button class="donut-filtro-chip" data-grupo="entrega" data-valor="retiro">Sin delivery</button>
-              </div>
-            </div>
-            <div class="seg-bloque">
-              <span class="seg-etiqueta">Pago</span>
-              <div class="seg donut-filtro-grupo" data-i="0">
-                <i class="seg-thumb"></i>
-                <button class="donut-filtro-chip activo" data-grupo="pago" data-valor="">Todos</button>
-                <button class="donut-filtro-chip" data-grupo="pago" data-valor="efectivo">Efectivo</button>
-                <button class="donut-filtro-chip" data-grupo="pago" data-valor="transferencia">Transferencia</button>
+            <div class="filtro-select" id="filtro-select">
+              <button type="button" class="filtro-select-btn" id="filtro-select-btn" aria-expanded="false" aria-controls="filtro-select-panel">
+                <span class="filtro-select-icono"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M6 12h12M10 19h4"/></svg></span>
+                <span class="filtro-select-texto"><small>Filtrar por</small><strong id="filtro-select-valor">Todos los pedidos</strong></span>
+                <svg class="filtro-select-flecha" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="filtro-select-panel" id="filtro-select-panel" role="listbox">
+                <div class="filtro-select-interior">
+                  <button type="button" class="filtro-op activo" data-grupo="todos" data-valor="">Todos los pedidos</button>
+                  <div class="filtro-sep">Entrega</div>
+                  <button type="button" class="filtro-op" data-grupo="entrega" data-valor="delivery">Con delivery</button>
+                  <button type="button" class="filtro-op" data-grupo="entrega" data-valor="retiro">Sin delivery</button>
+                  <div class="filtro-sep">Forma de pago</div>
+                  <button type="button" class="filtro-op" data-grupo="pago" data-valor="efectivo">Efectivo</button>
+                  <button type="button" class="filtro-op" data-grupo="pago" data-valor="transferencia">Transferencia</button>
+                </div>
               </div>
             </div>
           </div>
@@ -841,7 +865,9 @@
 
       <!-- AJUSTES -->
       <section id="seccion-ajustes" class="app-seccion" style="display:none;">
-        <div class="list-card">
+                <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Cuenta y plan</h3></div>
+          <div class="list-card">
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-suscripcion" data-titulo="Mi suscripción">
             <div class="list-row-icono ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
@@ -855,7 +881,6 @@
             <div id="suscripcion-contenido"></div>
           </div>
           </div>
-
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-planes" data-titulo="Plan y facturación">
             <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"  style="vertical-align:middle"><path d="M12 2.5l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 18.5l-6.18 3 1.18-6.87-5-4.87 6.91-1L12 2.5Z"/></svg></div>
@@ -873,18 +898,6 @@
             <div id="pago-msg"></div>
           </div>
           </div>
-
-          <div class="list-card-item">
-          <div class="list-row deshabilitada">
-            <div class="list-row-icono ic-gris"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Notificaciones</strong>
-              <span>Configuración de alertas del panel.</span>
-            </div>
-            <span class="pill-proximamente">Próximamente</span>
-          </div>
-          </div>
-
           <div class="list-card-item">
           <div class="list-row deshabilitada">
             <div class="list-row-icono ic-gris"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
@@ -895,7 +908,28 @@
             <span class="pill-proximamente">Próximamente</span>
           </div>
           </div>
+          </div>
+        </div>
 
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Preferencias</h3></div>
+          <div class="list-card">
+          <div class="list-card-item">
+          <div class="list-row deshabilitada">
+            <div class="list-row-icono ic-gris"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+            <div class="list-row-texto">
+              <strong>Notificaciones</strong>
+              <span>Configuración de alertas del panel.</span>
+            </div>
+            <span class="pill-proximamente">Próximamente</span>
+          </div>
+          </div>
+          </div>
+        </div>
+
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Comunidad</h3></div>
+          <div class="list-card">
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-invitar" data-titulo="Invitá a otros negocios">
             <div class="list-row-icono ic-rosado"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
@@ -911,7 +945,12 @@
             <button class="btn secundario ancho" id="btn-copiar-invitar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar enlace</button>
           </div>
           </div>
+          </div>
+        </div>
 
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Ayuda y legal</h3></div>
+          <div class="list-card">
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-privacidad" data-titulo="Privacidad">
             <div class="list-row-icono ic-indigo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5Z"/></svg></div>
@@ -928,7 +967,6 @@
             <p class="ayuda">Si querés que eliminemos datos ya guardados de tu negocio, escribinos desde Centro de ayuda.</p>
           </div>
           </div>
-
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-ayuda" data-titulo="Centro de ayuda">
             <div class="list-row-icono ic-celeste"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div>
@@ -942,13 +980,17 @@
             <a href="#" id="link-ayuda" class="btn secundario ancho">Contactar soporte</a>
           </div>
           </div>
+          </div>
+        </div>
 
-
+        <div class="lista-grupo">
+          <div class="list-card">
           <div class="list-card-item">
           <a href="#" id="link-cerrar-sesion" class="list-row destructivo">
             <div class="list-row-icono ic-rojo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></div>
             <div class="list-row-texto"><strong>Cerrar sesión</strong></div>
           </a>
+          </div>
           </div>
         </div>
       </section>

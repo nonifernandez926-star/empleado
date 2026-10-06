@@ -25,14 +25,58 @@ function horaActual() {
   return new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Convierte **negrita** en <strong> y escapa el resto del texto para evitar HTML no deseado.
-function formatearTexto(texto) {
+// Escapa el texto y lo presenta con claridad: **negrita**, listas, y renglones con precio como filas.
+function escaparHtml(t) {
   const div = document.createElement('div');
-  div.textContent = texto;
-  let escapado = div.innerHTML; // escapa < > & etc.
-  escapado = escapado.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  escapado = escapado.replace(/\n/g, '<br>');
-  return escapado;
+  div.textContent = t;
+  return div.innerHTML;
+}
+function inline(t) {
+  return escaparHtml(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+function formatearTexto(texto) {
+  const lineas = String(texto).split('\n');
+  let html = '';
+  let lista = [];
+  const cerrarLista = () => {
+    if (!lista.length) return;
+    html += `<div class="msg-lista">${lista.join('')}</div>`;
+    lista = [];
+  };
+  for (const crudo of lineas) {
+    const linea = crudo.trim();
+    const item = linea.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/);
+    if (item) {
+      const cuerpo = item[1];
+      const conPrecio = cuerpo.match(/^(.*?)\s*(?:[-–—:]\s*)?(\$\s?[\d.,]+(?:\s?(?:c\/u|cada uno|ARS))?)\**\s*$/);
+      if (conPrecio && conPrecio[1].replace(/\*/g, '').trim().length > 1) {
+        lista.push(`<div class="msg-item"><span class="msg-item-nombre">${escaparHtml(conPrecio[1].replace(/\*\*/g, '').replace(/[\s:–—-]+$/, ''))}</span><span class="msg-item-precio">${escaparHtml(conPrecio[2])}</span></div>`);
+      } else {
+        lista.push(`<div class="msg-item"><span class="msg-item-punto"></span><span class="msg-item-nombre">${inline(cuerpo)}</span></div>`);
+      }
+      continue;
+    }
+    cerrarLista();
+    if (linea === '') { html += '<div class="msg-espacio"></div>'; continue; }
+    html += `<p>${inline(linea)}</p>`;
+  }
+  cerrarLista();
+  return html.replace(/(<div class="msg-espacio"><\/div>)+/g, '<div class="msg-espacio"></div>');
+}
+
+// Indicador de que el asistente está escribiendo
+function mostrarEscribiendo() {
+  if (document.getElementById('msg-escribiendo')) return;
+  const fila = document.createElement('div');
+  fila.className = 'msg-fila asistente';
+  fila.id = 'msg-escribiendo';
+  fila.innerHTML = '<div class="msg asistente msg-escribiendo" aria-label="El asistente está escribiendo"><span></span><span></span><span></span></div>';
+  contenedorMensajes.appendChild(fila);
+  contenedorMensajes.scrollTop = contenedorMensajes.scrollHeight;
+}
+function ocultarEscribiendo() {
+  const el = document.getElementById('msg-escribiendo');
+  if (el) el.remove();
 }
 
 function agregarMensaje(texto, rol) {
@@ -158,6 +202,7 @@ async function enviarMensaje() {
   const texto = inputMensaje.value.trim();
   if (!texto || !codigoPublico) return;
 
+  ocultarSugerencias();
   agregarMensaje(texto, 'cliente');
   inputMensaje.value = '';
   inputMensaje.disabled = true;
@@ -183,12 +228,14 @@ async function enviarMensaje() {
   }
 
   try {
+    mostrarEscribiendo();
     const res = await fetch(`${API_URL}/chat/${codigoPublico}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mensaje: texto, sesionClienteId: obtenerSesionCliente() }),
     });
     const data = await res.json();
+    ocultarEscribiendo();
 
     if (!res.ok) {
       agregarMensaje(data.mensaje || 'Este asistente no está disponible en este momento.', 'asistente');
@@ -210,6 +257,7 @@ async function enviarMensaje() {
       intentarActivarPush(); // recién acá, después de la primera respuesta - pedir permiso antes de que hable se siente invasivo
     }
   } catch (error) {
+    ocultarEscribiendo();
     agregarMensaje('Hubo un error de conexión. Intentá de nuevo.', 'asistente');
   } finally {
     inputMensaje.disabled = false;
@@ -367,6 +415,17 @@ function mostrarWidgetCalificacion() {
 }
 
 btnEnviar.addEventListener('click', enviarMensaje);
+
+// Sugerencias rápidas: desaparecen apenas la persona empieza a conversar
+const cajaSugerencias = document.getElementById('chat-sugerencias');
+if (cajaSugerencias) {
+  cajaSugerencias.querySelectorAll('.chat-sug').forEach((b) => b.addEventListener('click', () => {
+    inputMensaje.value = b.textContent.trim();
+    enviarMensaje();
+  }));
+}
+function ocultarSugerencias() { if (cajaSugerencias) cajaSugerencias.classList.add('oculto'); }
+
 inputMensaje.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') enviarMensaje();
 });

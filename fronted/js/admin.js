@@ -318,6 +318,7 @@ const ICONO_KPI = {
 
 function renderizarKPIs(r) {
   const esTurnos = r.tipoOperacion === 'turnos';
+  actualizarTarjetaAsistente(r, esTurnos);
   const cont = document.getElementById('resumen-diario');
   const tarjetas = [
     { clase: 'kpi-azul', icono: ICONO_KPI.chat, valor: r.conversacionesHoy, etiqueta: 'Conversaciones hoy' },
@@ -631,15 +632,46 @@ async function aplicarFiltrosDonut() {
   }
 }
 
-document.querySelectorAll('.donut-filtro-chip').forEach((chip) => {
-  chip.addEventListener('click', () => {
-    const grupo = chip.dataset.grupo;
-    document.querySelectorAll(`.donut-filtro-chip[data-grupo="${grupo}"]`).forEach((c) => c.classList.toggle('activo', c === chip));
-    if (grupo === 'entrega') filtroDonutEntrega = chip.dataset.valor;
-    if (grupo === 'pago') filtroDonutPago = chip.dataset.valor;
-    aplicarFiltrosDonut();
+// Selector único: se toca para desplegar las opciones hacia abajo. Se puede elegir una de entrega,
+// una de pago (combinables) o "Todos" para quitar los filtros.
+(function iniciarSelectorFiltro() {
+  const caja = document.getElementById('filtro-select');
+  const btn = document.getElementById('filtro-select-btn');
+  const valorTxt = document.getElementById('filtro-select-valor');
+  if (!caja || !btn) return;
+
+  const etiquetas = { delivery: 'Con delivery', retiro: 'Sin delivery', efectivo: 'Efectivo', transferencia: 'Transferencia' };
+  const abrir = (abierto) => { caja.classList.toggle('abierto', abierto); btn.setAttribute('aria-expanded', String(abierto)); };
+
+  function refrescar() {
+    caja.querySelectorAll('.filtro-op').forEach((op) => {
+      const g = op.dataset.grupo;
+      const activo = g === 'todos' ? !filtroDonutEntrega && !filtroDonutPago
+        : g === 'entrega' ? op.dataset.valor === filtroDonutEntrega
+        : op.dataset.valor === filtroDonutPago;
+      op.classList.toggle('activo', activo);
+    });
+    const partes = [etiquetas[filtroDonutEntrega], etiquetas[filtroDonutPago]].filter(Boolean);
+    valorTxt.textContent = partes.length ? partes.join(' · ') : 'Todos los pedidos';
+    caja.classList.toggle('con-filtro', partes.length > 0);
+  }
+
+  btn.addEventListener('click', () => abrir(!caja.classList.contains('abierto')));
+
+  caja.querySelectorAll('.filtro-op').forEach((op) => {
+    op.addEventListener('click', () => {
+      const g = op.dataset.grupo;
+      if (g === 'todos') { filtroDonutEntrega = ''; filtroDonutPago = ''; }
+      else if (g === 'entrega') filtroDonutEntrega = filtroDonutEntrega === op.dataset.valor ? '' : op.dataset.valor;
+      else if (g === 'pago') filtroDonutPago = filtroDonutPago === op.dataset.valor ? '' : op.dataset.valor;
+      refrescar();
+      abrir(false);
+      aplicarFiltrosDonut();
+    });
   });
-});
+
+  document.addEventListener('click', (e) => { if (!caja.contains(e.target)) abrir(false); });
+})();
 
 document.querySelectorAll('#semana-tabs .dash-tab').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -831,6 +863,7 @@ let busquedaPedidoActual = '';
 
 function actualizarBadgeCampana(pedidos) {
   const pendientes = pedidos.filter((p) => p.estado === 'pendiente').length;
+  actualizarAtencionInicio(pendientes);
   const badge = document.getElementById('badge-campana');
   if (pendientes > 0) {
     badge.textContent = pendientes > 9 ? '9+' : pendientes;
@@ -1302,7 +1335,7 @@ function renderizarPedidos() {
   }
 
   contenedor.innerHTML = pedidosFiltrados.map((p) => `
-      <div class="pedido-card" data-id="${p._id}">
+      <div class="pedido-card" data-id="${p._id}" data-estado="${p.estado}">
         <div class="pedido-header">
           <div class="pedido-avatar">${ICONOS_PEDIDO.persona}</div>
           <div class="pedido-header-texto">
@@ -3056,3 +3089,48 @@ function posicionarSelectores() {
 document.addEventListener('click', (e) => { if (e.target.closest('.seg button')) setTimeout(posicionarSelectores, 0); });
 window.addEventListener('DOMContentLoaded', posicionarSelectores);
 setInterval(posicionarSelectores, 1200); // cubre cuando un botón se oculta/muestra según el tipo de negocio
+
+
+// ---------- Inicio: el asistente como protagonista ----------
+function actualizarTarjetaAsistente(r, esTurnos) {
+  const resumen = document.getElementById('ia-resumen');
+  const hab = document.getElementById('ia-habilidades');
+  const accionPedidos = document.getElementById('ia-accion-pedidos');
+  if (!resumen || !hab) return;
+  const conv = Number(r.conversacionesHoy) || 0;
+  resumen.textContent = conv > 0
+    ? `Hoy atendió ${conv} conversación${conv === 1 ? '' : 'es'}${r.pedidosHoy ? ` y generó ${r.pedidosHoy} ${esTurnos ? 'consulta' : 'pedido'}${r.pedidosHoy === 1 ? '' : 's'}` : ''}.`
+    : 'Listo para atender a tus clientes las 24 horas.';
+  const habilidades = esTurnos
+    ? ['Responde consultas', 'Agenda turnos', 'Confirma y recuerda']
+    : ['Responde consultas', 'Toma pedidos', 'Valida pagos'];
+  hab.innerHTML = habilidades.map((h) => `<span>${h}</span>`).join('');
+  if (accionPedidos) accionPedidos.textContent = esTurnos ? 'Agenda' : 'Pedidos';
+  const btn = document.getElementById('ia-accion-pedidos');
+  if (btn) btn.closest('.ia-accion').dataset.ir = esTurnos ? 'seccion:agenda' : 'seccion:pedidos';
+}
+
+function actualizarAtencionInicio(pendientes) {
+  const card = document.getElementById('atencion-card');
+  if (!card) return;
+  if (pendientes > 0) {
+    document.getElementById('atencion-texto').textContent = `${pendientes} pedido${pendientes === 1 ? '' : 's'} pendiente${pendientes === 1 ? '' : 's'} de confirmar`;
+    card.style.display = 'flex';
+  } else {
+    card.style.display = 'none';
+  }
+}
+
+// Atajos del inicio: llevan a una sección o abren una herramienta existente
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-ir]');
+  if (!el) return;
+  const [tipo, destino] = el.dataset.ir.split(':');
+  if (tipo === 'seccion') {
+    const nav = document.querySelector(`.app-navbar-item[data-seccion="${destino}"]`);
+    if (nav) nav.click();
+  } else if (tipo === 'fullscreen') {
+    const fila = document.querySelector(`[data-fullscreen="${destino}"]`);
+    if (fila) fila.click();
+  }
+});

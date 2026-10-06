@@ -5,27 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat con el asistente</title>
     <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#1638c9">
+  <meta name="theme-color" content="#0b1437">
   <link rel="icon" href="/img/icono-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="chat-widget">
-    <div class="chat-header">
-      <div class="chat-header-logo" id="chat-header-logo">💬</div>
-      <div class="chat-header-info">
-        <strong>Asistente virtual</strong>
-        <span id="chat-header-nombre">Cargando...</span>
+    <header class="chat-header">
+      <div class="chat-header-logo" id="chat-header-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>
       </div>
-      <div class="chat-header-estado"><span class="punto-conectado"></span> Conectado</div>
-    </div>
+      <div class="chat-header-info">
+        <strong id="chat-header-nombre">Cargando...</strong>
+        <span><span class="chat-ia-tag">IA</span> Asistente virtual</span>
+      </div>
+      <div class="chat-header-estado"><span class="punto-conectado"></span> En línea</div>
+    </header>
     <div class="fila-cliente" id="fila-cliente" style="display:none;"></div>
     <div class="chat-mensajes" id="chat-mensajes"></div>
+    <div class="chat-sugerencias" id="chat-sugerencias">
+      <button type="button" class="chat-sug">Ver opciones y precios</button>
+      <button type="button" class="chat-sug">Horarios de atención</button>
+      <button type="button" class="chat-sug">Quiero hacer un pedido o reservar</button>
+    </div>
     <div class="chat-input-area">
       <input type="file" id="input-comprobante" accept="image/*" style="display:none;">
-      <button id="btn-adjuntar" title="Adjuntar comprobante de pago" style="display:none;">📎</button>
-      <input type="text" id="input-mensaje" placeholder="Escribí tu mensaje...">
-      <button id="btn-enviar">Enviar</button>
+      <button id="btn-adjuntar" type="button" title="Adjuntar comprobante de pago" aria-label="Adjuntar comprobante" style="display:none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg>
+      </button>
+      <input type="text" id="input-mensaje" placeholder="Escribí tu mensaje..." autocomplete="off" enterkeyhint="send">
+      <button id="btn-enviar" type="button" aria-label="Enviar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </button>
     </div>
   </div>
 
