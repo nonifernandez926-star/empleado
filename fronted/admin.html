@@ -7,28 +7,18 @@
     <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1638c9">
   <link rel="icon" href="/img/icono-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- LOGIN -->
-  <div class="pantalla" id="contenedor-login">
-    <div class="pantalla-topbar">
-      <span class="marca">Mi Asistente</span>
-    </div>
-    <div class="pantalla-contenido">
-      <div id="vista-login" class="tarjeta" style="margin-top:18px;">
-        <h1 style="font-size:1.3rem; margin-top:0;">Ingresá a tu panel</h1>
-        <div id="boton-google-login" style="margin-bottom:16px;"></div>
-        <p class="ayuda" style="text-align:center; margin:14px 0;">— o con tu código —</p>
-        <label>Código de administración</label>
-        <input type="text" id="input-codigo-admin" placeholder="ADM-XXXX-XXXX-XXXX">
-        <button class="btn ancho" id="btn-login" style="margin-top:16px;">Ingresar</button>
-        <div id="login-error"></div>
-      </div>
-    </div>
+  <!-- Sin sesión, el panel redirige al acceso con Google (index.html) -->
+  <div class="pantalla" id="contenedor-login" style="display:flex;">
+    <div class="cargando-panel"><span class="spinner-panel"></span></div>
   </div>
 
-  <!-- APP (aparece recién después de loguearse, con Google o con código) -->
+  <!-- APP (aparece recién después de iniciar sesión con Google) -->
   <div id="vista-panel" class="app-shell" style="display:none;">
 
     <!-- Fondo oscuro + menú lateral -->
@@ -118,15 +108,23 @@
             <span class="dash-card-sub">Últimos 30 días</span>
           </div>
           <div class="donut-filtros" id="donut-filtros" style="display:none;">
-            <div class="donut-filtro-grupo">
-              <button class="donut-filtro-chip activo" data-grupo="entrega" data-valor="">Todos</button>
-              <button class="donut-filtro-chip" data-grupo="entrega" data-valor="delivery">Con delivery</button>
-              <button class="donut-filtro-chip" data-grupo="entrega" data-valor="retiro">Sin delivery</button>
+            <div class="seg-bloque">
+              <span class="seg-etiqueta">Entrega</span>
+              <div class="seg donut-filtro-grupo" data-i="0">
+                <i class="seg-thumb"></i>
+                <button class="donut-filtro-chip activo" data-grupo="entrega" data-valor="">Todos</button>
+                <button class="donut-filtro-chip" data-grupo="entrega" data-valor="delivery">Con delivery</button>
+                <button class="donut-filtro-chip" data-grupo="entrega" data-valor="retiro">Sin delivery</button>
+              </div>
             </div>
-            <div class="donut-filtro-grupo">
-              <button class="donut-filtro-chip activo" data-grupo="pago" data-valor="">Todos</button>
-              <button class="donut-filtro-chip" data-grupo="pago" data-valor="efectivo">Efectivo</button>
-              <button class="donut-filtro-chip" data-grupo="pago" data-valor="transferencia">Transferencia</button>
+            <div class="seg-bloque">
+              <span class="seg-etiqueta">Pago</span>
+              <div class="seg donut-filtro-grupo" data-i="0">
+                <i class="seg-thumb"></i>
+                <button class="donut-filtro-chip activo" data-grupo="pago" data-valor="">Todos</button>
+                <button class="donut-filtro-chip" data-grupo="pago" data-valor="efectivo">Efectivo</button>
+                <button class="donut-filtro-chip" data-grupo="pago" data-valor="transferencia">Transferencia</button>
+              </div>
             </div>
           </div>
           <div id="donut-contenedor"><p class="ayuda">Cargando...</p></div>
@@ -135,7 +133,7 @@
         <div class="tarjeta dash-card">
           <div class="dash-card-titulo">
             <h2>Últimos 7 días</h2>
-            <div class="dash-tabs dash-tabs-mini" id="semana-tabs">
+            <div class="dash-tabs dash-tabs-mini seg seg-mini" id="semana-tabs" data-i="0"><i class="seg-thumb"></i>
               <button class="dash-tab activo" data-modo="cantidad" id="semana-tab-cantidad">Pedidos</button>
               <button class="dash-tab" data-modo="monto">Ingresos</button>
             </div>
@@ -278,9 +276,11 @@
       </section>
 
       <section id="seccion-herramientas" class="app-seccion" style="display:none;">
-        <p class="ayuda" id="aviso-suscripcion-herramientas" style="display:none; margin-bottom:14px;">Estas herramientas se activan del todo cuando tu suscripción está paga — mientras tanto podés verlas y probarlas igual.</p>
+<p class="ayuda" id="aviso-suscripcion-herramientas" style="display:none; margin-bottom:6px;">Estas herramientas se activan del todo cuando tu suscripción está paga — mientras tanto podés verlas y probarlas igual.</p>
 
-        <div class="list-card">
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Compartí tu asistente</h3><p>Hacé que tus clientes lleguen al chat.</p></div>
+          <div class="list-card">
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-qr" data-titulo="Mi QR de chat">
             <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="14" y="14" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="18.5" y="14" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="14" y="18.5" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="18.5" y="18.5" width="2.5" height="2.5" fill="currentColor" stroke="none"/></svg></div>
@@ -312,22 +312,6 @@
           </div>
 
           <div class="list-card-item">
-          <button class="list-row" data-fullscreen="panel-codigo" data-titulo="Código de vinculación">
-            <div class="list-row-icono ic-naranja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 8 4.5 12 9 16"/><path d="M15 8l4.5 4-4.5 4"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Código de vinculación</strong>
-              <span>Usá este código para vincular tu negocio en Mi Zona.</span>
-            </div>
-            <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
-          </button>
-          <div class="list-row-panel" id="panel-codigo">
-            <div class="codigo-box" id="codigo-vinculacion"></div>
-            <button class="btn secundario ancho" id="btn-copiar-codigo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar código</button>
-            <p class="ayuda">Funciona aunque en Mi Zona uses una cuenta distinta a la de acá.</p>
-          </div>
-          </div>
-
-          <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-registrar" data-titulo="Registrá tu negocio">
             <div class="list-row-icono ic-violeta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><circle cx="8" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="8" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="8" cy="14" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r=".6" fill="currentColor" stroke="none"/></svg></div>
             <div class="list-row-texto">
@@ -340,7 +324,12 @@
             <a class="btn ancho" id="btn-registrar-mizona" href="#" target="_blank">Ir a Mi Zona</a>
           </div>
           </div>
+          </div>
+        </div>
 
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Probá y vendé más</h3><p>Ajustá cómo atiende y activá ofertas.</p></div>
+          <div class="list-card">
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-probar-asistente" data-titulo="Probar al asistente">
             <div class="list-row-icono ic-cyan"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
@@ -371,6 +360,120 @@
             </div>
           </div>
           </div>
+
+          <div class="list-card-item" id="tarjeta-promociones">
+              <button class="list-row" data-fullscreen="panel-promociones" data-titulo="Promociones">
+                <div class="list-row-icono ic-naranja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20.6 12.6 12.6 20.6a2 2 0 0 1-2.8 0l-7.4-7.4a2 2 0 0 1 0-2.8L10.4 2.4A2 2 0 0 1 11.8 2H19a2 2 0 0 1 2 2v7.2a2 2 0 0 1-.4 1.4Z"/><circle cx="15" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Promociones</strong>
+                  <span>Publicá descuentos, 2x1 o lo que se te ocurra.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-promociones">
+                <p class="ayuda">El asistente las va a mencionar solo cuando tenga sentido en la charla.</p>
+                <div id="lista-promociones"><p class="ayuda">Cargando...</p></div>
+
+                <label>Título</label>
+                <input type="text" id="promo-titulo" placeholder="Ej: 2x1 en helados los martes">
+                <label>Descripción (opcional)</label>
+                <textarea id="promo-descripcion" placeholder="Contá los detalles: qué días aplica, condiciones, etc."></textarea>
+
+                <button type="button" class="btn secundario ancho" id="btn-mostrar-reglas-promo" style="margin-top:10px;">+ Agregar reglas (opcional)</button>
+                <div id="reglas-promo-wrap" style="display:none; margin-top:10px;">
+                  <label>Aplica solo a (opcional)</label>
+                  <input type="text" id="promo-aplica-a" placeholder="Ej: Corte + barba">
+                  <label>Válida hasta esta fecha (opcional)</label>
+                  <input type="date" id="promo-fecha-hasta">
+                  <label>Horario en que aplica (opcional)</label>
+                  <div style="display:flex; gap:8px;">
+                    <input type="time" id="promo-horario-desde" style="flex:1;">
+                    <input type="time" id="promo-horario-hasta" style="flex:1;">
+                  </div>
+                  <label>Cupo máximo de usos (opcional)</label>
+                  <input type="number" id="promo-usos-maximos" placeholder="Ej: 20" min="1">
+                </div>
+
+                <button class="btn ancho" id="btn-crear-promocion" style="margin-top:12px;">Publicar promoción</button>
+                <div id="promo-msg"></div>
+              </div>
+            </div>
+
+          <div class="list-card-item">
+              <button class="list-row" data-fullscreen="panel-oportunidades" data-titulo="Oportunidades de venta">
+                <div class="list-row-icono ic-rojo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6Z"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Oportunidades de venta</strong>
+                  <span>Clientes que no compraron o dejaron de volver.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-oportunidades">
+                <p class="ayuda">"Recuperar" prepara un mensaje que el asistente le va a decir apenas ese cliente vuelva a escribir (no se le puede enviar un mensaje sin que él escriba primero).</p>
+
+                <h3 style="margin-top:16px;">Clientes que no volvieron hace más de:</h3>
+                <div class="grid-tipo-operacion" id="grid-umbral-inactivos">
+                  <div class="opcion-aprobacion" data-dias="1">Un día</div>
+                  <div class="opcion-aprobacion" data-dias="7">Una semana</div>
+                  <div class="opcion-aprobacion" data-dias="30">Un mes</div>
+                </div>
+
+                <h3>Preguntaron y no concretaron</h3>
+                <div id="lista-indecisos"><p class="ayuda">Cargando...</p></div>
+                <button class="btn secundario ancho" id="btn-recuperar-todos-indecisos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
+
+                <h3>Ya fueron clientes, pero no volvieron</h3>
+                <div id="lista-inactivos"><p class="ayuda">Cargando...</p></div>
+                <button class="btn secundario ancho" id="btn-recuperar-todos-inactivos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Conocé a tus clientes</h3><p>Datos para decidir mejor.</p></div>
+          <div class="list-card">
+          <div class="list-card-item">
+              <button class="list-row" data-fullscreen="panel-tendencias" data-titulo="Tendencias">
+                <div class="list-row-icono ic-indigo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Tendencias</strong>
+                  <span>Qué sube, qué baja y cuándo hay menos movimiento.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-tendencias">
+                <p class="ayuda">Se calculan con los datos reales de tu negocio (tus pedidos o turnos y tus conversaciones). No usan internet ni inventan nada: si todavía hay pocos datos, te lo avisan.</p>
+                <div id="tendencias-contenido"><p class="ayuda">Cargando...</p></div>
+              </div>
+            </div>
+
+          <div class="list-card-item">
+              <button class="list-row" data-fullscreen="panel-ranking" data-titulo="Clientes destacados">
+                <div class="list-row-icono ic-amarillo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="8" r="5"/><path d="M8.5 13 7 22l5-3 5 3-1.5-9"/></svg></div>
+                <div class="list-row-texto">
+                  <strong>Clientes destacados</strong>
+                  <span>TOP 10 y premios por fidelidad.</span>
+                </div>
+                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+              </button>
+              <div class="list-row-panel" id="panel-ranking">
+                <p class="ayuda">Podés activar más de un criterio a la vez (tocá para activar o desactivar). El asistente le va a avisar al cliente si está en el puesto 1°, 2° o 3° de alguno la próxima vez que vuelva a escribir, y si le pusiste un % de descuento, se lo va a calcular y aplicar en su compra.</p>
+
+                <div class="grid-tipo-operacion" id="grid-criterio-ranking">
+                  <div class="opcion-aprobacion" data-criterio="compras">Compras</div>
+                  <div class="opcion-aprobacion" data-criterio="dinero">Dinero gastado</div>
+                  <div class="opcion-aprobacion" data-criterio="visitas">Visitas</div>
+                  <div class="opcion-aprobacion" data-criterio="fidelidad">Fidelidad</div>
+                </div>
+
+                <div id="ranking-por-criterio"></div>
+
+                <button class="btn ancho" id="btn-guardar-ranking" style="margin-top:16px;">Guardar</button>
+                <div id="ranking-msg"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -379,9 +482,10 @@
 
         <!-- Vista normal -->
         <div id="negocio-vista">
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Catálogo</h3><p>Lo que ofrecés y cómo se ve.</p></div>
           <div class="list-card">
-
-            <div class="list-card-item">
+          <div class="list-card-item">
               <button class="list-row" data-fullscreen="panel-productos" data-titulo="Productos y servicios">
                 <div class="list-row-icono ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></div>
                 <div class="list-row-texto">
@@ -477,7 +581,7 @@
               </div>
             </div>
 
-            <div class="list-card-item">
+          <div class="list-card-item">
               <button class="list-row" data-fullscreen="panel-fotos-negocio" data-titulo="Fotos del negocio">
                 <div class="list-row-icono ic-rosado"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
                 <div class="list-row-texto">
@@ -535,8 +639,13 @@
                 <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="list-card-item">
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Operación</h3><p>Cuándo y cómo atendés.</p></div>
+          <div class="list-card">
+          <div class="list-card-item">
               <button class="list-row" data-fullscreen="panel-disponibilidad" data-titulo="Disponibilidad de hoy">
                 <div class="list-row-icono ic-amarillo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
                 <div class="list-row-texto">
@@ -553,7 +662,7 @@
               </div>
             </div>
 
-            <div class="list-card-item" id="tarjeta-zonas-delivery">
+          <div class="list-card-item" id="tarjeta-zonas-delivery">
               <button class="list-row" data-fullscreen="panel-zonas-delivery" data-titulo="Zonas de delivery">
                 <div class="list-row-icono ic-celeste"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 11l18-5-5 18-3-8-8-3Z"/></svg></div>
                 <div class="list-row-texto">
@@ -573,46 +682,13 @@
                 <div id="zonas-delivery-msg"></div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="list-card-item" id="tarjeta-promociones">
-              <button class="list-row" data-fullscreen="panel-promociones" data-titulo="Promociones">
-                <div class="list-row-icono ic-naranja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20.6 12.6 12.6 20.6a2 2 0 0 1-2.8 0l-7.4-7.4a2 2 0 0 1 0-2.8L10.4 2.4A2 2 0 0 1 11.8 2H19a2 2 0 0 1 2 2v7.2a2 2 0 0 1-.4 1.4Z"/><circle cx="15" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg></div>
-                <div class="list-row-texto">
-                  <strong>Promociones</strong>
-                  <span>Publicá descuentos, 2x1 o lo que se te ocurra.</span>
-                </div>
-                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
-              </button>
-              <div class="list-row-panel" id="panel-promociones">
-                <p class="ayuda">El asistente las va a mencionar solo cuando tenga sentido en la charla.</p>
-                <div id="lista-promociones"><p class="ayuda">Cargando...</p></div>
-
-                <label>Título</label>
-                <input type="text" id="promo-titulo" placeholder="Ej: 2x1 en helados los martes">
-                <label>Descripción (opcional)</label>
-                <textarea id="promo-descripcion" placeholder="Contá los detalles: qué días aplica, condiciones, etc."></textarea>
-
-                <button type="button" class="btn secundario ancho" id="btn-mostrar-reglas-promo" style="margin-top:10px;">+ Agregar reglas (opcional)</button>
-                <div id="reglas-promo-wrap" style="display:none; margin-top:10px;">
-                  <label>Aplica solo a (opcional)</label>
-                  <input type="text" id="promo-aplica-a" placeholder="Ej: Corte + barba">
-                  <label>Válida hasta esta fecha (opcional)</label>
-                  <input type="date" id="promo-fecha-hasta">
-                  <label>Horario en que aplica (opcional)</label>
-                  <div style="display:flex; gap:8px;">
-                    <input type="time" id="promo-horario-desde" style="flex:1;">
-                    <input type="time" id="promo-horario-hasta" style="flex:1;">
-                  </div>
-                  <label>Cupo máximo de usos (opcional)</label>
-                  <input type="number" id="promo-usos-maximos" placeholder="Ej: 20" min="1">
-                </div>
-
-                <button class="btn ancho" id="btn-crear-promocion" style="margin-top:12px;">Publicar promoción</button>
-                <div id="promo-msg"></div>
-              </div>
-            </div>
-
-            <div class="list-card-item">
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Atención del asistente</h3><p>Cómo habla, qué sabe y qué opinan tus clientes.</p></div>
+          <div class="list-card">
+          <div class="list-card-item">
               <button class="list-row" data-fullscreen="panel-vendedor-memoria" data-titulo="Vendedor y memoria">
                 <div class="list-row-icono ic-violeta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l7-4"/></svg></div>
                 <div class="list-row-texto">
@@ -656,36 +732,7 @@
               </div>
             </div>
 
-            <div class="list-card-item">
-              <button class="list-row" data-fullscreen="panel-oportunidades" data-titulo="Oportunidades de venta">
-                <div class="list-row-icono ic-rojo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6Z"/></svg></div>
-                <div class="list-row-texto">
-                  <strong>Oportunidades de venta</strong>
-                  <span>Clientes que no compraron o dejaron de volver.</span>
-                </div>
-                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
-              </button>
-              <div class="list-row-panel" id="panel-oportunidades">
-                <p class="ayuda">"Recuperar" prepara un mensaje que el asistente le va a decir apenas ese cliente vuelva a escribir (no se le puede enviar un mensaje sin que él escriba primero).</p>
-
-                <h3 style="margin-top:16px;">Clientes que no volvieron hace más de:</h3>
-                <div class="grid-tipo-operacion" id="grid-umbral-inactivos">
-                  <div class="opcion-aprobacion" data-dias="1">Un día</div>
-                  <div class="opcion-aprobacion" data-dias="7">Una semana</div>
-                  <div class="opcion-aprobacion" data-dias="30">Un mes</div>
-                </div>
-
-                <h3>Preguntaron y no concretaron</h3>
-                <div id="lista-indecisos"><p class="ayuda">Cargando...</p></div>
-                <button class="btn secundario ancho" id="btn-recuperar-todos-indecisos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
-
-                <h3>Ya fueron clientes, pero no volvieron</h3>
-                <div id="lista-inactivos"><p class="ayuda">Cargando...</p></div>
-                <button class="btn secundario ancho" id="btn-recuperar-todos-inactivos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
-              </div>
-            </div>
-
-            <div class="list-card-item">
+          <div class="list-card-item">
               <button class="list-row" data-fullscreen="panel-experiencia" data-titulo="Experiencia">
                 <div class="list-row-icono ic-amarillo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8l-6.2 3.3L7 14.2l-5-4.9 6.9-1Z"/></svg></div>
                 <div class="list-row-texto">
@@ -726,7 +773,7 @@
               </div>
             </div>
 
-            <div class="list-card-item">
+          <div class="list-card-item">
               <button class="list-row" data-fullscreen="panel-preguntas" data-titulo="Preguntas frecuentes">
                 <div class="list-row-icono ic-cyan"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div>
                 <div class="list-row-texto">
@@ -740,49 +787,13 @@
                 <div id="lista-preguntas-frecuentes"><p class="ayuda">Cargando...</p></div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="list-card-item">
-              <button class="list-row" data-fullscreen="panel-ranking" data-titulo="Clientes destacados">
-                <div class="list-row-icono ic-amarillo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="8" r="5"/><path d="M8.5 13 7 22l5-3 5 3-1.5-9"/></svg></div>
-                <div class="list-row-texto">
-                  <strong>Clientes destacados</strong>
-                  <span>TOP 10 y premios por fidelidad.</span>
-                </div>
-                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
-              </button>
-              <div class="list-row-panel" id="panel-ranking">
-                <p class="ayuda">Podés activar más de un criterio a la vez (tocá para activar o desactivar). El asistente le va a avisar al cliente si está en el puesto 1°, 2° o 3° de alguno la próxima vez que vuelva a escribir, y si le pusiste un % de descuento, se lo va a calcular y aplicar en su compra.</p>
-
-                <div class="grid-tipo-operacion" id="grid-criterio-ranking">
-                  <div class="opcion-aprobacion" data-criterio="compras">Compras</div>
-                  <div class="opcion-aprobacion" data-criterio="dinero">Dinero gastado</div>
-                  <div class="opcion-aprobacion" data-criterio="visitas">Visitas</div>
-                  <div class="opcion-aprobacion" data-criterio="fidelidad">Fidelidad</div>
-                </div>
-
-                <div id="ranking-por-criterio"></div>
-
-                <button class="btn ancho" id="btn-guardar-ranking" style="margin-top:16px;">Guardar</button>
-                <div id="ranking-msg"></div>
-              </div>
-            </div>
-
-            <div class="list-card-item">
-              <button class="list-row" data-fullscreen="panel-tendencias" data-titulo="Tendencias">
-                <div class="list-row-icono ic-indigo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
-                <div class="list-row-texto">
-                  <strong>Tendencias</strong>
-                  <span>Qué sube, qué baja y cuándo hay menos movimiento.</span>
-                </div>
-                <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
-              </button>
-              <div class="list-row-panel" id="panel-tendencias">
-                <p class="ayuda">Se calculan con los datos reales de tu negocio (tus pedidos o turnos y tus conversaciones). No usan internet ni inventan nada: si todavía hay pocos datos, te lo avisan.</p>
-                <div id="tendencias-contenido"><p class="ayuda">Cargando...</p></div>
-              </div>
-            </div>
-
-            <div class="list-card-item">
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Tu negocio</h3><p>Datos, detalles y horarios.</p></div>
+          <div class="list-card">
+          <div class="list-card-item">
               <button class="list-row" id="btn-abrir-edicion-negocio">
                 <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 4 4h16l1 5.5"/><path d="M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5"/><path d="M9 20v-6h6v6"/><path d="M3 9.5h18"/></svg></div>
                 <div class="list-row-texto">
@@ -792,8 +803,8 @@
                 <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
               </button>
             </div>
-
           </div>
+        </div>
         </div>
 
         <!-- Vista de edición ("Editar información") -->
@@ -978,9 +989,7 @@
     </nav>
   </div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="js/config.js"></script>
-  <script src="js/google-init.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/agenda.js"></script>
 </body>

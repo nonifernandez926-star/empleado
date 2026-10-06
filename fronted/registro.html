@@ -7,10 +7,13 @@
     <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1638c9">
   <link rel="icon" href="/img/icono-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="pantalla">
+  <div class="pantalla" id="pantalla-registro">
     <div class="pantalla-topbar">
       <a class="volver" id="btn-volver-registro" href="index.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></a>
       <span class="marca">Creá tu asistente virtual</span>
@@ -116,23 +119,43 @@
           <p class="ayuda">Va a aparecer como avatar del asistente en el chat, así los clientes reconocen tu negocio.</p>
           <input type="file" id="input-logo" accept="image/*">
 
-          <h3>Vincular con Google (recomendado)</h3>
-          <p class="ayuda">Vinculá tu cuenta de Google para poder entrar a tu panel sin tener que guardar el código de administración. Es opcional: si no lo hacés, igual te vamos a dar un código para entrar.</p>
-          <div id="boton-google-registro" style="margin-bottom:10px;"></div>
-          <p class="ayuda" id="estado-google-registro"></p>
-
+          <div id="error-registro"></div>
           <button type="submit" class="btn ancho" style="margin-top:24px;">Crear mi asistente (modo prueba gratis)</button>
         </form>
       </div>
 
-      <!-- RESULTADO -->
-      <div id="resultado" class="tarjeta" style="display:none;"></div>
     </div>
   </div>
 
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- PANTALLA DE ÉXITO: pantalla separada, el formulario ya no se ve -->
+  <div class="exito-pantalla" id="pantalla-exito" style="display:none;">
+    <div class="exito-contenido">
+      <div class="exito-sello">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      </div>
+      <h1>Tu asistente está listo</h1>
+      <p class="exito-sub">Lo creamos en modo prueba gratis. Ya está vinculado a tu cuenta de Google, así que vas a entrar a tu panel directamente, sin códigos.</p>
+
+      <div class="exito-pasos">
+        <div class="exito-paso"><b>1</b><span>Probá cómo responde tu asistente a un cliente.</span></div>
+        <div class="exito-paso"><b>2</b><span>Entrá al panel para cargar productos, fotos y horarios.</span></div>
+        <div class="exito-paso"><b>3</b><span>Compartí tu enlace o tu QR para empezar a recibir clientes.</span></div>
+      </div>
+
+      <div class="exito-acciones">
+        <a class="btn ancho" id="exito-probar" href="#">Probar mi asistente</a>
+        <a class="btn secundario ancho" href="admin.html">Ir a mi panel</a>
+      </div>
+
+      <div class="exito-zona">
+        <strong>¿Ya usás Mi Zona?</strong>
+        <span>Registrá tu negocio ahí para que más clientes lo encuentren. Tu asistente se vincula automáticamente.</span>
+        <a class="exito-zona-link" id="exito-mizona" href="#" target="_blank" rel="noopener">Registrar mi negocio en Mi Zona</a>
+      </div>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
-  <script src="js/google-init.js"></script>
   <script src="js/registro.js"></script>
 </body>
 </html>

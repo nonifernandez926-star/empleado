@@ -1,4 +1,3 @@
-let codigoAdminActual = null;
 let jwtTokenActual = null;
 let negocioActual = null;
 let inicialNegocio = 'N';
@@ -28,64 +27,30 @@ function iconoFormaPago(formaPago = '') {
   return ICONOS_PEDIDO.tarjeta;
 }
 
-// Devuelve los headers correctos según cómo se haya logueado el dueño (Google o código admin)
+// Headers con la sesión de la cuenta (Google)
 function headersAuth(extra = {}) {
-  if (jwtTokenActual) {
-    return { ...extra, Authorization: `Bearer ${jwtTokenActual}` };
-  }
-  return { ...extra, 'x-codigo-admin': codigoAdminActual };
+  return { ...extra, Authorization: `Bearer ${jwtTokenActual}` };
 }
 
-// --- Login con Google ---
-function alRecibirRespuestaGoogle(respuesta) {
-  procesarLoginGoogle(respuesta.credential);
-}
+// Sin sesión válida se vuelve a la pantalla de acceso (Google), sin códigos
+function irAlAcceso() { location.replace('index.html?acceso=1'); }
 
-async function procesarLoginGoogle(idToken) {
-  const errorDiv = document.getElementById('login-error');
-  errorDiv.innerHTML = '';
-  try {
-    const res = await fetch(`${API_URL}/auth/google/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      if (data.error === 'sin_negocio_vinculado') {
-        errorDiv.innerHTML = `<div class="error-msg">Esta cuenta de Google todavía no tiene un negocio creado. <a href="registro.html">Crear mi negocio</a></div>`;
-      } else {
-        errorDiv.innerHTML = `<div class="error-msg">No se pudo iniciar sesión con Google.</div>`;
-      }
-      return;
-    }
-
-    jwtTokenActual = data.token;
-    localStorage.setItem('jwtToken', data.token); // sesión persistente: no hay que loguearse cada vez
-
-    const resNegocio = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
-    negocioActual = await resNegocio.json();
-    mostrarPanel();
-  } catch (error) {
-    errorDiv.innerHTML = `<div class="error-msg">Error de conexión, intentá de nuevo.</div>`;
-  }
-}
-
-// Si ya había una sesión de Google guardada, entramos directo sin pedir login de nuevo
+// Si ya había una sesión guardada, entramos directo; si no, vamos al acceso
 async function intentarSesionGuardada() {
   const tokenGuardado = localStorage.getItem('jwtToken');
-  if (!tokenGuardado) return;
+  if (!tokenGuardado) { irAlAcceso(); return; }
 
   jwtTokenActual = tokenGuardado;
   try {
     const res = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
+    if (res.status === 403) { location.replace('registro.html'); return; } // tiene cuenta pero todavía no creó su asistente
     if (!res.ok) throw new Error('Sesión vencida');
     negocioActual = await res.json();
     mostrarPanel();
   } catch (error) {
     jwtTokenActual = null;
     localStorage.removeItem('jwtToken');
+    irAlAcceso();
   }
 }
 
@@ -93,12 +58,8 @@ function cerrarSesion(e) {
   if (e) e.preventDefault();
   localStorage.removeItem('jwtToken');
   jwtTokenActual = null;
-  codigoAdminActual = null;
   negocioActual = null;
-  cerrarDrawer();
-  document.getElementById('vista-panel').style.display = 'none';
-  document.getElementById('contenedor-login').style.display = 'flex';
-  document.getElementById('vista-login').style.display = 'block';
+  location.replace('index.html');
 }
 
 function abrirDrawer() {
@@ -126,13 +87,6 @@ function actualizarAvatares(inicial) {
 
 window.addEventListener('DOMContentLoaded', () => {
   intentarSesionGuardada();
-
-  if (GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.startsWith('TU_CLIENT_ID')) {
-    esperarGoogleListo(() => {
-      google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: alRecibirRespuestaGoogle });
-      google.accounts.id.renderButton(document.getElementById('boton-google-login'), { theme: 'outline', size: 'large', width: 300 });
-    });
-  }
 
   // Navegación inferior por pestañas
   document.querySelectorAll('.app-navbar-item').forEach((btn) => {
@@ -174,10 +128,9 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-cerrar-pantalla-completa').addEventListener('click', cerrarPantallaCompleta);
 
-  // Copiar enlace de chat / código de vinculación con un botón (en vez de seleccionar texto a mano)
+  // Copiar enlace de chat con un botón (en vez de seleccionar texto a mano)
   document.getElementById('btn-copiar-link').addEventListener('click', () => copiarAlPortapapeles('link-chat', 'btn-copiar-link', '📋 Copiar enlace'));
   document.getElementById('btn-copiar-invitar')?.addEventListener('click', () => copiarAlPortapapeles('link-invitar', 'btn-copiar-invitar', 'Copiar enlace'));
-  document.getElementById('btn-copiar-codigo').addEventListener('click', () => copiarAlPortapapeles('codigo-vinculacion', 'btn-copiar-codigo', '📋 Copiar código'));
 
   document.getElementById('link-ayuda').addEventListener('click', (e) => {
     e.preventDefault();
@@ -247,26 +200,6 @@ function mostrarSeccion(nombre) {
   document.querySelector('.app-contenido').scrollTop = 0;
 }
 
-document.getElementById('btn-login').addEventListener('click', async () => {
-  const codigo = document.getElementById('input-codigo-admin').value.trim();
-  const errorDiv = document.getElementById('login-error');
-  errorDiv.innerHTML = '';
-
-  try {
-    const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
-      headers: { 'x-codigo-admin': codigo },
-    });
-    if (!res.ok) throw new Error('Código inválido');
-
-    negocioActual = await res.json();
-    codigoAdminActual = codigo;
-    jwtTokenActual = null;
-    mostrarPanel();
-  } catch (error) {
-    errorDiv.innerHTML = `<div class="error-msg">Código inválido, revisalo e intentá de nuevo.</div>`;
-  }
-});
-
 async function mostrarPanel() {
   document.getElementById('contenedor-login').style.display = 'none';
   document.getElementById('vista-panel').style.display = 'flex';
@@ -296,7 +229,7 @@ async function mostrarPanel() {
   const linkChat = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
   document.getElementById('link-chat').textContent = linkChat;
   document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
-  document.getElementById('codigo-vinculacion').textContent = negocioActual.codigoVinculacion || '(no disponible)';
+  // el vínculo con Mi Zona va implícito en el enlace: la persona no ve ni copia ningún código
   document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
   document.getElementById('link-invitar').textContent = `${window.location.origin}/registro.html`;
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
@@ -3109,3 +3042,17 @@ function htmlTendencias(d) {
   partes.push('<p class="ayuda" style="margin-top:12px;">Los pedidos y turnos de prueba no se cuentan. Todo se calcula en el momento con tus datos.</p>');
   return partes.join('');
 }
+
+
+// Barra selector: mueve el "deslizador" a la opción activa (se apoya en data-i + CSS)
+function posicionarSelectores() {
+  document.querySelectorAll('.seg').forEach((seg) => {
+    const opciones = [...seg.querySelectorAll('button')].filter((b) => b.style.display !== 'none');
+    const idx = Math.max(0, opciones.findIndex((b) => b.classList.contains('activo')));
+    seg.dataset.i = idx;
+    seg.style.setProperty('--n', opciones.length);
+  });
+}
+document.addEventListener('click', (e) => { if (e.target.closest('.seg button')) setTimeout(posicionarSelectores, 0); });
+window.addEventListener('DOMContentLoaded', posicionarSelectores);
+setInterval(posicionarSelectores, 1200); // cubre cuando un botón se oculta/muestra según el tipo de negocio

@@ -112,8 +112,7 @@ router.post('/', async (req, res) => {
     });
 
     const respuesta = {
-      mensaje: 'Negocio registrado. Guardá tu código de administración como respaldo, aunque hayas vinculado Google.',
-      codigoAdmin: negocio.codigoAdmin,
+      mensaje: 'Negocio registrado.',
       codigoPublico: negocio.codigoPublico,
       codigoVinculacion: negocio.codigoVinculacion,
     };
@@ -162,7 +161,9 @@ router.delete('/fotos/:publicId', requiereAdmin, async (req, res) => {
 
 // GET /api/negocios/mi-negocio -> datos del negocio autenticado (para el panel admin)
 router.get('/mi-negocio', requiereAdmin, async (req, res) => {
-  res.json(req.negocio);
+  const datos = req.negocio.toObject();
+  delete datos.codigoAdmin; // ya no se usa: el acceso es solo con la cuenta de Google
+  res.json(datos);
 });
 
 // PUT /api/negocios/mi-negocio -> actualiza info, horarios o personalidad

@@ -2,9 +2,8 @@ const Negocio = require('../models/Negocio');
 const Usuario = require('../models/Usuario');
 const { verificarToken } = require('../utils/jwt');
 
-// Protege las rutas de administración. Acepta dos formas de identificarse:
-// 1) Header "x-codigo-admin" con el código admin (forma clásica, sigue funcionando)
-// 2) Header "Authorization: Bearer <token>" con la sesión que se genera al loguearse con Google
+// Protege las rutas de administración. Se identifica solo con la sesión de la cuenta:
+// Header "Authorization: Bearer <token>" (se genera al iniciar sesión con Google o correo).
 async function requiereAdmin(req, res, next) {
   try {
     const authHeader = req.headers['authorization'];
@@ -29,18 +28,7 @@ async function requiereAdmin(req, res, next) {
       return next();
     }
 
-    const codigo = req.headers['x-codigo-admin'];
-    if (!codigo) {
-      return res.status(401).json({ error: 'Falta autenticación (código de administración o sesión)' });
-    }
-
-    const negocio = await Negocio.findOne({ codigoAdmin: codigo });
-    if (!negocio) {
-      return res.status(403).json({ error: 'Código de administración inválido' });
-    }
-
-    req.negocio = negocio;
-    next();
+    return res.status(401).json({ error: 'Iniciá sesión con tu cuenta para continuar' });
   } catch (error) {
     console.error('Error en requiereAdmin:', error);
     res.status(500).json({ error: 'Error de autenticación' });

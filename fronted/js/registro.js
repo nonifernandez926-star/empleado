@@ -3,7 +3,6 @@ const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 's
 let categoriasData = [];
 let categoriaSeleccionada = null;
 let subrubroSeleccionado = null;
-let googleIdTokenCapturado = null;
 let pasoActual = 1;
 
 // Muestra un único paso a la vez (los otros quedan completamente ocultos, sin poder
@@ -23,22 +22,6 @@ document.getElementById('btn-volver-registro').addEventListener('click', (e) => 
     mostrarPaso(pasoActual - 1);
   }
   // si ya estamos en el Paso 1, dejamos que el link navegue normalmente a index.html
-});
-
-window.addEventListener('DOMContentLoaded', () => {
-  const bloqueG = document.getElementById('boton-google-registro'); if (bloqueG) { const t = bloqueG.previousElementSibling; const a = t && t.previousElementSibling; [a, t, bloqueG, document.getElementById('estado-google-registro')].forEach((el) => el && (el.style.display = 'none')); }
-  if (false && GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.startsWith('TU_CLIENT_ID')) {
-    esperarGoogleListo(() => {
-      google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (respuesta) => {
-          googleIdTokenCapturado = respuesta.credential;
-          document.getElementById('estado-google-registro').textContent = '✅ Cuenta de Google vinculada correctamente.';
-        },
-      });
-      google.accounts.id.renderButton(document.getElementById('boton-google-registro'), { theme: 'outline', size: 'large', width: 280 });
-    });
-  }
 });
 
 // Ícono + color por categoría (mismo estilo que el resto del panel)
@@ -345,7 +328,7 @@ function recolectarHorarios() {
   });
 }
 
-async function subirUnaFoto(codigoAdmin, archivo, categoria) {
+async function subirUnaFoto(archivo, categoria) {
   if (!archivo) return;
   const formDataFoto = new FormData();
   formDataFoto.append('foto', archivo);
@@ -353,7 +336,7 @@ async function subirUnaFoto(codigoAdmin, archivo, categoria) {
   try {
     await fetch(`${API_URL}/negocios/fotos`, {
       method: 'POST',
-      headers: { 'x-codigo-admin': codigoAdmin },
+      headers: { Authorization: `Bearer ${localStorage.getItem('jwtToken')}` },
       body: formDataFoto,
     });
   } catch (error) {
@@ -362,14 +345,14 @@ async function subirUnaFoto(codigoAdmin, archivo, categoria) {
   }
 }
 
-async function subirFotosDelRegistro(codigoAdmin) {
+async function subirFotosDelRegistro() {
   const logo = document.getElementById('input-logo')?.files[0];
   const menuFoto1 = document.getElementById('input-menu-foto-1')?.files[0];
   const menuFoto2 = document.getElementById('input-menu-foto-2')?.files[0];
 
-  await subirUnaFoto(codigoAdmin, logo, 'logo');
-  await subirUnaFoto(codigoAdmin, menuFoto1, 'menu');
-  await subirUnaFoto(codigoAdmin, menuFoto2, 'menu');
+  await subirUnaFoto(logo, 'logo');
+  await subirUnaFoto(menuFoto1, 'menu');
+  await subirUnaFoto(menuFoto2, 'menu');
 }
 
 document.getElementById('form-negocio').addEventListener('submit', async (e) => {
@@ -392,7 +375,6 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
       estilo: document.getElementById('personalidad-estilo').value,
       descripcionLibre: document.getElementById('personalidad-libre').value,
     },
-    googleIdToken: googleIdTokenCapturado || undefined,
     atencionSoloEnHorario: document.getElementById('atencion-solo-horario').checked,
   };
 
@@ -404,7 +386,11 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
     };
   }
 
-  const resultadoDiv = document.getElementById('resultado');
+  const errorDiv = document.getElementById('error-registro');
+  const botonCrear = e.target.querySelector('button[type="submit"]');
+  errorDiv.innerHTML = '';
+  botonCrear.disabled = true;
+  botonCrear.textContent = 'Creando tu asistente...';
 
   try {
     const res = await fetch(`${API_URL}/negocios`, {
@@ -416,9 +402,9 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
 
     if (!res.ok) {
       if (data.error === 'negocio_ya_existe') {
-        resultadoDiv.style.display = 'block';
-        resultadoDiv.innerHTML = `<div class="error-msg">${data.mensaje} <a href="admin.html">Iniciar sesión</a></div>`;
-        resultadoDiv.scrollIntoView({ behavior: 'smooth' });
+        errorDiv.innerHTML = `<div class="error-msg">${data.mensaje} <a href="admin.html">Ir a mi panel</a></div>`;
+        botonCrear.disabled = false;
+        botonCrear.textContent = 'Crear mi asistente (modo prueba gratis)';
         return;
       }
       throw new Error(data.mensaje || data.error || 'Error al crear el asistente');
@@ -428,35 +414,28 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
       localStorage.setItem('jwtToken', data.token); // así entra directo al panel sin loguearse de nuevo
     }
 
-    // Subimos el logo y las fotos del menú, si el dueño cargó alguna, usando el código admin recién generado
-    await subirFotosDelRegistro(data.codigoAdmin);
+    // Logo y fotos del menú (si el dueño cargó alguna): se suben con su sesión
+    await subirFotosDelRegistro();
 
-    resultadoDiv.style.display = 'block';
-    resultadoDiv.innerHTML = `
-      <div class="exito">¡Tu asistente fue creado en modo prueba!</div>
-      ${data.googleVinculado ? '<p>Tu cuenta de Google ya está vinculada, vas a poder entrar a tu panel directamente.</p>' : ''}
-      <p>Guardá este código como respaldo, no se puede recuperar después:</p>
-      <p><strong>Código de administración</strong> (privado, es tu llave para el panel):</p>
-      <div class="codigo-box">${data.codigoAdmin}</div>
-
-      <div class="acciones-edicion" style="margin-top:18px;">
-        <a class="btn" href="chat.html?codigo=${data.codigoPublico}">Probar mi asistente</a>
-        <a class="btn secundario" href="admin.html">Ir a mi panel</a>
-      </div>
-
-      <div class="mensaje-info" style="margin-top:20px;">
-        <strong>¿Ya usás Mi Zona?</strong> Registrá ahí tu negocio para que tus clientes lo encuentren, y vinculalo con este asistente usando el código de abajo cuando Mi Zona te pregunte si querés pegar un código en vez de descargar.
-      </div>
-      <p><strong>Código de vinculación con Mi Zona:</strong></p>
-      <div class="codigo-box">${data.codigoVinculacion}</div>
-      <a class="btn secundario ancho" href="${MI_ZONA_URL}?codigo=${data.codigoVinculacion}" target="_blank">Registrar mi negocio en Mi Zona</a>
-    `;
-    resultadoDiv.scrollIntoView({ behavior: 'smooth' });
+    mostrarPantallaExito(data);
   } catch (error) {
-    resultadoDiv.style.display = 'block';
-    resultadoDiv.innerHTML = `<div class="error-msg">${error.message}</div>`;
+    errorDiv.innerHTML = `<div class="error-msg">${error.message}</div>`;
+    botonCrear.disabled = false;
+    botonCrear.textContent = 'Crear mi asistente (modo prueba gratis)';
   }
 });
+
+// Pantalla aparte: oculta por completo el formulario y muestra solo el resultado
+function mostrarPantallaExito(data) {
+  document.getElementById('pantalla-registro').style.display = 'none';
+  document.getElementById('exito-probar').href = `chat.html?codigo=${data.codigoPublico}`;
+  // El vínculo con Mi Zona se hace solo: la persona ya no ve ni copia ningún código
+  document.getElementById('exito-mizona').href = `${MI_ZONA_URL}?codigo=${data.codigoVinculacion}`;
+  const pantalla = document.getElementById('pantalla-exito');
+  pantalla.style.display = 'flex';
+  window.scrollTo(0, 0);
+  history.replaceState(null, '', 'registro.html');
+}
 
 renderizarMotivosTurno();
 cargarRubros();
