@@ -23,6 +23,9 @@ const authRoutes = require('./routes/auth');
 const vinculacionRoutes = require('./routes/vinculacion');
 const integracionRoutes = require('./routes/integracion');
 const agendaRoutes = require('./routes/agenda');
+const cuentaRoutes = require('./routes/cuenta');
+const soporteRoutes = require('./routes/soporte');
+const { revisarVencimientos } = require('./utils/avisos');
 
 const app = express();
 
@@ -56,9 +59,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/vinculacion', vinculacionRoutes);
 app.use('/api/integracion', integracionRoutes);
 app.use('/api/agenda', agendaRoutes);
+app.use('/api/cuenta', cuentaRoutes);
+app.use('/api/soporte', soporteRoutes);
 
 const PORT = process.env.PORT || 5000;
 
 connectDB().then(() => {
   app.listen(PORT, () => console.log(`🚀 Servidor corriendo en el puerto ${PORT}`));
+  // Avisos de vencimiento de suscripción al celular del dueño (7, 3 y 1 día antes, y al vencer): una sola vez por umbral
+  setTimeout(revisarVencimientos, 60 * 1000);
+  setInterval(revisarVencimientos, 6 * 60 * 60 * 1000).unref();
 });

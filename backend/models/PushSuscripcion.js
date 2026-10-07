@@ -8,6 +8,7 @@ const pushSuscripcionSchema = new mongoose.Schema({
   sesionClienteId: { type: String, required: true, index: true },
   endpoint: { type: String, required: true },
   subscription: { type: mongoose.Schema.Types.Mixed, required: true }, // objeto completo que pide web-push
+  dispositivo: { type: String, default: '' }, // solo para dispositivos del dueño: "Chrome en Android"
 }, { timestamps: true });
 
 // Un mismo cliente puede tener más de un dispositivo/navegador suscripto para el mismo negocio,

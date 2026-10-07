@@ -163,6 +163,11 @@ const negocioSchema = new mongoose.Schema({
     },
   },
 
+  // Qué avisos recibe el dueño en el celular (pedidos, turnos, reseñas, etc.). Vacío = todos prendidos.
+  notificaciones: { type: mongoose.Schema.Types.Mixed, default: {} },
+  // Último umbral de vencimiento ya avisado por push, para no repetir el mismo aviso.
+  avisosVencimiento: { type: String, default: '' },
+
   activo: { type: Boolean, default: true },
 }, { timestamps: true });
 

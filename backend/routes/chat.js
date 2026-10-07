@@ -1,4 +1,5 @@
 const express = require('express');
+const { avisarDueno } = require('../utils/avisos');
 const router = express.Router();
 const Negocio = require('../models/Negocio');
 const Conversacion = require('../models/Conversacion');
@@ -179,6 +180,9 @@ router.post('/:codigoPublico', async (req, res) => {
       const yaExiste = await PreguntaFrecuente.findOne({ negocioId: negocio._id, pregunta: mensaje.trim() });
       if (!yaExiste) {
         await PreguntaFrecuente.create({ negocioId: negocio._id, pregunta: mensaje.trim() });
+        if (!negocio.esPruebaActual) {
+          avisarDueno(negocio._id, 'preguntas', { titulo: 'Tu asistente no supo responder algo', cuerpo: mensaje.trim().slice(0, 110), url: '/admin.html?ir=preguntas' });
+        }
       }
     }
 

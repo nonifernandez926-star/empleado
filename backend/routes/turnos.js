@@ -33,7 +33,7 @@ router.get('/disponibilidad', requiereAdmin, async (req, res) => {
     });
 
     const horarios = calcularHorariosDisponibles({
-      negocio: req.negocio,
+      negocio: (() => { const o = req.negocio.toObject(); delete o.codigoAdmin; return o; })(),
       fecha,
       duracionMinutos,
       profesional: profesional || '',

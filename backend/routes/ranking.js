@@ -103,7 +103,7 @@ router.put('/config', requiereAdmin, async (req, res) => {
     }
 
     await req.negocio.save();
-    res.json({ mensaje: 'Configuración guardada', negocio: req.negocio });
+    res.json({ mensaje: 'Configuración guardada', negocio: (() => { const o = req.negocio.toObject(); delete o.codigoAdmin; return o; })() });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al guardar la configuración del ranking' });

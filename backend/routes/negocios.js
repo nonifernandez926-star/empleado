@@ -189,7 +189,7 @@ router.put('/mi-negocio', requiereAdmin, async (req, res) => {
     }
 
     await req.negocio.save();
-    res.json({ mensaje: 'Negocio actualizado correctamente', negocio: req.negocio });
+    res.json({ mensaje: 'Negocio actualizado correctamente', negocio: (() => { const o = req.negocio.toObject(); delete o.codigoAdmin; return o; })() });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar el negocio' });

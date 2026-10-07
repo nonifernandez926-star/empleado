@@ -10,6 +10,7 @@ const { ahoraArgentina } = require('../utils/fila');
 const { perfilAgenda } = require('../utils/agendaPerfiles');
 const { interpretar, responderSobreAgenda } = require('../utils/agendaIA');
 const { enviarPush } = require('../utils/push');
+const { prefsDe } = require('../utils/avisos');
 
 // Suscripción push del DUEÑO (no de un cliente): mismo modelo que ya existía para avisarle
 // a los clientes, pero con este sesionClienteId fijo para distinguirlas.
@@ -310,10 +311,11 @@ router.post('/recordatorios/enviar-push', async (req, res) => {
       return res.status(401).json({ error: 'No autorizado.' });
     }
 
-    const negocios = await Negocio.find({ 'suscripcion.estado': { $in: ['prueba', 'activa'] } }).select('_id formData');
+    const negocios = await Negocio.find({ 'suscripcion.estado': { $in: ['prueba', 'activa'] } }).select('_id formData notificaciones');
     let enviados = 0;
 
     for (const negocio of negocios) {
+      if (prefsDe(negocio).agenda === false) continue; // el dueño apagó los avisos de agenda: queda para el panel
       const debidos = await buscarRecordatoriosDebidos(negocio._id);
       if (!debidos.length) continue;
 

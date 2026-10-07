@@ -410,3 +410,13 @@ Pestaña **Agenda** del panel: un centro de organización personal del dueño, q
 ## Integración con Mi Zona
 
 Rutas privadas `/api/integracion/*`, protegidas con `INTEGRACION_KEY` (la misma clave en los dos servidores): `cuenta`, `estado-asistentes` y `conversaciones-cliente`. Las conversaciones de los clientes nunca se borran al vencer la suscripción: al renovar, el asistente retoma el historial.
+
+---
+
+## Centro de notificaciones, avisos al celular y Ajustes (v3)
+
+- **Notificaciones del dueño** (campana): el servidor arma la lista en `GET /api/cuenta/novedades` a partir de datos reales (pedidos, comprobantes, turnos, reseñas, preguntas sin responder, suscripción, respuestas de soporte, accesos). El panel solo guarda en el celular qué avisos leíste o borraste. Se actualiza solo cada 40 s y al volver a la pestaña.
+- **Avisos al celular (push) para el dueño:** se activan por dispositivo en Ajustes → Notificaciones. Usan la misma tabla de dispositivos que ya usaban los recordatorios de la Agenda (`PushSuscripcion` con `sesionClienteId: '__dueno__'`) y requieren las claves VAPID. Cada tipo de aviso se puede apagar (`Negocio.notificaciones`). Los vencimientos de suscripción (7, 3, 1 día y al vencer) se revisan cada 6 h dentro del propio servidor (`utils/avisos.js`); en planes gratuitos de hosting que duermen el servidor, conviene tenerlo despierto.
+- **Ajustes:** Mi cuenta, Notificaciones, Apariencia (tema claro/oscuro/automático, 6 colores de acento, tamaño de texto, reducir animaciones; se guarda en el dispositivo), Seguridad (cambiar contraseña, cerrar las demás sesiones, actividad de 90 días), Privacidad (memoria de clientes, qué se guarda, descargar y borrar datos), Centro de ayuda (`frontend/js/ayuda-contenido.js`), Soporte (consultas con respuesta; panel del equipo en `/api/soporte/panel`) y Acerca de (`frontend/js/legal.js`: texto base de términos y privacidad, **conviene que lo revise un abogado**).
+- **Rutas nuevas:** `/api/cuenta/*`, `/api/soporte/*`, `/api/push/dueno/*`.
+- **Seguridad:** al vincular con Google una cuenta que ya existía con correo, se borra la contraseña anterior y se cierran sus sesiones. Ninguna respuesta de la API devuelve ya el código de administración.

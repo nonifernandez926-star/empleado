@@ -1,4 +1,5 @@
 const express = require('express');
+const { avisarDueno } = require('../utils/avisos');
 const router = express.Router();
 const Negocio = require('../models/Negocio');
 const Cliente = require('../models/Cliente');
@@ -38,6 +39,8 @@ router.post('/:codigoPublico', async (req, res) => {
       estrellas: estrellasNum,
     });
 
+    avisarDueno(negocio._id, 'resenas', { titulo: `Nueva calificación: ${'★'.repeat(estrellasNum)}${'☆'.repeat(5 - estrellasNum)}`, cuerpo: (cliente && cliente.nombre ? cliente.nombre + ' calificó tu atención.' : 'Un cliente calificó tu atención.'), url: '/admin.html?ir=resenas' });
+
     res.status(201).json({ resenaId: resena._id, preguntaSeguimiento: preguntaSeguimiento(estrellasNum) });
   } catch (error) {
     console.error(error);
@@ -65,6 +68,7 @@ router.put('/:codigoPublico/:resenaId', async (req, res) => {
     );
     if (!resena) return res.status(404).json({ error: 'Reseña no encontrada' });
 
+    avisarDueno(negocio._id, 'resenas', { titulo: `Comentario nuevo (${resena.estrellas} ★)`, cuerpo: comentario.trim().slice(0, 120), url: '/admin.html?ir=resenas' });
     res.json({ mensaje: '¡Gracias por contarnos! 💙' });
   } catch (error) {
     console.error(error);

@@ -6,6 +6,7 @@ const Cliente = require('../models/Cliente');
 const PreguntaFrecuente = require('../models/PreguntaFrecuente');
 const { calcularHorariosDisponibles } = require('./turnos');
 const { calcularTop10 } = require('../routes/ranking');
+const { avisarDueno } = require('./avisos');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
@@ -399,6 +400,16 @@ async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
     estadoPago: esTransferencia ? 'esperando_comprobante' : 'no_aplica',
   });
 
+  // Aviso al celular del dueño (no bloquea la respuesta al cliente)
+  if (!pedido.esPrueba) {
+    const cant = items.reduce(function (a, i) { return a + i.cantidad; }, 0);
+    avisarDueno(negocio._id, 'pedidos', {
+      titulo: 'Pedido nuevo de ' + input.nombreCliente,
+      cuerpo: cant + (cant === 1 ? ' producto' : ' productos') + (total ? ' · $' + total.toLocaleString('es-AR') : '') + ' · ' + (input.tipoEntrega === 'delivery' ? 'delivery' : 'retira en el local'),
+      url: '/admin.html?ir=pedidos',
+    });
+  }
+
   // Actualizamos (o creamos) el perfil de cliente recurrente para este negocio,
   // salvo que el dueño haya apagado la memoria de clientes.
   if (negocio.memoriaActiva !== false) {
@@ -495,6 +506,14 @@ async function ejecutarRegistrarTurno(negocio, sesionClienteId, input) {
       return { error: 'Justo se ocupo ese horario mientras hablabamos. Consulta turnos disponibles de nuevo y ofrecele otro al cliente.' };
     }
     throw error;
+  }
+
+  if (!turno.esPrueba) {
+    avisarDueno(negocio._id, 'turnos', {
+      titulo: turno.estado === 'pendiente' ? 'Turno por confirmar: ' + input.nombreCliente : 'Turno nuevo: ' + input.nombreCliente,
+      cuerpo: input.fecha + ' · ' + input.hora + ' hs' + (input.motivo ? ' · ' + input.motivo : ''),
+      url: '/admin.html?ir=agenda',
+    });
   }
 
   if (negocio.memoriaActiva !== false) {

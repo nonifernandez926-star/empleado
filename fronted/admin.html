@@ -10,7 +10,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="js/apariencia.js"></script>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/ajustes.css">
 </head>
 <body>
   <!-- Sin sesión, el panel redirige al acceso con Google (index.html) -->
@@ -865,10 +867,18 @@
 
       <!-- AJUSTES -->
       <section id="seccion-ajustes" class="app-seccion" style="display:none;">
-                <div class="lista-grupo">
+        <div class="lista-grupo">
           <div class="lista-grupo-cabecera"><h3>Cuenta y plan</h3></div>
           <div class="list-card">
           <div class="list-card-item">
+          <button class="list-row" data-fullscreen="panel-cuenta" data-titulo="Mi cuenta">
+            <div class="list-row-icono ic-azul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+            <div class="list-row-texto"><strong>Mi cuenta</strong><span>Tus datos, tu negocio y tu actividad.</span></div>
+            <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+          </button>
+          <div class="list-row-panel" id="panel-cuenta"></div>
+          </div>
+<div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-suscripcion" data-titulo="Mi suscripción">
             <div class="list-row-icono ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
             <div class="list-row-texto">
@@ -881,7 +891,7 @@
             <div id="suscripcion-contenido"></div>
           </div>
           </div>
-          <div class="list-card-item">
+<div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-planes" data-titulo="Plan y facturación">
             <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"  style="vertical-align:middle"><path d="M12 2.5l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 18.5l-6.18 3 1.18-6.87-5-4.87 6.91-1L12 2.5Z"/></svg></div>
             <div class="list-row-texto">
@@ -898,16 +908,6 @@
             <div id="pago-msg"></div>
           </div>
           </div>
-          <div class="list-card-item">
-          <div class="list-row deshabilitada">
-            <div class="list-row-icono ic-gris"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Usuarios y accesos</strong>
-              <span>Sumar más personas a tu panel.</span>
-            </div>
-            <span class="pill-proximamente">Próximamente</span>
-          </div>
-          </div>
           </div>
         </div>
 
@@ -915,70 +915,72 @@
           <div class="lista-grupo-cabecera"><h3>Preferencias</h3></div>
           <div class="list-card">
           <div class="list-card-item">
-          <div class="list-row deshabilitada">
-            <div class="list-row-icono ic-gris"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Notificaciones</strong>
-              <span>Configuración de alertas del panel.</span>
-            </div>
-            <span class="pill-proximamente">Próximamente</span>
-          </div>
-          </div>
-          </div>
-        </div>
-
-        <div class="lista-grupo">
-          <div class="lista-grupo-cabecera"><h3>Comunidad</h3></div>
-          <div class="list-card">
-          <div class="list-card-item">
-          <button class="list-row" data-fullscreen="panel-invitar" data-titulo="Invitá a otros negocios">
-            <div class="list-row-icono ic-rosado"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Invitá a otros negocios</strong>
-              <span>Compartí el link para que otro dueño lo pruebe.</span>
-            </div>
+          <button class="list-row" data-fullscreen="panel-notificaciones" data-titulo="Notificaciones">
+            <div class="list-row-icono ic-violeta"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+            <div class="list-row-texto"><strong>Notificaciones</strong><span>Qué avisos recibís y dónde.</span></div>
             <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
           </button>
-          <div class="list-row-panel" id="panel-invitar">
-            <p class="ayuda">Mandale este link a otro dueño de negocio para que cree su propio asistente.</p>
-            <div class="codigo-box" id="link-invitar"></div>
-            <button class="btn secundario ancho" id="btn-copiar-invitar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar enlace</button>
+          <div class="list-row-panel" id="panel-notificaciones"></div>
           </div>
+          <div class="list-card-item">
+          <button class="list-row" data-fullscreen="panel-apariencia" data-titulo="Apariencia">
+            <div class="list-row-icono ic-naranja"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 22a10 10 0 1 1 10-10c0 3-2 4-4.5 4H15a2 2 0 0 0-1.4 3.4A2 2 0 0 1 12 22z"/></svg></div>
+            <div class="list-row-texto"><strong>Apariencia</strong><span>Tema, color y tamaño del texto.</span></div>
+            <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+          </button>
+          <div class="list-row-panel" id="panel-apariencia"></div>
           </div>
           </div>
         </div>
 
         <div class="lista-grupo">
-          <div class="lista-grupo-cabecera"><h3>Ayuda y legal</h3></div>
+          <div class="lista-grupo-cabecera"><h3>Seguridad y datos</h3></div>
           <div class="list-card">
+          <div class="list-card-item">
+          <button class="list-row" data-fullscreen="panel-seguridad" data-titulo="Seguridad">
+            <div class="list-row-icono ic-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <div class="list-row-texto"><strong>Seguridad</strong><span>Contraseña, sesiones y actividad.</span></div>
+            <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+          </button>
+          <div class="list-row-panel" id="panel-seguridad"></div>
+          </div>
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-privacidad" data-titulo="Privacidad">
-            <div class="list-row-icono ic-indigo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 11 4.6-2.3 8-6 8-11V5Z"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Privacidad</strong>
-              <span>Qué datos guardamos y cómo se usan.</span>
-            </div>
+            <div class="list-row-icono ic-violeta"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+            <div class="list-row-texto"><strong>Privacidad</strong><span>Tus datos: ver, descargar o borrar.</span></div>
             <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
           </button>
-          <div class="list-row-panel" id="panel-privacidad">
-            <p>Guardamos las conversaciones de tu chat, los pedidos y turnos que se registran, y las fotos que subís, únicamente para que tu asistente funcione: recordar clientes (si tenés la memoria activada), calcular tus estadísticas y mostrarte pedidos/turnos/reseñas en el panel.</p>
-            <p>No vendemos ni compartimos tus datos ni los de tus clientes con terceros.</p>
-            <p>Podés apagar en cualquier momento que el asistente recuerde a tus clientes desde <strong>Negocio → Vendedor y memoria</strong>. Eso no borra lo ya guardado, pero deja de usarlo y de guardar nada nuevo.</p>
-            <p class="ayuda">Si querés que eliminemos datos ya guardados de tu negocio, escribinos desde Centro de ayuda.</p>
+          <div class="list-row-panel" id="panel-privacidad"></div>
           </div>
           </div>
+        </div>
+
+        <div class="lista-grupo">
+          <div class="lista-grupo-cabecera"><h3>Ayuda</h3></div>
+          <div class="list-card">
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-ayuda" data-titulo="Centro de ayuda">
-            <div class="list-row-icono ic-celeste"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Centro de ayuda</strong>
-              <span>Preguntas frecuentes y soporte.</span>
-            </div>
+            <div class="list-row-icono ic-celeste"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4M12 17h.01"/></svg></div>
+            <div class="list-row-texto"><strong>Centro de ayuda</strong><span>Respuestas a las dudas más comunes.</span></div>
             <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
           </button>
-          <div class="list-row-panel" id="panel-ayuda">
-            <a href="#" id="link-ayuda" class="btn secundario ancho">Contactar soporte</a>
+          <div class="list-row-panel" id="panel-ayuda"></div>
           </div>
+          <div class="list-card-item">
+          <button class="list-row" data-fullscreen="panel-soporte" data-titulo="Soporte">
+            <div class="list-row-icono ic-violeta"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg></div>
+            <div class="list-row-texto"><strong>Soporte</strong><span>Escribinos y mirá tus consultas.</span></div>
+            <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+          </button>
+          <div class="list-row-panel" id="panel-soporte"></div>
+          </div>
+          <div class="list-card-item">
+          <button class="list-row" data-fullscreen="panel-acerca" data-titulo="Acerca de Mi Asistente">
+            <div class="list-row-icono ic-azul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+            <div class="list-row-texto"><strong>Acerca de Mi Asistente</strong><span>Versión, términos y privacidad.</span></div>
+            <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
+          </button>
+          <div class="list-row-panel" id="panel-acerca"></div>
           </div>
           </div>
         </div>
@@ -1008,6 +1010,17 @@
       <div class="tarjeta" id="pantalla-completa-contenido"></div>
     </div>
 
+    <!-- Centro de notificaciones (se abre con la campana) -->
+    <div id="pantalla-notificaciones" aria-hidden="true">
+      <div class="nt-cabecera">
+        <button class="app-topbar-btn-claro" id="nt-volver" aria-label="Volver"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
+        <div class="nt-titulo"><strong>Notificaciones</strong><span id="nt-sub">Estás al día</span></div>
+        <button class="nt-marcar" id="nt-marcar" style="display:none">Marcar todas</button>
+      </div>
+      <div class="nt-chips" id="nt-chips"></div>
+      <div class="nt-cuerpo" id="nt-contenido"></div>
+    </div>
+
     <!-- Navegación inferior -->
     <nav class="app-navbar">
       <button class="app-navbar-item activo" data-seccion="inicio">
@@ -1034,5 +1047,10 @@
   <script src="js/config.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/agenda.js"></script>
+  <script src="js/ui-extra.js"></script>
+  <script src="js/legal.js"></script>
+  <script src="js/ayuda-contenido.js"></script>
+  <script src="js/notificaciones.js"></script>
+  <script src="js/ajustes.js"></script>
 </body>
 </html>

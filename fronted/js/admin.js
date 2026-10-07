@@ -54,8 +54,9 @@ async function intentarSesionGuardada() {
   }
 }
 
-function cerrarSesion(e) {
+async function cerrarSesion(e) {
   if (e) e.preventDefault();
+  try { if (typeof avDesactivarPush === 'function' && jwtTokenActual) await Promise.race([avDesactivarPush(), new Promise((r) => setTimeout(r, 2500))]); } catch (err) { /* si falla, igual se cierra la sesión */ }
   localStorage.removeItem('jwtToken');
   jwtTokenActual = null;
   negocioActual = null;
@@ -99,23 +100,11 @@ window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.drawer-nav-item[data-seccion]').forEach((btn) => {
     btn.addEventListener('click', () => { mostrarSeccion(btn.dataset.seccion); cerrarDrawer(); });
   });
-  document.getElementById('drawer-ayuda').addEventListener('click', () => {
-    cerrarDrawer();
-    document.getElementById('link-ayuda').click();
-  });
-  document.getElementById('drawer-soporte').addEventListener('click', () => {
-    cerrarDrawer();
-    document.getElementById('link-ayuda').click();
-  });
+  document.getElementById('drawer-ayuda').addEventListener('click', () => { cerrarDrawer(); mostrarSeccion('ajustes'); ajAbrirFS('panel-ayuda'); });
+  document.getElementById('drawer-soporte').addEventListener('click', () => { cerrarDrawer(); mostrarSeccion('ajustes'); ajAbrirFS('panel-soporte'); });
   document.getElementById('drawer-cerrar-sesion').addEventListener('click', cerrarSesion);
 
-  // La campana lleva directo a Pedidos, filtrados por "Pendientes"
-  document.getElementById('btn-campana').addEventListener('click', () => {
-    mostrarSeccion('pedidos');
-    const idTabs = negocioActual?.tipoOperacion === 'turnos' ? 'tabs-turnos' : 'tabs-pedidos';
-    const tabPendientes = document.querySelector(`#${idTabs} .tab-pill[data-filtro="pendiente"]`);
-    if (tabPendientes) tabPendientes.click();
-  });
+  // La campana abre el centro de notificaciones (ver js/notificaciones.js)
 
   // El avatar abre el modal para cambiar la foto de perfil (el menú se abre con el ☰)
   document.getElementById('avatar-topbar').addEventListener('click', abrirModalFoto);
@@ -126,16 +115,13 @@ window.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.list-row[data-fullscreen]').forEach((fila) => {
     fila.addEventListener('click', () => abrirPantallaCompleta(fila.dataset.fullscreen, fila.dataset.titulo));
   });
-  document.getElementById('btn-cerrar-pantalla-completa').addEventListener('click', cerrarPantallaCompleta);
+  document.getElementById('btn-cerrar-pantalla-completa').addEventListener('click', () => {
+    if (typeof ajVolver === 'function' && ajVolver()) return; // estaba dentro de una subpantalla (ej. Seguridad → Contraseña)
+    cerrarPantallaCompleta();
+  });
 
   // Copiar enlace de chat con un botón (en vez de seleccionar texto a mano)
   document.getElementById('btn-copiar-link').addEventListener('click', () => copiarAlPortapapeles('link-chat', 'btn-copiar-link', '📋 Copiar enlace'));
-  document.getElementById('btn-copiar-invitar')?.addEventListener('click', () => copiarAlPortapapeles('link-invitar', 'btn-copiar-invitar', 'Copiar enlace'));
-
-  document.getElementById('link-ayuda').addEventListener('click', (e) => {
-    e.preventDefault();
-    alert('¿Necesitás ayuda? Escribinos a soporte@tudominio.com o por WhatsApp al [tu número de soporte].');
-  });
 
   document.getElementById('link-cerrar-sesion').addEventListener('click', cerrarSesion);
 
@@ -231,7 +217,6 @@ async function mostrarPanel() {
   document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
   // el vínculo con Mi Zona va implícito en el enlace: la persona no ve ni copia ningún código
   document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
-  document.getElementById('link-invitar').textContent = `${window.location.origin}/registro.html`;
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
 
@@ -274,6 +259,7 @@ async function mostrarPanel() {
   cargarResumenDiario();
   cargarPreguntasFrecuentes();
   iniciarNotificacionesPedidos();
+  if (typeof ntIniciar === 'function') ntIniciar();
   if (typeof iniciarRecordatoriosAgenda === 'function') iniciarRecordatoriosAgenda();
   cargarDefinicionCampos();
 
@@ -862,15 +848,9 @@ let filtroPedidoActual = 'todos';
 let busquedaPedidoActual = '';
 
 function actualizarBadgeCampana(pedidos) {
+  // El número de la campana lo maneja el centro de notificaciones; acá solo se actualiza el aviso del inicio.
   const pendientes = pedidos.filter((p) => p.estado === 'pendiente').length;
   actualizarAtencionInicio(pendientes);
-  const badge = document.getElementById('badge-campana');
-  if (pendientes > 0) {
-    badge.textContent = pendientes > 9 ? '9+' : pendientes;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
 }
 
 function reproducirSonidoAviso() {
@@ -913,10 +893,6 @@ function mostrarNotificacionFlotante(texto) {
 }
 
 function iniciarNotificacionesPedidos() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-
   const esTurnos = negocioActual.tipoOperacion === 'turnos';
 
   setInterval(async () => {
@@ -935,8 +911,7 @@ function iniciarNotificacionesPedidos() {
 
       if (masReciente._id !== ultimoPedidoIdVisto) {
         ultimoPedidoIdVisto = masReciente._id;
-        reproducirSonidoAviso();
-        mostrarNotificacionFlotante(esTurnos ? `Turno nuevo de ${masReciente.nombreCliente}` : `Pedido nuevo de ${masReciente.nombreCliente}`);
+        // el aviso en pantalla lo muestra el centro de notificaciones; acá solo se actualizan las listas
         if (esTurnos) { cargarTurnos(); } else { cargarPedidos(); }
         cargarResumenDiario();
       }
@@ -2345,6 +2320,7 @@ function abrirPantallaCompleta(panelId, titulo) {
       <div class="fs-hero-texto">${escHtml(descripcion ? descripcion.textContent : '')}</div>
     </div>` : '';
 
+  if (typeof ajRenderPanel === 'function') ajRenderPanel(panelId, panel);
   if (panelId === 'panel-ranking') renderizarBloquesRanking(true);
   if (panelId === 'panel-tendencias') cargarTendencias();
   document.getElementById('pantalla-completa').style.display = 'block';
@@ -2353,6 +2329,7 @@ function abrirPantallaCompleta(panelId, titulo) {
 }
 
 function cerrarPantallaCompleta() {
+  if (typeof ajReset === 'function') ajReset();
   document.getElementById('pantalla-completa').style.display = 'none';
   if (panelAbiertoActualId) {
     const panel = document.getElementById(panelAbiertoActualId);

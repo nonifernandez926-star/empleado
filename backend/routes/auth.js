@@ -6,6 +6,13 @@ const Usuario = require('../models/Usuario');
 const { generarToken, generarTokenUsuario, verificarToken } = require('../utils/jwt');
 const { hashearContrasena, verificarContrasena } = require('../utils/contrasenas');
 const { permitir, olvidar } = require('../utils/limitador');
+const ActividadSeguridad = require('../models/ActividadSeguridad');
+const { nombreDispositivo } = require('../utils/dispositivo');
+
+// Deja anotado en el historial de seguridad cada inicio de sesión (con el nombre del dispositivo, nada más)
+async function anotarAcceso(usuario, tipo, req, metodo) {
+  try { await ActividadSeguridad.create({ usuarioId: usuario._id, tipo, dispositivo: nombreDispositivo(req.headers['user-agent']), metodo }); } catch (e) { /* no es crítico */ }
+}
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -62,7 +69,7 @@ router.post('/google', async (req, res) => {
     if (!usuario) {
       // Si ya se había registrado con correo y contraseña, Google ahora verifica ese correo: pasa a ser la misma cuenta
       const porCorreo = await Usuario.findOne({ email, proveedor: 'email' });
-      if (porCorreo) { porCorreo.googleId = googleId; porCorreo.proveedor = 'google'; await porCorreo.save(); usuario = porCorreo; yaExistia = true; }
+      if (porCorreo) { porCorreo.googleId = googleId; porCorreo.proveedor = 'google'; porCorreo.passwordHash = ''; porCorreo.tokenVersion = (porCorreo.tokenVersion || 0) + 1; await porCorreo.save(); usuario = porCorreo; yaExistia = true; }
     }
     if (!usuario && modo === 'login') {
       return res.status(404).json({ error: 'cuenta_inexistente', mensaje: 'Todavía no te registraste con esta cuenta de Google. Tocá "Registrarme" para crear tu cuenta.' });
@@ -71,6 +78,7 @@ router.post('/google', async (req, res) => {
 
     // Negocios creados antes de que existiera el login con cuenta: se unen por la cuenta de Google
     await Negocio.updateMany({ googleId, usuarioId: { $exists: false } }, { $set: { usuarioId: usuario._id } });
+    await anotarAcceso(usuario, yaExistia ? 'inicio_sesion' : 'registro', req, 'google');
     res.json(await respuestaSesion(usuario, { yaExistia }));
   } catch (e) {
     console.error('Error en login con Google:', e.message);
@@ -107,6 +115,7 @@ router.post('/registro', async (req, res) => {
     if (await Usuario.findOne({ email })) return res.status(409).json({ error: 'Ese correo ya está registrado. Tocá "Iniciar sesión".' });
 
     const usuario = await Usuario.create({ googleId: `email:${email}`, email, nombre, proveedor: 'email', passwordHash: await hashearContrasena(password) });
+    await anotarAcceso(usuario, 'registro', req, 'correo');
     res.status(201).json(await respuestaSesion(usuario, { yaExistia: false }));
   } catch (e) {
     if (e.code === 11000) return res.status(409).json({ error: 'Ese correo ya está registrado. Tocá "Iniciar sesión".' });
@@ -131,6 +140,7 @@ router.post('/login', async (req, res) => {
     const ok = await verificarContrasena(password, usuario ? usuario.passwordHash : '00:00');
     if (!usuario || !ok) return res.status(401).json({ error: 'Correo o contraseña incorrectos.' });
     olvidar(clave);
+    await anotarAcceso(usuario, 'inicio_sesion', req, 'correo');
     res.json(await respuestaSesion(usuario, { yaExistia: true }));
   } catch (e) {
     console.error('Error en login con correo:', e.message);
