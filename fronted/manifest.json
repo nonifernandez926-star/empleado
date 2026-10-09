@@ -1,17 +1,24 @@
 {
+  "id": "/index.html",
   "name": "Mi Asistente",
   "short_name": "Mi Asistente",
-  "description": "Un empleado virtual con inteligencia artificial, entrenado para tu negocio.",
-  "start_url": "/index.html",
+  "description": "Un empleado virtual con inteligencia artificial, entrenado para tu negocio: atiende a tus clientes, toma pedidos y turnos las 24 horas.",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "start_url": "/index.html?origen=app",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#eef1f9",
-  "theme_color": "#1638c9",
   "orientation": "portrait",
+  "background_color": "#050b2a",
+  "theme_color": "#1638c9",
+  "categories": ["business", "productivity"],
   "icons": [
     { "src": "/img/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/img/icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/img/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/img/icono-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/img/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Mi panel", "short_name": "Panel", "url": "/admin.html", "icons": [{ "src": "/img/icono-96.png", "sizes": "96x96" }] }
   ]
 }

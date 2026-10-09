@@ -420,3 +420,37 @@ Rutas privadas `/api/integracion/*`, protegidas con `INTEGRACION_KEY` (la misma 
 - **Ajustes:** Mi cuenta, Notificaciones, Apariencia (tema claro/oscuro/automático, 6 colores de acento, tamaño de texto, reducir animaciones; se guarda en el dispositivo), Seguridad (cambiar contraseña, cerrar las demás sesiones, actividad de 90 días), Privacidad (memoria de clientes, qué se guarda, descargar y borrar datos), Centro de ayuda (`frontend/js/ayuda-contenido.js`), Soporte (consultas con respuesta; panel del equipo en `/api/soporte/panel`) y Acerca de (`frontend/js/legal.js`: texto base de términos y privacidad, **conviene que lo revise un abogado**).
 - **Rutas nuevas:** `/api/cuenta/*`, `/api/soporte/*`, `/api/push/dueno/*`.
 - **Seguridad:** al vincular con Google una cuenta que ya existía con correo, se borra la contraseña anterior y se cierran sus sesiones. Ninguna respuesta de la API devuelve ya el código de administración.
+
+---
+
+## Cambios de esta versión
+
+**Cuenta y acceso** (mismo flujo que Mi Zona)
+- **Registrarme** (texto azul): abre directo la lista de cuentas de Google. Después se crea el **usuario** y, por último, la **contraseña**. El correo es el de la cuenta de Google elegida.
+- **Acceder con Google**: se elige la cuenta y se entra al panel.
+- **Usuario y contraseña**: se escribe el usuario y, en el paso siguiente, la contraseña.
+- **Con el correo**: se escribe el correo y es lo mismo que "Acceder con Google" pero con ese correo ya cargado (Google pide la contraseña en su propia página; Mi Asistente nunca la ve). Las cuentas viejas creadas con correo y contraseña siguen entrando con esa contraseña.
+- Las cuentas que ya existían sin usuario o contraseña ven un "último paso" al entrar (con opción de salir).
+- **Reglas** (iguales a Mi Zona, en `backend/utils/usuarios.js` y `frontend/js/credenciales.js`): usuario de 5 a 20 caracteres, empieza con letra, puede no tener números, sin tildes ni espacios. Contraseña de 8 o más caracteres, sin espacios y sin contener el usuario; puede ser solo números, solo letras o una mezcla. Si el usuario ya está en uso, avisa en vivo.
+- Ajustes → Mi cuenta: se pueden editar nombre, usuario, correo (solo cuentas viejas de correo; el de Google se cambia desde Google) y contraseña.
+- Si ya hay una sesión guardada, la web entra directo al panel. Si el servidor está dormido o no hay conexión, no se cierra la sesión: se ofrece reintentar. Cerrar sesión siempre pregunta (Confirmar / Cancelar).
+- Servidor: `GET /api/auth/usuario-disponible`, `PUT /api/auth/completar`, `POST /api/auth/login` (usuario; el correo solo para cuentas viejas), `PUT /api/cuenta/usuario`, `PUT /api/cuenta/correo`, `POST /api/cuenta/contrasena` (también crea la contraseña si falta). Se quitó el registro abierto por correo (`/auth/registro`): el correo no se verificaba.
+
+**Panel**
+- Subpantallas en: Vendedor y memoria, Promociones, Oportunidades de venta y Mi cuenta (se arman con `.sp-sub`, ver `frontend/js/subpantallas.js`).
+- "QR y enlace del chat" ahora es una sola función con explicación, descarga del QR, copiar/compartir el enlace y consejos de uso.
+- "Descargá Mi Zona": explica qué es Mi Zona, qué gana el negocio, cómo empezar y el costo. El botón usa `MI_ZONA_URL` de `frontend/js/config.js`.
+- Fotos del negocio: el logo se cambia o se quita tocando la foto de arriba a la derecha (con un modal rediseñado).
+- Filtro de pedidos: Delivery / Local y Efectivo / Transferencia, con íconos y desplegable compacto.
+- Apariencia: color propio, intensidad del color, esquinas, tipografía, espaciado y barra inferior, además de tema, tamaño de texto y movimiento.
+- Movimiento al abrir funciones, entrar/volver de subpantallas y cambiar de sección (se desactiva con "Reducir animaciones").
+
+**Clientes destacados (ranking) y seguridad**
+- El ranking ahora tiene el estilo del de Mi Zona: portada con título y datos, podio con corona para los 3 primeros (con el premio de cada puesto), selector de criterio, lista del 4° al 10° con barra de progreso y un "¿Cómo se calcula?". Premios y criterios están en sus propias subpantallas.
+- Corrección de seguridad: los nombres, comentarios, notas, direcciones y mensajes que escriben los clientes (pedidos, turnos, reseñas y oportunidades) se mostraban sin escapar en el panel del dueño, lo que permitía meter código desde el chat. Ahora se escapan.
+
+
+---
+
+## Publicación en Google Play
+Mirá `INFORME-REVISION.md` (qué se corrigió y qué falta) y la carpeta `play-store/`. Las páginas `privacidad.html`, `terminos.html` y `eliminar-cuenta.html` se generan con `node scripts/generar-legales.js` a partir de `frontend/js/legal.js`.

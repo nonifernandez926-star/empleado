@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Mi Asistente — Panel</title>
-    <link rel="manifest" href="/manifest.json">
+    <meta name="description" content="Panel de Mi Asistente: pedidos, turnos, agenda y ajustes de tu negocio.">
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1638c9">
   <link rel="icon" href="/img/icono-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +14,10 @@
   <script src="js/apariencia.js"></script>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/ajustes.css">
+  <link rel="stylesheet" href="css/funciones.css">
+  <link rel="stylesheet" href="css/tema.css">
+  <link rel="apple-touch-icon" href="/img/icono-192.png">
+  <link rel="stylesheet" href="css/pulido.css">
 </head>
 <body>
   <!-- Sin sesión, el panel redirige al acceso con Google (index.html) -->
@@ -46,26 +51,21 @@
       </div>
     </div>
 
-    <!-- Modal para cambiar la foto de perfil del negocio -->
+    <!-- Logo del negocio: se cambia o se quita tocando la foto de arriba a la derecha -->
     <div class="app-drawer-overlay" id="modal-foto-overlay"></div>
-    <div class="modal-foto" id="modal-foto">
-      <div class="modal-foto-preview" id="modal-foto-preview-img">N</div>
-      <strong class="modal-foto-titulo" id="modal-foto-nombre">Mi negocio</strong>
-      <div class="modal-foto-opciones">
-        <button class="modal-foto-opcion" id="btn-elegir-galeria">
-          <span class="modal-foto-opcion-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
-          Elegir de la galería
-        </button>
-        <button class="modal-foto-opcion" id="btn-tomar-foto">
-          <span class="modal-foto-opcion-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
-          Tomar foto
-        </button>
-        <button class="modal-foto-opcion destructivo" id="btn-quitar-foto">
-          <span class="modal-foto-opcion-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg></span>
-          Quitar foto
-        </button>
+    <div class="modal-foto" id="modal-foto" role="dialog" aria-modal="true" aria-labelledby="mf-titulo">
+      <button class="mf-cerrar" id="btn-cerrar-modal-foto" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <div class="mf-cab">
+        <div class="mf-marco"><div class="modal-foto-preview" id="modal-foto-preview-img">N</div></div>
+        <h3 class="mf-titulo" id="mf-titulo">Logo de tu negocio</h3>
+        <p class="mf-nombre" id="modal-foto-nombre">Mi negocio</p>
+        <p class="mf-sub">Es la imagen que tus clientes ven en el chat y en tu perfil.</p>
       </div>
-      <button class="btn secundario ancho" id="btn-cerrar-modal-foto" style="margin-top:6px;">Cancelar</button>
+      <div class="mf-acciones">
+        <button class="mf-tile" id="btn-elegir-galeria"><span class="mf-tile-ic ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span><b>Galería</b><small>Elegir una foto</small></button>
+        <button class="mf-tile" id="btn-tomar-foto"><span class="mf-tile-ic ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><b>Cámara</b><small>Sacar una ahora</small></button>
+      </div>
+      <button class="mf-quitar" id="btn-quitar-foto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"/></svg> Quitar logo</button>
       <div id="modal-foto-msg"></div>
       <input type="file" id="input-modal-foto-galeria" accept="image/*" hidden>
       <input type="file" id="input-modal-foto-camara" accept="image/*" capture="environment" hidden>
@@ -142,13 +142,17 @@
               </button>
               <div class="filtro-select-panel" id="filtro-select-panel" role="listbox">
                 <div class="filtro-select-interior">
-                  <button type="button" class="filtro-op activo" data-grupo="todos" data-valor="">Todos los pedidos</button>
+                  <button type="button" class="filtro-op filtro-todos activo" data-grupo="todos" data-valor="">Todos los pedidos</button>
                   <div class="filtro-sep">Entrega</div>
-                  <button type="button" class="filtro-op" data-grupo="entrega" data-valor="delivery">Con delivery</button>
-                  <button type="button" class="filtro-op" data-grupo="entrega" data-valor="retiro">Sin delivery</button>
+                  <div class="filtro-par">
+                    <button type="button" class="filtro-op filtro-tile" data-grupo="entrega" data-valor="delivery"><span class="filtro-ico ic-naranja"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="5" cy="17.5" r="2.7"/><circle cx="19" cy="17.5" r="2.7"/><path d="M7.7 17.5h5.3l2.2-3.8"/><path d="M15.2 13.7 14 8.5h-2"/><path d="M14 8.5h2.4"/><circle cx="9.6" cy="4.6" r="1.6"/><path d="M9.6 6.6v4.4l2.6 2.7"/><path d="M9.8 8.2l4 .3"/><rect x="3.4" y="6.2" width="5" height="5.6" rx="1.2"/></svg></span><span>Delivery</span></button>
+                    <button type="button" class="filtro-op filtro-tile" data-grupo="entrega" data-valor="retiro"><span class="filtro-ico ic-azul"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="m3 9 1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg></span><span>Local</span></button>
+                  </div>
                   <div class="filtro-sep">Forma de pago</div>
-                  <button type="button" class="filtro-op" data-grupo="pago" data-valor="efectivo">Efectivo</button>
-                  <button type="button" class="filtro-op" data-grupo="pago" data-valor="transferencia">Transferencia</button>
+                  <div class="filtro-par">
+                    <button type="button" class="filtro-op filtro-tile" data-grupo="pago" data-valor="efectivo"><span class="filtro-ico ic-verde"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M5.5 9.5v.01M18.5 14.5v.01"/></svg></span><span>Efectivo</span></button>
+                    <button type="button" class="filtro-op filtro-tile" data-grupo="pago" data-valor="transferencia"><span class="filtro-ico ic-violeta"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6.5 10.2h9m0 0-2-1.8m2 1.8-2 1.8"/><path d="M17.5 14.2h-9m0 0 2-1.8m-2 1.8 2 1.8"/></svg></span><span>Transferencia</span></button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -305,49 +309,97 @@
 <p class="ayuda" id="aviso-suscripcion-herramientas" style="display:none; margin-bottom:6px;">Estas herramientas se activan del todo cuando tu suscripción está paga — mientras tanto podés verlas y probarlas igual.</p>
 
         <div class="lista-grupo">
-          <div class="lista-grupo-cabecera"><h3>Compartí tu asistente</h3><p>Hacé que tus clientes lleguen al chat.</p></div>
+          <div class="lista-grupo-cabecera"><h3>Llegá a más clientes</h3><p>Compartí tu chat y publicá tu negocio en Mi Zona.</p></div>
           <div class="list-card">
           <div class="list-card-item">
-          <button class="list-row" data-fullscreen="panel-qr" data-titulo="Mi QR de chat">
-            <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="14" y="14" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="18.5" y="14" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="14" y="18.5" width="2.5" height="2.5" fill="currentColor" stroke="none"/><rect x="18.5" y="18.5" width="2.5" height="2.5" fill="currentColor" stroke="none"/></svg></div>
+          <button class="list-row" data-fullscreen="panel-qr" data-titulo="QR y enlace del chat">
+            <div class="list-row-icono ic-verde"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3M21 14v.01M14 21h.01M17 21h4v-4"/></svg></div>
             <div class="list-row-texto">
-              <strong>Mi QR de chat</strong>
-              <span>Compartí tu QR para que accedan directo a tu chat.</span>
+              <strong>QR y enlace del chat</strong>
+              <span>Dos formas de que tus clientes lleguen directo a tu asistente.</span>
             </div>
             <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
           </button>
           <div class="list-row-panel" id="panel-qr">
-            <img id="qr-chat" alt="QR del chat" style="width:200px; height:200px; border:1px solid var(--linea); border-radius:12px; display:block; margin:6px 0 10px;">
-            <p class="ayuda">Escaneá este código para abrir directo el chat con tu asistente.</p>
-          </div>
-          </div>
+            <p class="cmp-lead">Tus clientes hablan con tu asistente desde el celular, sin instalar nada. El QR y el enlace llevan <strong>al mismo chat</strong>: usá el que te quede más cómodo.</p>
 
-          <div class="list-card-item">
-          <button class="list-row" data-fullscreen="panel-link" data-titulo="Enlace de mi chat">
-            <div class="list-row-icono ic-azul"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9.5 14.5 14.5 9.5"/><path d="M11 7l1.5-1.5a4 4 0 0 1 5.66 5.66L16.5 12.5"/><path d="M13 17l-1.5 1.5a4 4 0 0 1-5.66-5.66L7.5 11.5"/></svg></div>
-            <div class="list-row-texto">
-              <strong>Enlace de mi chat</strong>
-              <span>Copiá y compartí el enlace de tu chat con tus clientes.</span>
+            <div class="cmp-tarjeta">
+              <div class="cmp-tarjeta-cab"><span class="cmp-chip ic-verde"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3M21 14v.01M14 21h.01M17 21h4v-4"/></svg></span><div><strong>Tu código QR</strong><small>Para mostrarlo en persona o imprimirlo</small></div></div>
+              <div class="cmp-qr-marco"><img id="qr-chat" alt="Código QR de tu chat" width="220" height="220"></div>
+              <p class="cmp-nota">Se escanea con la cámara del celular y abre tu chat al instante.</p>
+              <button type="button" class="btn secundario ancho" id="btn-descargar-qr"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg> Descargar QR</button>
             </div>
-            <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
-          </button>
-          <div class="list-row-panel" id="panel-link">
-            <div class="codigo-box" id="link-chat"></div>
-            <button class="btn secundario ancho" id="btn-copiar-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar enlace</button>
+
+            <div class="cmp-tarjeta">
+              <div class="cmp-tarjeta-cab"><span class="cmp-chip ic-azul"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><div><strong>Tu enlace</strong><small>Para mandarlo por mensaje o ponerlo en tus redes</small></div></div>
+              <div class="cmp-enlace"><span class="cmp-enlace-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><span class="cmp-enlace-texto" id="link-chat"></span></div>
+              <div class="cmp-botones">
+                <button type="button" class="btn secundario" id="btn-copiar-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar</button>
+                <button type="button" class="btn" id="btn-compartir-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg> Compartir</button>
+              </div>
+              <div id="cmp-aviso" class="cmp-aviso" role="status"></div>
+            </div>
+
+            <div class="cmp-bloque">
+              <h3>¿Para qué sirve?</h3>
+              <div class="cmp-item"><span class="cmp-item-ico ic-celeste"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><strong>Atención las 24 horas</strong><p>Tus clientes consultan precios, horarios y lo que ofrecés a cualquier hora, y el asistente responde con lo que cargaste.</p></div></div>
+              <div class="cmp-item"><span class="cmp-item-ico ic-naranja"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg></span><div><strong>Pedidos y turnos sin llamadas</strong><p>Desde el chat pueden hacer su pedido o reservar un turno, y vos lo recibís en tu panel.</p></div></div>
+              <div class="cmp-item"><span class="cmp-item-ico ic-amarillo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="m12 2.5 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 18.2l-6.2 3.3L7 14.7 2 9.8l6.9-1z"/></svg></span><div><strong>Calificaciones de tus clientes</strong><p>Después de cada pedido o turno, el cliente puede calificar tu atención.</p></div></div>
+            </div>
+
+            <div class="cmp-bloque">
+              <h3>¿Dónde usarlos?</h3>
+              <ul class="cmp-lista">
+                <li><b>En tu local:</b> imprimí el QR y pegalo en el mostrador, la vidriera o las mesas.</li>
+                <li><b>En tus redes:</b> poné el enlace en la biografía de Instagram, TikTok o Facebook.</li>
+                <li><b>En WhatsApp:</b> mandalo a tus clientes o ponelo en tu estado y en tu perfil de empresa.</li>
+                <li><b>En tu papelería:</b> tarjetas, folletos, bolsas y cajas con el QR impreso.</li>
+              </ul>
+            </div>
+
+            <a class="btn ancho" id="btn-abrir-chat" href="#" target="_blank" rel="noopener" style="margin-top:6px;">Probar mi chat como cliente</a>
           </div>
           </div>
 
           <div class="list-card-item">
-          <button class="list-row" data-fullscreen="panel-registrar" data-titulo="Registrá tu negocio">
-            <div class="list-row-icono ic-violeta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><circle cx="8" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="6" r=".6" fill="currentColor" stroke="none"/><circle cx="8" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r=".6" fill="currentColor" stroke="none"/><circle cx="8" cy="14" r=".6" fill="currentColor" stroke="none"/><circle cx="12" cy="14" r=".6" fill="currentColor" stroke="none"/><circle cx="16" cy="14" r=".6" fill="currentColor" stroke="none"/></svg></div>
+          <button class="list-row" data-fullscreen="panel-registrar" data-titulo="Descargá Mi Zona">
+            <div class="list-row-icono ic-violeta"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
             <div class="list-row-texto">
-              <strong>Registrá tu negocio</strong>
-              <span>Llevá tu negocio a Mi Zona y empezá a recibir clientes.</span>
+              <strong>Descargá Mi Zona</strong>
+              <span>La app donde tu zona encuentra tu negocio.</span>
             </div>
             <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
           </button>
           <div class="list-row-panel" id="panel-registrar">
-            <a class="btn ancho" id="btn-registrar-mizona" href="#" target="_blank">Ir a Mi Zona</a>
+            <p class="cmp-lead"><strong>Mi Zona</strong> reúne los negocios de una localidad en un solo lugar. Las personas de tu zona la usan para ver qué hay cerca, mirar fotos, horarios y reseñas, y contactar a cada negocio por WhatsApp o por el chat de su asistente.</p>
+
+            <div class="cmp-estado" id="mz-estado"></div>
+
+            <div class="cmp-bloque">
+              <h3>Qué ganás con Mi Zona</h3>
+              <div class="cmp-item"><span class="cmp-item-ico ic-azul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><div><strong>Que te encuentren</strong><p>Aparecés en el buscador, por categoría y en el mapa, con tu logo, tu nombre y tu dirección. Quien busca algo cerca de su casa te ve.</p></div></div>
+              <div class="cmp-item"><span class="cmp-item-ico ic-rosado"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg></span><div><strong>Un perfil completo</strong><p>Tus fotos, horarios, redes, WhatsApp y el botón “Cómo llegar”, todo en una sola ficha.</p></div></div>
+              <div class="cmp-item"><span class="cmp-item-ico ic-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><div><strong>Chat con tu asistente</strong><p>Tus clientes te escriben desde tu perfil y tu asistente les responde. El chat se muestra mientras tu suscripción de Mi Asistente esté activa.</p></div></div>
+              <div class="cmp-item"><span class="cmp-item-ico ic-amarillo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="m12 2.5 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 18.2l-6.2 3.3L7 14.7 2 9.8l6.9-1z"/></svg></span><div><strong>Reseñas reales</strong><p>Tus clientes opinan sobre tu negocio y vos podés responderles.</p></div></div>
+              <div class="cmp-item"><span class="cmp-item-ico ic-naranja"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.2"/></svg></span><div><strong>Promociones e historias</strong><p>Publicá ofertas e historias de 24 horas: los clientes que te guardaron en favoritos se enteran.</p></div></div>
+            </div>
+
+            <div class="cmp-bloque">
+              <h3>Cómo empezar</h3>
+              <ol class="cmp-pasos">
+                <li><span>1</span><div><strong>Tocá el botón de abajo.</strong><p>Se abre Mi Zona con tu negocio ya vinculado: no tenés que copiar ningún código.</p></div></li>
+                <li><span>2</span><div><strong>Entrá con Google.</strong><p>Usá la misma cuenta de Google que tenés en Mi Asistente. Así reconocemos tu suscripción.</p></div></li>
+                <li><span>3</span><div><strong>Completá los datos y publicá.</strong><p>Dirección, horarios y fotos. Tu negocio se muestra apenas se confirma la suscripción.</p></div></li>
+              </ol>
+            </div>
+
+            <div class="cmp-bloque">
+              <h3>¿Tiene costo?</h3>
+              <p class="cmp-texto">Para la gente que busca negocios, Mi Zona es gratis. Para publicar tu negocio hay una suscripción de 1, 3 o 6 meses que pagás con Mercado Pago (ves el precio antes de pagar). <strong>Si ya pagás Mi Asistente con esa misma cuenta de Google, tu primer negocio en Mi Zona se publica sin costo</strong>, hasta el mismo vencimiento.</p>
+            </div>
+
+            <a class="btn ancho" id="btn-registrar-mizona" href="#" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg> Descargar Mi Zona</a>
+            <p class="cmp-nota" style="text-align:center; margin-top:10px;">Se abre en una pestaña nueva. Tu panel de Mi Asistente queda como está.</p>
           </div>
           </div>
           </div>
@@ -397,31 +449,36 @@
                 <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
               </button>
               <div class="list-row-panel" id="panel-promociones">
-                <p class="ayuda">El asistente las va a mencionar solo cuando tenga sentido en la charla.</p>
-                <div id="lista-promociones"><p class="ayuda">Cargando...</p></div>
+                <p class="ayuda sp-intro">El asistente las va a mencionar solo cuando tenga sentido en la charla.</p>
 
-                <label>Título</label>
-                <input type="text" id="promo-titulo" placeholder="Ej: 2x1 en helados los martes">
-                <label>Descripción (opcional)</label>
-                <textarea id="promo-descripcion" placeholder="Contá los detalles: qué días aplica, condiciones, etc."></textarea>
-
-                <button type="button" class="btn secundario ancho" id="btn-mostrar-reglas-promo" style="margin-top:10px;">+ Agregar reglas (opcional)</button>
-                <div id="reglas-promo-wrap" style="display:none; margin-top:10px;">
-                  <label>Aplica solo a (opcional)</label>
-                  <input type="text" id="promo-aplica-a" placeholder="Ej: Corte + barba">
-                  <label>Válida hasta esta fecha (opcional)</label>
-                  <input type="date" id="promo-fecha-hasta">
-                  <label>Horario en que aplica (opcional)</label>
-                  <div style="display:flex; gap:8px;">
-                    <input type="time" id="promo-horario-desde" style="flex:1;">
-                    <input type="time" id="promo-horario-hasta" style="flex:1;">
-                  </div>
-                  <label>Cupo máximo de usos (opcional)</label>
-                  <input type="number" id="promo-usos-maximos" placeholder="Ej: 20" min="1">
+                <div class="sp-sub" data-sp-titulo="Promociones publicadas" data-sp-desc="Activalas, pausalas o eliminalas" data-sp-icono="tag" data-sp-color="naranja" data-sp-valor="promos-lista">
+                  <div id="lista-promociones"><p class="ayuda">Cargando...</p></div>
                 </div>
 
-                <button class="btn ancho" id="btn-crear-promocion" style="margin-top:12px;">Publicar promoción</button>
-                <div id="promo-msg"></div>
+                <div class="sp-sub" data-sp-titulo="Nueva promoción" data-sp-desc="Un descuento, un 2x1 o lo que se te ocurra" data-sp-icono="sparkles" data-sp-color="violeta" data-sp-valor="">
+                  <label style="margin-top:0;">Título</label>
+                  <input type="text" id="promo-titulo" placeholder="Ej: 2x1 en helados los martes">
+                  <label>Descripción (opcional)</label>
+                  <textarea id="promo-descripcion" placeholder="Contá los detalles: qué días aplica, condiciones, etc."></textarea>
+
+                  <button type="button" class="btn secundario ancho" id="btn-mostrar-reglas-promo" style="margin-top:10px;">+ Agregar reglas (opcional)</button>
+                  <div id="reglas-promo-wrap" style="display:none; margin-top:10px;">
+                    <label>Aplica solo a (opcional)</label>
+                    <input type="text" id="promo-aplica-a" placeholder="Ej: Corte + barba">
+                    <label>Válida hasta esta fecha (opcional)</label>
+                    <input type="date" id="promo-fecha-hasta">
+                    <label>Horario en que aplica (opcional)</label>
+                    <div style="display:flex; gap:8px;">
+                      <input type="time" id="promo-horario-desde" style="flex:1;">
+                      <input type="time" id="promo-horario-hasta" style="flex:1;">
+                    </div>
+                    <label>Cupo máximo de usos (opcional)</label>
+                    <input type="number" id="promo-usos-maximos" placeholder="Ej: 20" min="1">
+                  </div>
+
+                  <button class="btn ancho" id="btn-crear-promocion" style="margin-top:12px;">Publicar promoción</button>
+                  <div id="promo-msg"></div>
+                </div>
               </div>
             </div>
 
@@ -435,22 +492,23 @@
                 <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
               </button>
               <div class="list-row-panel" id="panel-oportunidades">
-                <p class="ayuda">"Recuperar" prepara un mensaje que el asistente le va a decir apenas ese cliente vuelva a escribir (no se le puede enviar un mensaje sin que él escriba primero).</p>
+                <p class="ayuda sp-intro">“Recuperar” prepara un mensaje que el asistente le va a decir apenas ese cliente vuelva a escribir (no se le puede enviar un mensaje sin que él escriba primero).</p>
 
-                <h3 style="margin-top:16px;">Clientes que no volvieron hace más de:</h3>
-                <div class="grid-tipo-operacion" id="grid-umbral-inactivos">
-                  <div class="opcion-aprobacion" data-dias="1">Un día</div>
-                  <div class="opcion-aprobacion" data-dias="7">Una semana</div>
-                  <div class="opcion-aprobacion" data-dias="30">Un mes</div>
+                <div class="sp-sub" data-sp-titulo="Preguntaron y no concretaron" data-sp-desc="Hablaron con tu asistente pero no compraron ni reservaron" data-sp-icono="help" data-sp-color="rojo" data-sp-valor="indecisos">
+                  <div id="lista-indecisos"><p class="ayuda">Cargando...</p></div>
+                  <button class="btn secundario ancho" id="btn-recuperar-todos-indecisos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
                 </div>
 
-                <h3>Preguntaron y no concretaron</h3>
-                <div id="lista-indecisos"><p class="ayuda">Cargando...</p></div>
-                <button class="btn secundario ancho" id="btn-recuperar-todos-indecisos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
-
-                <h3>Ya fueron clientes, pero no volvieron</h3>
-                <div id="lista-inactivos"><p class="ayuda">Cargando...</p></div>
-                <button class="btn secundario ancho" id="btn-recuperar-todos-inactivos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
+                <div class="sp-sub" data-sp-titulo="Ya fueron clientes, pero no volvieron" data-sp-desc="Hace tiempo que no te escriben" data-sp-icono="history" data-sp-color="azul" data-sp-valor="inactivos">
+                  <h3 style="margin-top:0;">Clientes que no volvieron hace más de:</h3>
+                  <div class="grid-tipo-operacion" id="grid-umbral-inactivos">
+                    <div class="opcion-aprobacion" data-dias="1">Un día</div>
+                    <div class="opcion-aprobacion" data-dias="7">Una semana</div>
+                    <div class="opcion-aprobacion" data-dias="30">Un mes</div>
+                  </div>
+                  <div id="lista-inactivos"><p class="ayuda">Cargando...</p></div>
+                  <button class="btn secundario ancho" id="btn-recuperar-todos-inactivos" style="margin-top:10px; display:none;">Recuperar a todos estos</button>
+                </div>
               </div>
             </div>
           </div>
@@ -483,20 +541,37 @@
                 </div>
                 <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
               </button>
-              <div class="list-row-panel" id="panel-ranking">
-                <p class="ayuda">Podés activar más de un criterio a la vez (tocá para activar o desactivar). El asistente le va a avisar al cliente si está en el puesto 1°, 2° o 3° de alguno la próxima vez que vuelva a escribir, y si le pusiste un % de descuento, se lo va a calcular y aplicar en su compra.</p>
+              <div class="list-row-panel" id="panel-ranking" data-sp-sin-hero="1">
+                <div class="sp-intro" id="rk-vista"><p class="ayuda">Cargando...</p></div>
 
-                <div class="grid-tipo-operacion" id="grid-criterio-ranking">
-                  <div class="opcion-aprobacion" data-criterio="compras">Compras</div>
-                  <div class="opcion-aprobacion" data-criterio="dinero">Dinero gastado</div>
-                  <div class="opcion-aprobacion" data-criterio="visitas">Visitas</div>
-                  <div class="opcion-aprobacion" data-criterio="fidelidad">Fidelidad</div>
+                <div class="sp-sub" data-sp-titulo="Premios" data-sp-desc="Qué gana cada puesto" data-sp-icono="gift" data-sp-color="amarillo" data-sp-valor="rk-premios">
+                  <p class="ayuda" style="margin-top:0;">El asistente le avisa al cliente si está en el puesto 1°, 2° o 3° la próxima vez que escribe y, si pusiste un % de descuento, lo calcula y lo aplica en su compra.</p>
+                  <div id="ranking-premios"></div>
                 </div>
 
-                <div id="ranking-por-criterio"></div>
+                <div class="sp-sub" data-sp-titulo="Criterios del ranking" data-sp-desc="Por qué se destaca a un cliente" data-sp-icono="sliders" data-sp-color="violeta" data-sp-valor="rk-criterios">
+                  <p class="ayuda" style="margin-top:0;">Podés activar más de un criterio a la vez (tocá para activar o desactivar).</p>
+                  <div class="grid-tipo-operacion" id="grid-criterio-ranking">
+                    <div class="opcion-aprobacion" data-criterio="compras">Compras</div>
+                    <div class="opcion-aprobacion" data-criterio="dinero">Dinero gastado</div>
+                    <div class="opcion-aprobacion" data-criterio="visitas">Visitas</div>
+                    <div class="opcion-aprobacion" data-criterio="fidelidad">Fidelidad</div>
+                  </div>
+                </div>
 
-                <button class="btn ancho" id="btn-guardar-ranking" style="margin-top:16px;">Guardar</button>
-                <div id="ranking-msg"></div>
+                <div class="sp-sub" data-sp-sin-pie="1" data-sp-titulo="¿Cómo se calcula?" data-sp-desc="Qué mide cada criterio" data-sp-icono="info" data-sp-color="celeste" data-sp-valor="">
+                  <div class="rk-info">
+                    <div class="cmp-item"><span class="cmp-item-ico ic-azul"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/></svg></span><div><strong>Compras</strong><p>Los pedidos y turnos que el cliente concretó con tu negocio.</p></div></div>
+                    <div class="cmp-item"><span class="cmp-item-ico ic-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span><div><strong>Dinero gastado</strong><p>La suma de lo que gastó en todas sus compras.</p></div></div>
+                    <div class="cmp-item"><span class="cmp-item-ico ic-naranja"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><div><strong>Visitas</strong><p>Cuántas veces conversó con tu asistente.</p></div></div>
+                    <div class="cmp-item"><span class="cmp-item-ico ic-violeta"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg></span><div><strong>Fidelidad</strong><p>Hace cuánto es cliente: el más antiguo queda primero.</p></div></div>
+                  </div>
+                </div>
+
+                <div class="sp-pie">
+                  <button class="btn ancho" id="btn-guardar-ranking" style="margin-top:16px;">Guardar</button>
+                  <div id="ranking-msg"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -612,57 +687,36 @@
                 <div class="list-row-icono ic-rosado"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
                 <div class="list-row-texto">
                   <strong>Fotos del negocio</strong>
-                  <span>Logo, carta/menú y fotos de productos.</span>
+                  <span>Tu carta o menú y las fotos de tus productos.</span>
                 </div>
                 <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
               </button>
               <div class="list-row-panel" id="panel-fotos-negocio">
-                <p class="ayuda">Las fotos que marques como "Menú" son las que el asistente le va a mostrar al cliente cuando pregunte "¿qué tienen?" o pida el menú.</p>
-
-                <div class="foto-row">
-                  <div class="foto-row-icono"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 9.5 4 4h16l1 5.5"/><path d="M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5"/><path d="M9 20v-6h6v6"/><path d="M3 9.5h18"/></svg></div>
-                  <div class="foto-row-texto">
-                    <strong>Logo del negocio</strong>
-                    <span>Subí el logo que representa tu negocio. Se mostrará en tu perfil y en las conversaciones.</span>
-                  </div>
-                  <label class="upload-box" for="input-foto-logo">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
-                    <span class="upload-box-texto">Subir foto</span>
-                    <span class="upload-box-caption">PNG o JPG</span>
-                  </label>
-                  <input type="file" id="input-foto-logo" accept="image/*" hidden>
+                <div class="fo-logo-aviso">
+                  <span class="fo-logo-mini" id="fo-logo-mini">N</span>
+                  <div><strong>Tu logo se cambia desde tu foto</strong><p>Tocá tu foto en la esquina superior derecha de la pantalla: ahí podés cambiarla o quitarla cuando quieras.</p></div>
                 </div>
 
-                <div class="foto-row">
-                  <div class="foto-row-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M3 17a9 9 0 0 1 18 0"/><path d="M2 17h20"/><path d="M12 3v3"/></svg></div>
-                  <div class="foto-row-texto">
-                    <strong>Carta o menú</strong>
-                    <span>Subí una foto clara de tu carta o menú para que el asistente la muestre a los clientes.</span>
-                  </div>
-                  <label class="upload-box" for="input-foto-menu">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
-                    <span class="upload-box-texto">Subir foto</span>
-                    <span class="upload-box-caption">PNG o JPG</span>
-                  </label>
+                <div class="fo-card">
+                  <span class="fo-card-ic ic-naranja"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 2v7a3 3 0 0 0 3 3v10"/><path d="M9 2v7a3 3 0 0 1-3 3"/><path d="M17 2c-2 2-3 4-3 8 0 3 1.5 4 3 4v8"/></svg></span>
+                  <div class="fo-card-texto"><strong>Carta o menú</strong><p>Subí una foto clara. Tu asistente la muestra cuando un cliente pregunta “¿qué tienen?” o pide el menú.</p></div>
+                  <label class="fo-subir" for="input-foto-menu"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></svg> Subir foto</label>
                   <input type="file" id="input-foto-menu" accept="image/*" hidden>
                 </div>
 
-                <div class="foto-row">
-                  <div class="foto-row-icono"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><ellipse cx="12" cy="17.5" rx="9" ry="1.7"/><path d="M4 16a8 8 0 0 1 16 0"/><path d="M9 8.5a3 3 0 0 1 6 0"/></svg></div>
-                  <div class="foto-row-texto">
-                    <strong>Fotos de productos</strong>
-                    <span>Subí fotos de tus productos o platos para que el asistente los muestre a los clientes.</span>
-                  </div>
-                  <label class="upload-box" for="input-foto-producto">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 18a4.5 4.5 0 0 1-1-8.9A5 5 0 0 1 16 8h.5A4.5 4.5 0 0 1 17 18"/><path d="M12 11v9"/><path d="M9 14l3-3 3 3"/></svg>
-                    <span class="upload-box-texto">Subir fotos</span>
-                    <span class="upload-box-caption">PNG o JPG</span>
-                  </label>
+                <div class="fo-card">
+                  <span class="fo-card-ic ic-rosado"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></span>
+                  <div class="fo-card-texto"><strong>Fotos de productos</strong><p>Tus productos o platos, para que el asistente se los muestre a los clientes. Podés subir todas las que quieras.</p></div>
+                  <label class="fo-subir" for="input-foto-producto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/></svg> Subir fotos</label>
                   <input type="file" id="input-foto-producto" accept="image/*" hidden>
                 </div>
 
                 <div id="foto-msg"></div>
-                <div id="grid-fotos" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;"></div>
+
+                <div class="cmp-bloque">
+                  <h3>Tus fotos <span class="fo-conteo" id="fo-conteo"></span></h3>
+                  <div id="grid-fotos" class="fo-grid"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -724,40 +778,48 @@
                 <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
               </button>
               <div class="list-row-panel" id="panel-vendedor-memoria">
-                <p class="ayuda">Elegí qué tan activo es el asistente para cerrar ventas/turnos, si recuerda a los clientes que ya hablaron antes, y qué puede hacer por su cuenta.</p>
+                <p class="ayuda sp-intro">Elegí qué tan activo es el asistente para cerrar ventas o turnos, si recuerda a los clientes que ya hablaron antes, y qué puede hacer por su cuenta.</p>
 
-                <label>Modo vendedor</label>
-                <select id="select-modo-vendedor">
-                  <option value="suave">Suave — recomienda sin presionar</option>
-                  <option value="normal">Normal — guía naturalmente hacia el cierre</option>
-                  <option value="agresivo">Activo — busca activamente cerrar la venta</option>
-                </select>
+                <div class="sp-sub" data-sp-titulo="Modo vendedor" data-sp-desc="Qué tan activo es para cerrar ventas o turnos" data-sp-icono="zap" data-sp-color="violeta" data-sp-valor="modo-vendedor">
+                  <p class="ayuda" style="margin-top:0;">Define cuánto empuja el asistente para cerrar. En cualquiera de los tres modos nunca inventa precios ni disponibilidad, y no insiste después de un “no”.</p>
+                  <label>Modo vendedor</label>
+                  <select id="select-modo-vendedor">
+                    <option value="suave">Suave — recomienda sin presionar</option>
+                    <option value="normal">Normal — guía naturalmente hacia el cierre</option>
+                    <option value="agresivo">Activo — busca activamente cerrar la venta</option>
+                  </select>
+                </div>
 
-                <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:16px;">
-                  <input type="checkbox" id="check-memoria-activa" style="width:auto;">
-                  El asistente recuerda a los clientes que ya hablaron antes (su nombre, su último pedido/turno)
-                </label>
+                <div class="sp-sub" data-sp-titulo="Memoria de clientes" data-sp-desc="Que recuerde a quienes ya hablaron antes" data-sp-icono="users" data-sp-color="naranja" data-sp-valor="memoria">
+                  <p class="ayuda" style="margin-top:0;">Con la memoria activa, cuando un cliente vuelve el asistente lo reconoce y retoma lo que ya hablaron. Si la apagás, cada conversación se trata como la primera vez.</p>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400; margin-top:12px;">
+                    <input type="checkbox" id="check-memoria-activa" style="width:auto;">
+                    El asistente recuerda a los clientes que ya hablaron antes (su nombre, su último pedido/turno)
+                  </label>
+                </div>
 
-                <label style="margin-top:18px;">Permisos del asistente</label>
-                <p class="ayuda" style="margin-top:0;">Lo que desmarques, el asistente no lo va a hacer nunca por su cuenta.</p>
-                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-                  <input type="checkbox" id="check-permiso-recomendar" style="width:auto;"> Recomendar productos/servicios de forma proactiva
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-                  <input type="checkbox" id="check-permiso-promos" style="width:auto;"> Mencionar promociones activas
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-                  <input type="checkbox" id="check-permiso-tomar" style="width:auto;"> Tomar pedidos / reservar turnos por su cuenta
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
-                  <input type="checkbox" id="check-permiso-cerrar" style="width:auto;"> Guiar activamente la charla hacia el cierre
-                </label>
+                <div class="sp-sub" data-sp-titulo="Permisos del asistente" data-sp-desc="Qué puede hacer por su cuenta" data-sp-icono="shield" data-sp-color="verde" data-sp-valor="permisos">
+                  <p class="ayuda" style="margin-top:0;">Lo que desmarques, el asistente no lo va a hacer nunca por su cuenta.</p>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                    <input type="checkbox" id="check-permiso-recomendar" style="width:auto;"> Recomendar productos/servicios de forma proactiva
+                  </label>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                    <input type="checkbox" id="check-permiso-promos" style="width:auto;"> Mencionar promociones activas
+                  </label>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                    <input type="checkbox" id="check-permiso-tomar" style="width:auto;"> Tomar pedidos / reservar turnos por su cuenta
+                  </label>
+                  <label style="display:flex; align-items:center; gap:8px; font-weight:400;">
+                    <input type="checkbox" id="check-permiso-cerrar" style="width:auto;"> Guiar activamente la charla hacia el cierre
+                  </label>
+                </div>
 
-                <button class="btn ancho" id="btn-guardar-vendedor-memoria" style="margin-top:14px;">Guardar</button>
-                <div id="vendedor-memoria-msg"></div>
+                <div class="sp-pie">
+                  <button class="btn ancho" id="btn-guardar-vendedor-memoria" style="margin-top:14px;">Guardar</button>
+                  <div id="vendedor-memoria-msg"></div>
+                </div>
               </div>
             </div>
-
           <div class="list-card-item">
               <button class="list-row" data-fullscreen="panel-experiencia" data-titulo="Experiencia">
                 <div class="list-row-icono ic-amarillo"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.9L12 17.8l-6.2 3.3L7 14.2l-5-4.9 6.9-1Z"/></svg></div>
@@ -925,7 +987,7 @@
           <div class="list-card-item">
           <button class="list-row" data-fullscreen="panel-apariencia" data-titulo="Apariencia">
             <div class="list-row-icono ic-naranja"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 22a10 10 0 1 1 10-10c0 3-2 4-4.5 4H15a2 2 0 0 0-1.4 3.4A2 2 0 0 1 12 22z"/></svg></div>
-            <div class="list-row-texto"><strong>Apariencia</strong><span>Tema, color y tamaño del texto.</span></div>
+            <div class="list-row-texto"><strong>Apariencia</strong><span>Tema, color, esquinas, letra y más.</span></div>
             <div class="list-row-flecha"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M9 6l6 6-6 6"/></svg></div>
           </button>
           <div class="list-row-panel" id="panel-apariencia"></div>
@@ -1051,6 +1113,9 @@
   <script src="js/legal.js"></script>
   <script src="js/ayuda-contenido.js"></script>
   <script src="js/notificaciones.js"></script>
+  <script src="js/credenciales.js"></script>
   <script src="js/ajustes.js"></script>
+  <script src="js/subpantallas.js"></script>
+  <script src="js/pwa.js" defer></script>
 </body>
 </html>

@@ -250,3 +250,9 @@ html.sin-movimiento *, html.sin-movimiento *::before, html.sin-movimiento *::aft
 .aj-valor { flex: none; }
 .aj-caja .list-row-texto, .aj-caja .list-row-texto strong { min-width: 0; }
 .aj-caja .list-row-texto { flex: 1 1 auto; }
+
+/* Aviso en vivo debajo de un campo (usuario libre / en uso) */
+.aj-ayuda-campo { margin: 6px 2px 0; font-size: .8rem; line-height: 1.4; color: var(--gris-texto); min-height: 1.1em; }
+.aj-ayuda-campo.ok { color: #1e8a55; font-weight: 700; }
+.aj-ayuda-campo.mal { color: #c1443a; font-weight: 700; }
+.aj-form input.ok { border-color: #1e8a55; } .aj-form input.mal { border-color: #c1443a; }

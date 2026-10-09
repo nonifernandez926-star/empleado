@@ -4,6 +4,8 @@ const Negocio = require('../models/Negocio');
 const { requiereAdmin } = require('../middleware/auth');
 const { webhookEsValido } = require('../utils/firmaWebhookMP');
 
+// FRONTEND_URL puede traer varias direcciones separadas por coma: para volver del pago se usa la primera
+const FRONTEND_PRINCIPAL = (process.env.FRONTEND_URL || '').split(',')[0].trim().replace(/\/$/, '');
 const PRECIO_MENSUAL_BASE = Number(process.env.PRECIO_1_MES || 20000);
 
 // Planes que se ofrecen hoy. Los precios finales salen del .env (con estos valores por defecto).
@@ -62,9 +64,9 @@ router.post('/crear-pago', requiereAdmin, async (req, res) => {
         external_reference: `${req.negocio._id}:${plan}`,
         notification_url: `${process.env.BACKEND_URL}/api/suscripcion/webhook`,
         back_urls: {
-          success: `${process.env.FRONTEND_URL}/admin.html?pago=exito`,
-          failure: `${process.env.FRONTEND_URL}/admin.html?pago=fallo`,
-          pending: `${process.env.FRONTEND_URL}/admin.html?pago=pendiente`,
+          success: `${FRONTEND_PRINCIPAL}/admin.html?pago=exito`,
+          failure: `${FRONTEND_PRINCIPAL}/admin.html?pago=fallo`,
+          pending: `${FRONTEND_PRINCIPAL}/admin.html?pago=pendiente`,
         },
         auto_return: 'approved',
       },

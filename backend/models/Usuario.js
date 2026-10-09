@@ -6,6 +6,8 @@ const usuarioSchema = new mongoose.Schema(
     googleId: { type: String, required: true, unique: true }, // con correo: "email:<correo>"
     email: { type: String, required: true, index: true },
     nombre: { type: String, default: '' },
+    // Nombre de usuario para entrar (único, en minúsculas). Las cuentas anteriores no lo tienen hasta que lo eligen en Ajustes.
+    usuario: { type: String, lowercase: true, trim: true },
     proveedor: { type: String, enum: ['google', 'email'], default: 'google' },
     passwordHash: { type: String, default: '' },
     // Sube al cambiar la contraseña o cerrar sesión en todos los dispositivos: los tokens viejos dejan de servir.
@@ -13,5 +15,8 @@ const usuarioSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Único solo cuando existe: las cuentas viejas sin usuario no chocan entre sí.
+usuarioSchema.index({ usuario: 1 }, { unique: true, partialFilterExpression: { usuario: { $type: 'string' } } });
 
 module.exports = mongoose.model('Usuario', usuarioSchema);

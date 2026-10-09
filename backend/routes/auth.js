@@ -8,6 +8,7 @@ const { hashearContrasena, verificarContrasena } = require('../utils/contrasenas
 const { permitir, olvidar } = require('../utils/limitador');
 const ActividadSeguridad = require('../models/ActividadSeguridad');
 const { nombreDispositivo } = require('../utils/dispositivo');
+const { normalizarUsuario, errorUsuario, errorContrasena, MSG_USUARIO_EN_USO } = require('../utils/usuarios');
 
 // Deja anotado en el historial de seguridad cada inicio de sesión (con el nombre del dispositivo, nada más)
 async function anotarAcceso(usuario, tipo, req, metodo) {
@@ -46,11 +47,15 @@ const RE_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const normalizarCorreo = (v) => String(v || '').trim().toLowerCase();
 const ip = (req) => req.ip || 'sin-ip';
 
+const usuarioPublico = (u) => ({ id: String(u._id), email: u.email, nombre: u.nombre, usuario: u.usuario || '', conClave: !!u.passwordHash });
+
 async function respuestaSesion(usuario, extra = {}) {
   const negocio = await Negocio.findOne({ usuarioId: usuario._id }).select('_id');
   return {
     token: generarTokenUsuario(usuario),
-    usuario: { id: String(usuario._id), email: usuario.email, nombre: usuario.nombre },
+    usuario: usuarioPublico(usuario),
+    // Si falta el usuario o la contraseña, la web pide completarlos antes de entrar (PUT /api/auth/completar)
+    pendiente: { usuario: !usuario.usuario, clave: !usuario.passwordHash },
     tieneNegocio: !!negocio,
     ...extra,
   };
@@ -82,11 +87,12 @@ router.post('/google', async (req, res) => {
     res.json(await respuestaSesion(usuario, { yaExistia }));
   } catch (e) {
     console.error('Error en login con Google:', e.message);
-    res.status(401).json({ error: 'No se pudo verificar la cuenta de Google', detalle: String(e.message || '').slice(0, 160) });
+    res.status(401).json({ error: 'No se pudo verificar la cuenta de Google', ...(process.env.DEBUG_AUTH === '1' ? { detalle: String(e.message || '').slice(0, 160) } : {}) });
   }
 });
 
-// POST /api/auth/correo { email } -> dice qué sigue: pedir contraseña, crear la cuenta o usar Google
+// POST /api/auth/correo { email } -> primer paso del ingreso con correo: dice qué hacer después
+// paso: "crear" (no hay cuenta: hay que registrarse) | "clave" (cuenta vieja de correo: se pide la contraseña) | "google" (cuenta de Google)
 router.post('/correo', async (req, res) => {
   try {
     if (!permitir(`correo|${ip(req)}`, 30, 15 * 60 * 1000)) return res.status(429).json({ error: 'Hiciste muchos intentos. Probá de nuevo en un rato.' });
@@ -94,56 +100,88 @@ router.post('/correo', async (req, res) => {
     if (!RE_CORREO.test(email) || email.length > 120) return res.status(400).json({ error: 'Escribí un correo válido.' });
     const usuario = await Usuario.findOne({ email });
     if (!usuario) return res.json({ paso: 'crear' });
-    res.json({ paso: usuario.passwordHash ? 'clave' : 'google' });
+    // "clave": cuenta vieja creada con correo y contraseña. "google": cuenta de Google (entra con Google; Google pide la contraseña del correo en su propia página).
+    res.json({ paso: usuario.proveedor === 'email' && usuario.passwordHash ? 'clave' : 'google' });
   } catch (e) {
     console.error('Error al revisar el correo:', e.message);
     res.status(500).json({ error: 'No se pudo continuar. Probá de nuevo.' });
   }
 });
 
-// POST /api/auth/registro { nombre, email, password }
-router.post('/registro', async (req, res) => {
+// GET /api/auth/usuario-disponible?usuario=xxx -> avisa en vivo si el usuario es válido y está libre
+router.get('/usuario-disponible', async (req, res) => {
   try {
-    if (!permitir(`registro|${ip(req)}`, 10, 3600 * 1000)) return res.status(429).json({ error: 'Hiciste muchos intentos. Probá de nuevo en un rato.' });
-    const email = normalizarCorreo(req.body?.email);
-    const password = String(req.body?.password || '');
-    const nombre = String(req.body?.nombre || '').replace(/\s+/g, ' ').trim();
-    if (!RE_CORREO.test(email) || email.length > 120) return res.status(400).json({ error: 'Escribí un correo válido.' });
-    if (password.length < 8) return res.status(400).json({ error: 'La contraseña tiene que tener al menos 8 caracteres.' });
-    if (password.length > 100) return res.status(400).json({ error: 'La contraseña es demasiado larga (máximo 100).' });
-    if (nombre.length < 2 || nombre.length > 60) return res.status(400).json({ error: 'Escribí tu nombre (entre 2 y 60 letras).' });
-    if (await Usuario.findOne({ email })) return res.status(409).json({ error: 'Ese correo ya está registrado. Tocá "Iniciar sesión".' });
-
-    const usuario = await Usuario.create({ googleId: `email:${email}`, email, nombre, proveedor: 'email', passwordHash: await hashearContrasena(password) });
-    await anotarAcceso(usuario, 'registro', req, 'correo');
-    res.status(201).json(await respuestaSesion(usuario, { yaExistia: false }));
+    if (!permitir(`usuario-disp|${ip(req)}`, 80, 15 * 60 * 1000)) return res.status(429).json({ error: 'Hiciste muchos intentos. Probá de nuevo en un rato.' });
+    const usuario = normalizarUsuario(req.query?.usuario);
+    const motivo = errorUsuario(usuario);
+    if (motivo) return res.json({ disponible: false, valido: false, mensaje: motivo });
+    const existe = await Usuario.exists({ usuario });
+    res.json({ disponible: !existe, valido: true, mensaje: existe ? MSG_USUARIO_EN_USO : '' });
   } catch (e) {
-    if (e.code === 11000) return res.status(409).json({ error: 'Ese correo ya está registrado. Tocá "Iniciar sesión".' });
-    console.error('Error en registro con correo:', e.message);
-    res.status(500).json({ error: 'No se pudo crear la cuenta. Probá de nuevo.' });
+    res.status(500).json({ error: 'No se pudo revisar el usuario.' });
   }
 });
 
-// POST /api/auth/login { email, password }
+// PUT /api/auth/completar { usuario?, password? }  (con la sesión recién abierta con Google)
+// Último paso del registro: primero el usuario, después la contraseña. Pide solo lo que falta.
+router.put('/completar', async (req, res) => {
+  try {
+    const h = req.headers['authorization'] || '';
+    const p = h.startsWith('Bearer ') ? verificarToken(h.slice(7)) : null;
+    if (!p || !p.uid) return res.status(401).json({ error: 'Sesión inválida o vencida' });
+    const usuario = await Usuario.findById(p.uid);
+    if (!usuario || (p.v || 0) !== (usuario.tokenVersion || 0)) return res.status(401).json({ error: 'Sesión inválida o vencida' });
+    if (!permitir(`completar|${usuario._id}`, 15, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
+
+    let nuevoUsuario = usuario.usuario || '';
+    if (!usuario.usuario) {
+      nuevoUsuario = normalizarUsuario(req.body?.usuario);
+      const motivo = errorUsuario(nuevoUsuario);
+      if (motivo) return res.status(400).json({ error: motivo });
+      if (await Usuario.exists({ usuario: nuevoUsuario, _id: { $ne: usuario._id } })) return res.status(409).json({ error: MSG_USUARIO_EN_USO, codigo: 'usuario_en_uso' });
+    }
+    let hash = '';
+    if (!usuario.passwordHash) {
+      const password = String(req.body?.password || '');
+      const motivo = errorContrasena(password, nuevoUsuario);
+      if (motivo) return res.status(400).json({ error: motivo });
+      hash = await hashearContrasena(password);
+    }
+    if (!usuario.usuario) usuario.usuario = nuevoUsuario;
+    if (hash) usuario.passwordHash = hash;
+    if (!usuario.nombre) usuario.nombre = nuevoUsuario;
+    await usuario.save();
+    await anotarAcceso(usuario, 'cambio_usuario', req, 'google');
+    res.json(await respuestaSesion(usuario, { yaExistia: true }));
+  } catch (e) {
+    if (e.code === 11000) return res.status(409).json({ error: MSG_USUARIO_EN_USO, codigo: 'usuario_en_uso' });
+    console.error('Error completando la cuenta:', e.message);
+    res.status(500).json({ error: 'No se pudo guardar. Probá de nuevo.' });
+  }
+});
+
+// POST /api/auth/login { usuario, password }   (también acepta el correo en lugar del usuario, por las cuentas anteriores)
 router.post('/login', async (req, res) => {
   try {
-    const email = normalizarCorreo(req.body?.email);
+    const identificador = String(req.body?.usuario || req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
-    const clave = `login|${ip(req)}|${email}`;
+    const clave = `login|${ip(req)}|${identificador}`;
     if (!permitir(clave, 8, 15 * 60 * 1000) || !permitir(`login|${ip(req)}`, 40, 15 * 60 * 1000)) {
       return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos y probá de nuevo.' });
     }
-    if (!RE_CORREO.test(email) || !password) return res.status(400).json({ error: 'Escribí tu correo y tu contraseña.' });
-    const usuario = await Usuario.findOne({ email });
-    if (usuario && !usuario.passwordHash) return res.status(400).json({ error: 'Ese correo se registró con Google. Entrá con el botón de Google.' });
-    // aunque el correo no exista hacemos el mismo trabajo, así no se nota la diferencia
+    if (!identificador || identificador.length > 120 || !password) return res.status(400).json({ error: 'Escribí tu usuario y tu contraseña.' });
+    const conCorreo = identificador.includes('@');
+    const usuario = await Usuario.findOne(conCorreo ? { email: identificador } : { usuario: identificador });
+    // con el correo solo vale la contraseña de las cuentas viejas de correo; las de Google entran con Google o con su usuario
+    if (usuario && (!usuario.passwordHash || (conCorreo && usuario.proveedor !== 'email'))) return res.status(400).json({ error: 'Esa cuenta entra con Google. Tocá "Acceder con Google".' });
+    // aunque el usuario no exista hacemos el mismo trabajo, así no se nota la diferencia
     const ok = await verificarContrasena(password, usuario ? usuario.passwordHash : '00:00');
-    if (!usuario || !ok) return res.status(401).json({ error: 'Correo o contraseña incorrectos.' });
+    if (!usuario || !ok) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
     olvidar(clave);
     await anotarAcceso(usuario, 'inicio_sesion', req, 'correo');
     res.json(await respuestaSesion(usuario, { yaExistia: true }));
   } catch (e) {
-    console.error('Error en login con correo:', e.message);
+    console.error('Error en login:', e.message);
     res.status(500).json({ error: 'No se pudo iniciar sesión. Probá de nuevo.' });
   }
 });
@@ -158,7 +196,7 @@ router.get('/me', async (req, res) => {
     const usuario = await Usuario.findById(p.uid);
     if (!usuario || (p.v || 0) !== (usuario.tokenVersion || 0)) return res.status(401).json({ error: 'Sesión inválida o vencida' });
     const negocio = await Negocio.findOne({ usuarioId: usuario._id }).select('_id');
-    res.json({ usuario: { email: usuario.email, nombre: usuario.nombre }, tieneNegocio: !!negocio });
+    res.json({ usuario: usuarioPublico(usuario), pendiente: { usuario: !usuario.usuario, clave: !usuario.passwordHash }, tieneNegocio: !!negocio });
   } catch (e) {
     res.status(500).json({ error: 'No se pudo leer la sesión.' });
   }

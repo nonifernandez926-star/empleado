@@ -79,7 +79,7 @@ function ocultarEscribiendo() {
   if (el) el.remove();
 }
 
-function agregarMensaje(texto, rol) {
+function agregarMensaje(texto, rol, opciones = {}) {
   const fila = document.createElement('div');
   fila.className = `msg-fila ${rol}`;
 
@@ -93,6 +93,15 @@ function agregarMensaje(texto, rol) {
 
   fila.appendChild(burbuja);
   fila.appendChild(hora);
+  // Debajo de cada respuesta de la IA: reportarla (Google Play lo exige en apps con IA generativa)
+  if (rol === 'asistente' && !opciones.sinReporte) {
+    const rep = document.createElement('button');
+    rep.type = 'button'; rep.className = 'msg-reportar'; rep.textContent = 'Reportar';
+    rep.setAttribute('aria-label', 'Reportar esta respuesta');
+    rep.addEventListener('click', () => reportarRespuesta(texto, rep));
+    hora.appendChild(document.createTextNode(' · '));
+    hora.appendChild(rep);
+  }
   contenedorMensajes.appendChild(fila);
   contenedorMensajes.scrollTop = contenedorMensajes.scrollHeight;
 }
@@ -217,9 +226,9 @@ async function enviarMensaje() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ comentario: texto }),
       });
-      agregarMensaje('¡Gracias por contarnos! 💙', 'asistente');
+      agregarMensaje('¡Gracias por contarnos! 💙', 'asistente', { sinReporte: true });
     } catch (error) {
-      agregarMensaje('No se pudo guardar tu respuesta, pero no pasa nada - gracias igual.', 'asistente');
+      agregarMensaje('No se pudo guardar tu respuesta, pero no pasa nada - gracias igual.', 'asistente', { sinReporte: true });
     }
     inputMensaje.disabled = false;
     btnEnviar.disabled = false;
@@ -238,14 +247,14 @@ async function enviarMensaje() {
     ocultarEscribiendo();
 
     if (!res.ok) {
-      agregarMensaje(data.mensaje || 'Este asistente no está disponible en este momento.', 'asistente');
+      agregarMensaje(data.mensaje || 'Este asistente no está disponible en este momento.', 'asistente', { sinReporte: true });
     } else {
       agregarMensaje(data.respuesta, 'asistente');
       if (data.imagenes && data.imagenes.length) {
         agregarImagenes(data.imagenes);
       }
       if (data.pedidoCreado && data.pedidoCreado.exito) {
-        agregarMensaje(`✅ Pedido registrado (N° ${data.pedidoCreado.pedidoId.slice(-6)})`, 'asistente');
+        agregarMensaje(`✅ Pedido registrado (N° ${data.pedidoCreado.pedidoId.slice(-6)})`, 'asistente', { sinReporte: true });
         ultimoPedidoId = data.pedidoCreado.pedidoId;
         btnAdjuntar.style.display = 'inline-block'; // ya puede adjuntar el comprobante si va a pagar por transferencia
         mostrarWidgetCalificacion();
@@ -258,7 +267,7 @@ async function enviarMensaje() {
     }
   } catch (error) {
     ocultarEscribiendo();
-    agregarMensaje('Hubo un error de conexión. Intentá de nuevo.', 'asistente');
+    agregarMensaje('Hubo un error de conexión. Intentá de nuevo.', 'asistente', { sinReporte: true });
   } finally {
     inputMensaje.disabled = false;
     btnEnviar.disabled = false;
@@ -405,11 +414,11 @@ function mostrarWidgetCalificacion() {
       if (res.ok && data.resenaId) {
         // La pregunta de seguimiento se muestra como un mensaje normal, y la respuesta se
         // escribe en el mismo cuadro de texto de siempre (no se crea un input nuevo).
-        agregarMensaje(data.preguntaSeguimiento, 'asistente');
+        agregarMensaje(data.preguntaSeguimiento, 'asistente', { sinReporte: true });
         resenaEsperandoComentario = data.resenaId;
       }
     } catch (error) {
-      agregarMensaje('No se pudo enviar la calificación, pero gracias igual por tu tiempo.', 'asistente');
+      agregarMensaje('No se pudo enviar la calificación, pero gracias igual por tu tiempo.', 'asistente', { sinReporte: true });
     }
   });
 }
@@ -460,9 +469,9 @@ inputComprobante.addEventListener('change', async () => {
     });
     if (!res.ok) throw new Error('Error al subir');
 
-    agregarMensaje('Recibimos tu comprobante. El negocio va a revisar que la transferencia haya llegado correctamente y va a confirmar tu pedido a la brevedad.', 'asistente');
+    agregarMensaje('Recibimos tu comprobante. El negocio va a revisar que la transferencia haya llegado correctamente y va a confirmar tu pedido a la brevedad.', 'asistente', { sinReporte: true });
   } catch (error) {
-    agregarMensaje('No se pudo enviar el comprobante, intentá de nuevo.', 'asistente');
+    agregarMensaje('No se pudo enviar el comprobante, intentá de nuevo.', 'asistente', { sinReporte: true });
   } finally {
     btnAdjuntar.disabled = false;
     inputComprobante.value = '';
@@ -472,7 +481,50 @@ inputComprobante.addEventListener('change', async () => {
 cargarInfoNegocio();
 
 if (!codigoPublico) {
-  agregarMensaje('Falta el código del negocio en la URL (?codigo=...)', 'asistente');
+  agregarMensaje('Falta el código del negocio en la URL (?codigo=...)', 'asistente', { sinReporte: true });
 } else {
-  agregarMensaje('¡Hola! ¿En qué puedo ayudarte?', 'asistente');
+  agregarMensaje('¡Hola! ¿En qué puedo ayudarte?', 'asistente', { sinReporte: true });
+}
+
+
+// --- Reportar una respuesta de la IA ---
+function reportarRespuesta(texto, boton) {
+  if (!codigoPublico || boton.dataset.hecho) return;
+  const fondo = document.createElement('div');
+  fondo.className = 'rep-fondo';
+  fondo.innerHTML = `
+    <div class="rep-hoja" role="dialog" aria-modal="true" aria-labelledby="rep-titulo">
+      <h3 id="rep-titulo">Reportar respuesta</h3>
+      <p>¿Qué pasó con esta respuesta?</p>
+      <div class="rep-opciones">
+        <button type="button" data-m="incorrecta">Es incorrecta o confusa</button>
+        <button type="button" data-m="ofensiva">Es ofensiva o inapropiada</button>
+        <button type="button" data-m="danina">Es peligrosa o dañina</button>
+        <button type="button" data-m="otro">Otro motivo</button>
+      </div>
+      <button type="button" class="rep-cancelar">Cancelar</button>
+      <p class="rep-estado" role="status"></p>
+    </div>`;
+  document.body.appendChild(fondo);
+  const estado = fondo.querySelector('.rep-estado');
+  const cerrar = () => fondo.remove();
+  fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(); });
+  fondo.querySelector('.rep-cancelar').addEventListener('click', cerrar);
+  fondo.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', async () => {
+    fondo.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+    try {
+      const r = await fetch(`${API_URL}/reportes/ia/${codigoPublico}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ respuesta: texto, motivo: b.dataset.m }),
+      });
+      if (!r.ok) throw new Error('fallo');
+      boton.textContent = 'Reportado'; boton.dataset.hecho = '1'; boton.disabled = true;
+      estado.textContent = 'Gracias, lo vamos a revisar.';
+      setTimeout(cerrar, 1100);
+    } catch (e) {
+      estado.textContent = 'No se pudo enviar. Probá de nuevo.';
+      fondo.querySelectorAll('button').forEach((x) => { x.disabled = false; });
+    }
+  }));
+  const primero = fondo.querySelector('[data-m]'); if (primero) primero.focus();
 }

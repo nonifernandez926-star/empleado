@@ -4,13 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Crear mi asistente — Registro</title>
-    <link rel="manifest" href="/manifest.json">
+    <meta name="description" content="Creá tu asistente virtual con inteligencia artificial para tu negocio.">
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1638c9">
   <link rel="icon" href="/img/icono-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="apple-touch-icon" href="/img/icono-192.png">
+  <link rel="stylesheet" href="css/pulido.css">
 </head>
 <body>
   <div class="pantalla" id="pantalla-registro">
@@ -134,12 +137,12 @@
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
       </div>
       <h1>Tu asistente está listo</h1>
-      <p class="exito-sub">Lo creamos en modo prueba gratis. Ya está vinculado a tu cuenta de Google, así que vas a entrar a tu panel directamente, sin códigos.</p>
+      <p class="exito-sub">Lo creamos en modo prueba gratis. Ya está vinculado a tu cuenta, así que vas a entrar a tu panel directamente, sin códigos.</p>
 
       <div class="exito-pasos">
         <div class="exito-paso"><b>1</b><span>Probá cómo responde tu asistente a un cliente.</span></div>
         <div class="exito-paso"><b>2</b><span>Entrá al panel para cargar productos, fotos y horarios.</span></div>
-        <div class="exito-paso"><b>3</b><span>Compartí tu enlace o tu QR para empezar a recibir clientes.</span></div>
+        <div class="exito-paso"><b>3</b><span>Compartí tu enlace o tu QR, o publicá tu negocio en Mi Zona, para empezar a recibir clientes.</span></div>
       </div>
 
       <div class="exito-acciones">
@@ -155,7 +158,12 @@
     </div>
   </div>
 
+  <div class="w-legal" style="max-width:520px;margin:0 auto;padding:0 22px calc(28px + env(safe-area-inset-bottom,0px))">
+    <p class="legal-pie">Al continuar aceptás los <a href="terminos.html" target="_blank" rel="noopener">Términos</a> y la <a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a>.</p>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/registro.js"></script>
+  <script src="js/pwa.js" defer></script>
 </body>
 </html>

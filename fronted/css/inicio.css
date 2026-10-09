@@ -61,6 +61,12 @@ body.ini .pantalla { background: #050b2a; position: relative; overflow: hidden; 
 .ini-form input:focus { outline: 2px solid #2454ff; border-color: transparent; }
 .ini-correo-fijo { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #f3f6fb; font-size: .9rem; }
 .ini-correo-fijo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ini-etq { display: block; margin: 2px 0 -4px 2px; font-size: .78rem; font-weight: 700; color: #475467; }
+.ini-ayuda { margin: -4px 2px 0; font-size: .78rem; line-height: 1.4; color: #667085; min-height: 1.1em; }
+.ini-ayuda.ok { color: #1e8a55; font-weight: 700; }
+.ini-ayuda.mal { color: #c1443a; font-weight: 700; }
+.ini-form input.mal { border-color: #c1443a; }
+.ini-form input.ok { border-color: #1e8a55; }
 .ini-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: #2f6fed; cursor: pointer; }
 .ini-clave { position: relative; }
 .ini-clave .ini-link { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: .8rem; }
@@ -69,3 +75,18 @@ body.ini .pantalla { background: #050b2a; position: relative; overflow: hidden; 
 .ini-error { margin: 0; font-size: .8rem; line-height: 1.4; color: #c1443a; }
 .ini-registro { margin: 20px 0 0; text-align: center; font-size: .85rem; color: #6b7280; }
 @media (prefers-reduced-motion: reduce) { body.ini *, body.ini *::after { animation: none !important; } }
+
+/* Si ya hay una sesión guardada: no mostramos la portada mientras se revisa */
+html.ini-revisando .ini-vista, html.ini-revisando .ini-acceso { visibility: hidden; }
+.ini-revisando-cargando { display: none; }
+html.ini-revisando .ini-revisando-cargando { display: grid; position: fixed; inset: 0; place-items: center; z-index: 5; pointer-events: none; }
+.ini-revisando-cargando span { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); border-top-color: #fff; animation: ini-gira .8s linear infinite; }
+
+/* Reglas de la contraseña (se tildan en vivo) */
+.ini-reglas { list-style: none; margin: 4px 2px 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.ini-reglas li { display: flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 600; color: #667085; }
+.ini-reglas li i { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; background: #e4e7ec; color: #fff; transition: background .2s ease, transform .25s cubic-bezier(.3, 1.6, .5, 1); }
+.ini-reglas li i svg { width: 10px; height: 10px; }
+.ini-reglas li.ok { color: #1e8a55; } .ini-reglas li.ok i { background: #1e8a55; transform: scale(1.08); }
+.ini-nota { margin: -2px 2px 0; font-size: .78rem; line-height: 1.45; color: #667085; }
+.ini-nota.mal { color: #c1443a; font-weight: 700; }

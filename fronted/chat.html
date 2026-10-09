@@ -2,15 +2,18 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Chat con el asistente</title>
-    <link rel="manifest" href="/manifest.json">
+    <meta name="description" content="Chateá con el asistente virtual del negocio.">
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0b1437">
   <link rel="icon" href="/img/icono-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="apple-touch-icon" href="/img/icono-192.png">
+  <link rel="stylesheet" href="css/pulido.css">
 </head>
 <body>
   <div class="chat-widget">
@@ -26,6 +29,7 @@
     </header>
     <div class="fila-cliente" id="fila-cliente" style="display:none;"></div>
     <div class="chat-mensajes" id="chat-mensajes"></div>
+    <p class="chat-aviso-ia" id="chat-aviso-ia">Te responde una IA y puede equivocarse. <a href="privacidad.html" target="_blank" rel="noopener">Privacidad</a></p>
     <div class="chat-sugerencias" id="chat-sugerencias">
       <button type="button" class="chat-sug">Ver opciones y precios</button>
       <button type="button" class="chat-sug">Horarios de atención</button>
@@ -53,5 +57,6 @@
 
   <script src="js/config.js"></script>
   <script src="js/chat.js"></script>
+  <script src="js/pwa.js" defer></script>
 </body>
 </html>

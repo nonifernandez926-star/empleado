@@ -17,6 +17,7 @@ const ActividadSeguridad = require('../models/ActividadSeguridad');
 const { generarTokenUsuario } = require('../utils/jwt');
 const { hashearContrasena, verificarContrasena } = require('../utils/contrasenas');
 const { permitir } = require('../utils/limitador');
+const { normalizarUsuario, errorUsuario, errorContrasena, MSG_USUARIO_EN_USO } = require('../utils/usuarios');
 const { nombreDispositivo } = require('../utils/dispositivo');
 const { PREFS_DEFECTO, prefsDe, SESION_DUENO } = require('../utils/avisos');
 
@@ -154,6 +155,7 @@ router.get('/resumen', async (req, res) => {
     res.json({
       cuenta: {
         nombre: usuario ? usuario.nombre : '',
+        usuario: usuario ? usuario.usuario || '' : '',
         email: usuario ? usuario.email : n.emailPropietario || '',
         proveedor: usuario ? usuario.proveedor : 'google',
         creadaEn: usuario ? usuario.createdAt : n.createdAt,
@@ -199,19 +201,80 @@ router.put('/nombre', async (req, res) => {
   }
 });
 
-// POST /api/cuenta/contrasena { actual, nueva }  (solo cuentas con correo y contraseña)
+// PUT /api/cuenta/usuario { usuario } -> cambia el nombre de usuario con el que se entra
+router.put('/usuario', async (req, res) => {
+  try {
+    const usuario = await usuarioDe(req);
+    if (!usuario) return res.status(400).json({ error: 'Esta sesión no tiene una cuenta de persona asociada.' });
+    if (!permitir(`cambiar-usuario|${usuario._id}`, 20, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
+    const nuevo = normalizarUsuario(req.body?.usuario);
+    if (errorUsuario(nuevo)) return res.status(400).json({ error: errorUsuario(nuevo) });
+    if (nuevo === usuario.usuario) return res.json({ usuario: nuevo });
+    if (await Usuario.exists({ usuario: nuevo, _id: { $ne: usuario._id } })) return res.status(409).json({ error: MSG_USUARIO_EN_USO, codigo: 'usuario_en_uso' });
+    usuario.usuario = nuevo;
+    await usuario.save();
+    await registrar(usuario, 'cambio_usuario', req);
+    res.json({ usuario: nuevo });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ error: MSG_USUARIO_EN_USO, codigo: 'usuario_en_uso' });
+    console.error('Error cambiando usuario:', error.message);
+    res.status(500).json({ error: 'No se pudo guardar el usuario.' });
+  }
+});
+
+// GET /api/cuenta/usuario-disponible?usuario=xxx -> aviso en vivo mientras escribe (su propio usuario cuenta como libre)
+router.get('/usuario-disponible', async (req, res) => {
+  try {
+    const usuario = await usuarioDe(req);
+    if (!usuario) return res.status(400).json({ error: 'Esta sesión no tiene una cuenta de persona asociada.' });
+    if (!permitir(`usuario-disp|${usuario._id}`, 120, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
+    const nuevo = normalizarUsuario(req.query?.usuario);
+    if (errorUsuario(nuevo)) return res.json({ disponible: false, valido: false, mensaje: errorUsuario(nuevo) });
+    const enUso = await Usuario.exists({ usuario: nuevo, _id: { $ne: usuario._id } });
+    res.json({ disponible: !enUso, valido: true, mensaje: enUso ? MSG_USUARIO_EN_USO : '' });
+  } catch (error) {
+    res.status(500).json({ error: 'No se pudo revisar el usuario.' });
+  }
+});
+
+// PUT /api/cuenta/correo { email, password } -> cambia el correo (solo cuentas con correo y contraseña: pide la contraseña)
+router.put('/correo', async (req, res) => {
+  try {
+    const usuario = await usuarioDe(req);
+    if (!usuario) return res.status(400).json({ error: 'Esta sesión no tiene una cuenta de persona asociada.' });
+    if (usuario.proveedor !== 'email' || !usuario.passwordHash) return res.status(400).json({ error: 'Tu correo viene de tu cuenta de Google y se cambia desde Google.' });
+    if (!permitir(`cambiar-correo|${usuario._id}`, 8, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 120) return res.status(400).json({ error: 'Escribí un correo válido.' });
+    if (!(await verificarContrasena(String(req.body?.password || ''), usuario.passwordHash))) return res.status(401).json({ error: 'La contraseña no es correcta.' });
+    if (email === usuario.email) return res.json({ email });
+    if (await Usuario.exists({ email, _id: { $ne: usuario._id } })) return res.status(409).json({ error: 'Ese correo ya está registrado en otra cuenta.', codigo: 'correo_en_uso' });
+    usuario.email = email;
+    usuario.googleId = `email:${email}`;
+    await usuario.save();
+    await Negocio.updateMany({ usuarioId: usuario._id }, { $set: { emailPropietario: email } });
+    await registrar(usuario, 'cambio_correo', req);
+    res.json({ email });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ error: 'Ese correo ya está registrado en otra cuenta.', codigo: 'correo_en_uso' });
+    console.error('Error cambiando correo:', error.message);
+    res.status(500).json({ error: 'No se pudo guardar el correo.' });
+  }
+});
+
+// POST /api/cuenta/contrasena { actual, nueva }  -> cambia la contraseña. Si la cuenta todavía no tiene ninguna, solo hace falta { nueva }.
 router.post('/contrasena', async (req, res) => {
   try {
     const usuario = await usuarioDe(req);
     if (!usuario) return res.status(400).json({ error: 'Esta sesión no tiene una cuenta de persona asociada.' });
-    if (!usuario.passwordHash) return res.status(400).json({ error: 'Tu cuenta entra con Google: la contraseña se administra desde tu cuenta de Google.' });
     if (!permitir(`clave|${usuario._id}`, 8, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
     const actual = String(req.body?.actual || '');
     const nueva = String(req.body?.nueva || '');
-    if (!(await verificarContrasena(actual, usuario.passwordHash))) return res.status(401).json({ error: 'La contraseña actual no es correcta.' });
-    if (nueva.length < 8) return res.status(400).json({ error: 'La contraseña nueva tiene que tener al menos 8 caracteres.' });
-    if (nueva.length > 100) return res.status(400).json({ error: 'La contraseña es demasiado larga (máximo 100).' });
-    if (nueva === actual) return res.status(400).json({ error: 'La contraseña nueva tiene que ser distinta de la actual.' });
+    const tenia = !!usuario.passwordHash;
+    if (tenia && !(await verificarContrasena(actual, usuario.passwordHash))) return res.status(401).json({ error: 'La contraseña actual no es correcta.' });
+    const motivo = errorContrasena(nueva, usuario.usuario);
+    if (motivo) return res.status(400).json({ error: motivo });
+    if (tenia && nueva === actual) return res.status(400).json({ error: 'La contraseña nueva tiene que ser distinta de la actual.' });
     usuario.passwordHash = await hashearContrasena(nueva);
     usuario.tokenVersion = (usuario.tokenVersion || 0) + 1; // cierra las demás sesiones
     await usuario.save();
@@ -270,7 +333,7 @@ router.get('/descargar', async (req, res) => {
     ]);
     const usuario = await usuarioDe(req);
     res.setHeader('Content-Disposition', 'attachment; filename="mis-datos-mi-asistente.json"');
-    res.json({ generadoEn: new Date().toISOString(), cuenta: usuario ? { nombre: usuario.nombre, email: usuario.email, proveedor: usuario.proveedor, creadaEn: usuario.createdAt } : null, negocio, productos, pedidos, turnos, clientes, resenas, preguntas, agenda, conversaciones });
+    res.json({ generadoEn: new Date().toISOString(), cuenta: usuario ? { nombre: usuario.nombre, usuario: usuario.usuario || '', email: usuario.email, proveedor: usuario.proveedor, creadaEn: usuario.createdAt } : null, negocio, productos, pedidos, turnos, clientes, resenas, preguntas, agenda, conversaciones });
   } catch (error) {
     console.error('Error en descarga de datos:', error.message);
     res.status(500).json({ error: 'No se pudo preparar la descarga.' });

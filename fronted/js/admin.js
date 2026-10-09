@@ -4,10 +4,10 @@ let inicialNegocio = 'N';
 
 // Iconos SVG chicos para usar dentro de las tarjetas de pedido (nada de emojis)
 const ICONOS_PEDIDO = {
-  moto: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="9" cy="7" r="1.4" fill="currentColor" stroke="none"/><path d="M9 8.5v3l2.5 2"/><path d="M8 11.5h4"/><circle cx="5.5" cy="17.5" r="3"/><circle cx="18.5" cy="17.5" r="3"/><path d="M11.5 13.5H9l-1.5 4h6l-1-4h4l2 4h2.5"/></svg>',
-  efectivo: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/></svg>',
-  transferencia: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 7h13"/><path d="M13 3l4 4-4 4"/><path d="M20 17H7"/><path d="M11 21l-4-4 4-4"/></svg>',
-  casa: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>',
+  moto: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="5" cy="17.5" r="2.7"/><circle cx="19" cy="17.5" r="2.7"/><path d="M7.7 17.5h5.3l2.2-3.8"/><path d="M15.2 13.7 14 8.5h-2"/><path d="M14 8.5h2.4"/><circle cx="9.6" cy="4.6" r="1.6"/><path d="M9.6 6.6v4.4l2.6 2.7"/><path d="M9.8 8.2l4 .3"/><rect x="3.4" y="6.2" width="5" height="5.6" rx="1.2"/></svg>',
+  efectivo: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M5.5 9.5v.01M18.5 14.5v.01"/></svg>',
+  transferencia: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6.5 10.2h9m0 0-2-1.8m2 1.8-2 1.8"/><path d="M17.5 14.2h-9m0 0 2-1.8m-2 1.8 2 1.8"/></svg>',
+  casa: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m3 9 1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg>',
   tarjeta: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
   nota: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>',
   check: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
@@ -41,23 +41,48 @@ async function intentarSesionGuardada() {
   if (!tokenGuardado) { irAlAcceso(); return; }
 
   jwtTokenActual = tokenGuardado;
+  let res;
   try {
-    const res = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
-    if (res.status === 403) { location.replace('registro.html'); return; } // tiene cuenta pero todavía no creó su asistente
-    if (!res.ok) throw new Error('Sesión vencida');
-    negocioActual = await res.json();
-    mostrarPanel();
+    res = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth() });
   } catch (error) {
+    // Sin conexión o servidor dormido: NO se cierra la sesión, se ofrece reintentar.
+    const cont = document.getElementById('contenedor-login');
+    cont.innerHTML = '<div class="aj-vacio" style="margin:auto; text-align:center; padding:24px;"><strong>No pudimos conectar</strong><p class="ayuda">Revisá tu conexión. Si el servidor estaba dormido, puede tardar un minuto en despertar.</p><button class="btn" id="btn-reintentar-sesion">Reintentar</button></div>';
+    document.getElementById('btn-reintentar-sesion').addEventListener('click', () => location.reload());
+    return;
+  }
+  if (res.status === 403) { location.replace('registro.html'); return; } // tiene cuenta pero todavía no creó su asistente
+  if (res.status === 401) { // la sesión venció o se cerró desde otro dispositivo
     jwtTokenActual = null;
     localStorage.removeItem('jwtToken');
+    localStorage.removeItem('destinoAcceso');
     irAlAcceso();
+    return;
   }
+  if (!res.ok) {
+    const cont = document.getElementById('contenedor-login');
+    cont.innerHTML = '<div class="aj-vacio" style="margin:auto; text-align:center; padding:24px;"><strong>Algo salió mal</strong><p class="ayuda">No pudimos cargar tu panel. Probá de nuevo en un momento.</p><button class="btn" id="btn-reintentar-sesion">Reintentar</button></div>';
+    document.getElementById('btn-reintentar-sesion').addEventListener('click', () => location.reload());
+    return;
+  }
+  negocioActual = await res.json();
+  try { localStorage.setItem('destinoAcceso', 'admin.html'); } catch (e) { /* sin almacenamiento */ }
+  mostrarPanel();
+}
+
+// Antes de salir, siempre se pregunta (Confirmar / Cancelar)
+async function pedirCerrarSesion(e) {
+  if (e) e.preventDefault();
+  if (typeof cerrarDrawer === 'function') cerrarDrawer();
+  const seguro = await ajConfirmar({ titulo: '¿Seguro que querés cerrar sesión?', texto: 'Vas a tener que volver a ingresar con tu usuario y contraseña (o con Google) para usar el panel.', boton: 'Confirmar', icono: 'logout' });
+  if (seguro) cerrarSesion();
 }
 
 async function cerrarSesion(e) {
   if (e) e.preventDefault();
   try { if (typeof avDesactivarPush === 'function' && jwtTokenActual) await Promise.race([avDesactivarPush(), new Promise((r) => setTimeout(r, 2500))]); } catch (err) { /* si falla, igual se cierra la sesión */ }
   localStorage.removeItem('jwtToken');
+  localStorage.removeItem('destinoAcceso');
   jwtTokenActual = null;
   negocioActual = null;
   location.replace('index.html');
@@ -80,6 +105,12 @@ function actualizarAvatares(inicial) {
   const html = urlLogo ? `<img src="${urlLogo}" alt="Foto de perfil">` : inicial;
   document.getElementById('avatar-topbar').innerHTML = html;
   document.getElementById('avatar-drawer').innerHTML = html;
+  const mini = document.getElementById('fo-logo-mini');
+  if (mini) mini.innerHTML = urlLogo ? `<img src="${urlLogo}" alt="">` : inicial;
+  const quitar = document.getElementById('btn-quitar-foto');
+  if (quitar) quitar.style.display = urlLogo ? '' : 'none';
+  const tituloLogo = document.getElementById('mf-titulo');
+  if (tituloLogo) tituloLogo.textContent = urlLogo ? 'Cambiá tu logo' : 'Agregá tu logo';
   const previewImg = document.getElementById('modal-foto-preview-img');
   if (previewImg) {
     previewImg.innerHTML = urlLogo ? `<img src="${urlLogo}" alt="Foto de perfil">` : `<span class="modal-foto-inicial">${inicial}</span>`;
@@ -102,7 +133,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('drawer-ayuda').addEventListener('click', () => { cerrarDrawer(); mostrarSeccion('ajustes'); ajAbrirFS('panel-ayuda'); });
   document.getElementById('drawer-soporte').addEventListener('click', () => { cerrarDrawer(); mostrarSeccion('ajustes'); ajAbrirFS('panel-soporte'); });
-  document.getElementById('drawer-cerrar-sesion').addEventListener('click', cerrarSesion);
+  document.getElementById('drawer-cerrar-sesion').addEventListener('click', pedirCerrarSesion);
 
   // La campana abre el centro de notificaciones (ver js/notificaciones.js)
 
@@ -120,10 +151,7 @@ window.addEventListener('DOMContentLoaded', () => {
     cerrarPantallaCompleta();
   });
 
-  // Copiar enlace de chat con un botón (en vez de seleccionar texto a mano)
-  document.getElementById('btn-copiar-link').addEventListener('click', () => copiarAlPortapapeles('link-chat', 'btn-copiar-link', '📋 Copiar enlace'));
-
-  document.getElementById('link-cerrar-sesion').addEventListener('click', cerrarSesion);
+  document.getElementById('link-cerrar-sesion').addEventListener('click', pedirCerrarSesion);
 
   // Filtros por pestaña y buscador de la sección Pedidos
   document.querySelectorAll('#tabs-pedidos .tab-pill').forEach((tab) => {
@@ -213,9 +241,8 @@ async function mostrarPanel() {
   actualizarEstadoSuscripcionUI();
   esperarConfirmacionPago();
   const linkChat = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
-  document.getElementById('link-chat').textContent = linkChat;
-  document.getElementById('qr-chat').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(linkChat)}`;
-  // el vínculo con Mi Zona va implícito en el enlace: la persona no ve ni copia ningún código
+  // QR, enlace y "Descargá Mi Zona" (el vínculo con Mi Zona va implícito en el enlace: la persona no ve ni copia ningún código)
+  cmpPreparar(negocioActual, linkChat);
   document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
@@ -284,6 +311,7 @@ function capitalizar(t) { t = String(t || ''); return t.charAt(0).toUpperCase() 
 // =====================================================================
 // INICIO: KPIs + gráficos (donut interactivo, barras de la semana, actividad por hora)
 // =====================================================================
+const colorAcento = () => (getComputedStyle(document.documentElement).getPropertyValue('--azul') || '').trim() || '#2454ff';
 const PALETA_DONUT = ['#2454ff', '#7c3aed', '#06b6d4', '#f59e0b', '#16a34a', '#ef4444', '#ec4899', '#64748b'];
 const ETIQUETAS_DONUT = {
   pendiente: 'Pendientes', confirmado: 'Confirmados', en_preparacion: 'En preparación', listo: 'Listos',
@@ -391,7 +419,7 @@ function seleccionarSegmentoDonut(i) {
     detalleEl.innerHTML = `<p class="dd-hint">Tocá un color del gráfico para ver sus datos.</p>`;
   } else {
     const d = datos[donutSeleccion];
-    const color = PALETA_DONUT[donutSeleccion % PALETA_DONUT.length];
+    const color = colorDonut(donutSeleccion % PALETA_DONUT.length);
     valorEl.textContent = d.valor;
     textoEl.textContent = d.nombre;
     pctEl.textContent = `${Math.round((d.valor / total) * 100)}% del total`;
@@ -400,6 +428,8 @@ function seleccionarSegmentoDonut(i) {
     detalleEl.innerHTML = htmlDetalleDonut(d, total, color);
   }
 }
+
+function colorDonut(i) { return i === 0 ? colorAcento() : PALETA_DONUT[i]; }
 
 function renderizarDonut() {
   const cont = document.getElementById('donut-contenedor');
@@ -428,13 +458,13 @@ function renderizarDonut() {
     const largo = Math.max(fraccion * C - hueco, 0.5);
     const desplazamiento = -acumulado;
     acumulado += fraccion * C;
-    const color = PALETA_DONUT[i % PALETA_DONUT.length];
+    const color = colorDonut(i % PALETA_DONUT.length);
     return `<circle class="donut-seg" data-i="${i}" data-largo="${largo}" cx="100" cy="100" r="${R}" fill="none" stroke="${color}" stroke-width="26" stroke-dasharray="0 ${C}" stroke-dashoffset="${desplazamiento}" transform="rotate(-90 100 100)"/>`;
   }).join('');
 
   const filas = datos.map((d, i) => {
     const pct = Math.round((d.valor / total) * 100);
-    const color = PALETA_DONUT[i % PALETA_DONUT.length];
+    const color = colorDonut(i % PALETA_DONUT.length);
     return `
       <button class="donut-fila" data-i="${i}">
         <span class="donut-punto" style="background:${color}"></span>
@@ -541,14 +571,14 @@ function renderizarChartHoras(r) {
     <svg viewBox="0 0 ${W} ${H}" class="horas-svg">
       <defs>
         <linearGradient id="grad-horas" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#2454ff" stop-opacity="0.35"/>
-          <stop offset="100%" stop-color="#2454ff" stop-opacity="0.02"/>
+          <stop offset="0%" stop-color="${colorAcento()}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="${colorAcento()}" stop-opacity="0.02"/>
         </linearGradient>
       </defs>
       <line x1="${PAD_X}" x2="${W - PAD_X}" y1="${BASE}" y2="${BASE}" stroke="#e5e9f7"/>
       <path d="${area}" fill="url(#grad-horas)"/>
-      <path d="${linea}" fill="none" stroke="#2454ff" stroke-width="2.5" stroke-linecap="round"/>
-      <circle id="horas-punto" cx="${puntos[pico].x}" cy="${puntos[pico].y}" r="5" fill="#fff" stroke="#2454ff" stroke-width="3"/>
+      <path d="${linea}" fill="none" stroke="${colorAcento()}" stroke-width="2.5" stroke-linecap="round"/>
+      <circle id="horas-punto" cx="${puntos[pico].x}" cy="${puntos[pico].y}" r="5" fill="#fff" stroke="${colorAcento()}" stroke-width="3"/>
       ${etiquetas}
       ${zonas}
     </svg>
@@ -626,7 +656,7 @@ async function aplicarFiltrosDonut() {
   const valorTxt = document.getElementById('filtro-select-valor');
   if (!caja || !btn) return;
 
-  const etiquetas = { delivery: 'Con delivery', retiro: 'Sin delivery', efectivo: 'Efectivo', transferencia: 'Transferencia' };
+  const etiquetas = { delivery: 'Delivery', retiro: 'Local', efectivo: 'Efectivo', transferencia: 'Transferencia' };
   const abrir = (abierto) => { caja.classList.toggle('abierto', abierto); btn.setAttribute('aria-expanded', String(abierto)); };
 
   function refrescar() {
@@ -643,6 +673,9 @@ async function aplicarFiltrosDonut() {
   }
 
   btn.addEventListener('click', () => abrir(!caja.classList.contains('abierto')));
+  // se cierra al tocar afuera o con Escape
+  document.addEventListener('click', (e) => { if (!caja.contains(e.target)) abrir(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') abrir(false); });
 
   caja.querySelectorAll('.filtro-op').forEach((op) => {
     op.addEventListener('click', () => {
@@ -1203,34 +1236,36 @@ async function esperarConfirmacionPago() {
 
 function renderizarFotos() {
   const grid = document.getElementById('grid-fotos');
-  const fotos = negocioActual.fotos || [];
+  // el logo no se maneja acá: se cambia o se quita tocando la foto de arriba a la derecha
+  const fotos = (negocioActual.fotos || []).filter((f) => f.categoria !== 'logo');
+  const conteo = document.getElementById('fo-conteo');
+  if (conteo) conteo.textContent = fotos.length ? `(${fotos.length})` : '';
 
   if (!fotos.length) {
-    grid.innerHTML = `<p class="ayuda">Todavía no subiste ninguna foto.</p>`;
+    grid.innerHTML = `<div class="fo-vacio"><strong>Todavía no subiste fotos</strong><p>Las que subas arriba aparecen acá.</p></div>`;
     return;
   }
-
+  const ETQ = { menu: 'Menú', producto: 'Producto' };
   grid.innerHTML = fotos.map((f) => `
-    <div style="position:relative;">
-      <img src="${f.url}" style="width:110px; height:110px; object-fit:cover; border-radius:10px;">
-      <div style="font-size:0.75rem; text-align:center; color:var(--gris-texto);">${f.categoria}</div>
-      <button class="btn-borrar-foto" data-public-id="${f.publicId}" style="position:absolute; top:2px; right:2px; background:rgba(220,38,38,0.9); color:white; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-size:0.8rem;">✕</button>
-    </div>
+    <figure class="fo-foto">
+      <img src="${f.url}" alt="${ETQ[f.categoria] || 'Foto'}" loading="lazy">
+      <figcaption>${ETQ[f.categoria] || escHtml(String(f.categoria || 'Foto'))}</figcaption>
+      <button class="btn-borrar-foto" data-public-id="${f.publicId}" aria-label="Borrar foto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </figure>
   `).join('');
 
   document.querySelectorAll('.btn-borrar-foto').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const publicId = btn.dataset.publicId;
+      if (!(await ajConfirmar({ titulo: '¿Borrar esta foto?', texto: 'Tu asistente dejará de mostrarla a los clientes.', boton: 'Borrar', peligro: true, icono: 'trash' }))) return;
       try {
-        const res = await fetch(`${API_URL}/negocios/fotos/${encodeURIComponent(publicId)}`, {
-          method: 'DELETE',
-          headers: headersAuth(),
-        });
+        const res = await fetch(`${API_URL}/negocios/fotos/${encodeURIComponent(publicId)}`, { method: 'DELETE', headers: headersAuth() });
         if (!res.ok) throw new Error('Error al borrar');
         negocioActual.fotos = negocioActual.fotos.filter((f) => f.publicId !== publicId);
         renderizarFotos();
+        ajToast('Foto borrada.');
       } catch (error) {
-        alert('No se pudo borrar la foto.');
+        ajToast('No se pudo borrar la foto.', 'error');
       }
     });
   });
@@ -1314,22 +1349,22 @@ function renderizarPedidos() {
         <div class="pedido-header">
           <div class="pedido-avatar">${ICONOS_PEDIDO.persona}</div>
           <div class="pedido-header-texto">
-            <strong>${p.nombreCliente}</strong>
-            ${p.telefonoCliente ? `<span class="pedido-telefono"> · ${p.telefonoCliente}</span>` : ''}
+            <strong>${escHtml(p.nombreCliente)}</strong>
+            ${p.telefonoCliente ? `<span class="pedido-telefono"> · ${escHtml(p.telefonoCliente)}</span>` : ''}
             <div class="pedido-fecha">${ICONOS_PEDIDO.reloj} ${new Date(p.createdAt).toLocaleString('es-AR')}</div>
           </div>
           <span class="badge-estado badge-${p.estado}"><span class="badge-punto"></span>${ETIQUETAS_ESTADO[p.estado] || p.estado}</span>
         </div>
         <ul class="pedido-items">
-          ${p.items.map((i) => `<li>${i.cantidad}x ${i.producto}${i.precioUnitario ? ` — $${i.precioUnitario * i.cantidad}` : ''}</li>`).join('')}
+          ${p.items.map((i) => `<li>${i.cantidad}x ${escHtml(i.producto)}${i.precioUnitario ? ` — $${i.precioUnitario * i.cantidad}` : ''}</li>`).join('')}
         </ul>
         ${p.total ? `<div class="pedido-total-linea">Total: <strong>$${p.total.toLocaleString('es-AR')}</strong></div>` : ''}
 
         <div class="pedido-info-chips">
-          <span class="chip-info">${p.tipoEntrega === 'delivery' ? `${ICONOS_PEDIDO.moto} Delivery — ${p.direccionEntrega || 'sin dirección'}` : `${ICONOS_PEDIDO.pin} Retira en el local`}</span>
-          <span class="chip-info">${iconoFormaPago(p.formaPago)} ${p.formaPago}</span>
+          <span class="chip-info">${p.tipoEntrega === 'delivery' ? `${ICONOS_PEDIDO.moto} Delivery — ${escHtml(p.direccionEntrega || 'sin dirección')}` : `${ICONOS_PEDIDO.pin} Retira en el local`}</span>
+          <span class="chip-info">${iconoFormaPago(p.formaPago)} ${escHtml(p.formaPago)}</span>
         </div>
-        ${p.observaciones ? `<div class="pedido-detalle">${ICONOS_PEDIDO.nota} ${p.observaciones}</div>` : ''}
+        ${p.observaciones ? `<div class="pedido-detalle">${ICONOS_PEDIDO.nota} ${escHtml(p.observaciones)}</div>` : ''}
 
         ${ETIQUETAS_ESTADO_PAGO[p.estadoPago] ? `<div class="pedido-detalle"><strong>${ETIQUETAS_ESTADO_PAGO[p.estadoPago]}</strong></div>` : ''}
 
@@ -1480,7 +1515,6 @@ function activarSubidaAutomatica(inputId, categoria) {
     }
   });
 }
-activarSubidaAutomatica('input-foto-logo', 'logo');
 activarSubidaAutomatica('input-foto-menu', 'menu');
 // --- Promociones ---
 function renderizarPromociones() {
@@ -1499,8 +1533,8 @@ function renderizarPromociones() {
     return `
     <div class="promo-card ${p.activa ? '' : 'promo-inactiva'}" data-id="${p._id}">
       <div class="promo-info">
-        <strong>${p.titulo}</strong>
-        ${p.descripcion ? `<span>${p.descripcion}</span>` : ''}
+        <strong>${escHtml(p.titulo)}</strong>
+        ${p.descripcion ? `<span>${escHtml(p.descripcion)}</span>` : ''}
         ${reglas.length ? `<span>${reglas.join(' · ')}</span>` : ''}
       </div>
       <div class="promo-acciones">
@@ -1707,7 +1741,7 @@ function renderizarVariantesProducto() {
   const contenedor = document.getElementById('lista-variantes-producto');
   contenedor.innerHTML = variantesProducto.map((v, i) => `
     <div class="fila-variante">
-      <span>${v.nombre}${v.stock !== null && v.stock !== undefined ? ` — stock: ${v.stock}` : ''}</span>
+      <span>${escHtml(v.nombre)}${v.stock !== null && v.stock !== undefined ? ` — stock: ${v.stock}` : ''}</span>
       <button type="button" data-i="${i}">Quitar</button>
     </div>
   `).join('');
@@ -1907,9 +1941,9 @@ function renderizarProductos() {
   }
   contenedor.innerHTML = productosCache.map((p) => `
     <div class="producto-card ${p.disponibleHoy ? '' : 'producto-no-disponible'}" data-id="${p._id}">
-      ${p.fotos && p.fotos[0] ? `<img class="producto-foto" src="${p.fotos[0].url}" alt="${p.nombre}">` : '<div class="producto-foto"></div>'}
+      ${p.fotos && p.fotos[0] ? `<img class="producto-foto" src="${p.fotos[0].url}" alt="${escHtml(p.nombre)}">` : '<div class="producto-foto"></div>'}
       <div class="producto-info">
-        <strong>${p.nombre}</strong>
+        <strong>${escHtml(p.nombre)}</strong>
         ${p.categoria ? `<span>${p.categoria}</span>` : ''}
         ${p.precio ? `<span class="producto-precio">$${Number(p.precio).toLocaleString('es-AR')}</span>` : ''}
         ${!p.disponibleHoy ? '<span>No disponible hoy</span>' : ''}
@@ -1965,7 +1999,7 @@ function prepararBloqueoTurno() {
   const select = document.getElementById('bloqueo-profesional');
 
   if (profesionales.length > 1) {
-    select.innerHTML = profesionales.map((p) => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+    select.innerHTML = profesionales.map((p) => `<option value="${escHtml(p.nombre)}">${escHtml(p.nombre)}</option>`).join('');
     wrap.style.display = 'block';
   } else {
     wrap.style.display = 'none';
@@ -2074,10 +2108,10 @@ function renderizarTurnos() {
       <div class="turno-fecha-hora">${new Date(`${t.fecha}T00:00:00`).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })} · ${t.hora}hs
         <span class="badge-estado badge-${t.estado}" style="margin-left:auto;">${ETIQUETAS_ESTADO_TURNO[t.estado] || t.estado}</span>
       </div>
-      <div class="turno-detalle"><strong>${t.nombreCliente}</strong>${t.telefonoCliente ? ` · ${t.telefonoCliente}` : ''}</div>
-      ${t.motivo ? `<div class="turno-detalle">Motivo: ${t.motivo} (${t.duracionMinutos} min)</div>` : `<div class="turno-detalle">Duración: ${t.duracionMinutos} min</div>`}
-      ${t.profesional ? `<div class="turno-detalle">Con: ${t.profesional}</div>` : ''}
-      ${t.notas ? `<div class="turno-detalle">Notas: ${t.notas}</div>` : ''}
+      <div class="turno-detalle"><strong>${escHtml(t.nombreCliente)}</strong>${t.telefonoCliente ? ` · ${escHtml(t.telefonoCliente)}` : ''}</div>
+      ${t.motivo ? `<div class="turno-detalle">Motivo: ${escHtml(t.motivo)} (${t.duracionMinutos} min)</div>` : `<div class="turno-detalle">Duración: ${t.duracionMinutos} min</div>`}
+      ${t.profesional ? `<div class="turno-detalle">Con: ${escHtml(t.profesional)}</div>` : ''}
+      ${t.notas ? `<div class="turno-detalle">Notas: ${escHtml(t.notas)}</div>` : ''}
       ${t.origen === 'dueño' ? `<div class="turno-detalle">Cargado manualmente</div>` : ''}
       <div class="turno-acciones">
         ${t.estado === 'pendiente' ? `
@@ -2182,9 +2216,9 @@ document.getElementById('input-modal-foto-camara').addEventListener('change', (e
 
 document.getElementById('btn-quitar-foto').addEventListener('click', async () => {
   const logosViejos = (negocioActual.fotos || []).filter((f) => f.categoria === 'logo');
-  if (!logosViejos.length) { cerrarModalFoto(); return; }
-  const msgDiv = document.getElementById('modal-foto-msg');
-  msgDiv.innerHTML = `<p class="ayuda">Quitando foto...</p>`;
+  cerrarModalFoto();
+  if (!logosViejos.length) return;
+  if (!(await ajConfirmar({ titulo: '¿Quitar tu logo?', texto: 'Vas a volver a ver la inicial de tu negocio hasta que subas otro.', boton: 'Quitar logo', peligro: true, icono: 'trash' }))) return;
   try {
     for (const foto of logosViejos) {
       await fetch(`${API_URL}/negocios/fotos/${foto.publicId}`, { method: 'DELETE', headers: headersAuth() });
@@ -2192,9 +2226,9 @@ document.getElementById('btn-quitar-foto').addEventListener('click', async () =>
     negocioActual.fotos = (negocioActual.fotos || []).filter((f) => f.categoria !== 'logo');
     actualizarAvatares(inicialNegocio);
     renderizarFotos();
-    cerrarModalFoto();
+    ajToast('Logo quitado.');
   } catch (error) {
-    msgDiv.innerHTML = `<div class="error-msg">No se pudo quitar la foto. Intentá de nuevo.</div>`;
+    ajToast('No se pudo quitar el logo. Intentá de nuevo.', 'error');
   }
 });
 
@@ -2321,16 +2355,24 @@ function abrirPantallaCompleta(panelId, titulo) {
     </div>` : '';
 
   if (typeof ajRenderPanel === 'function') ajRenderPanel(panelId, panel);
+  if (typeof spPreparar === 'function') spPreparar(panelId, panel);
   if (panelId === 'panel-ranking') renderizarBloquesRanking(true);
   if (panelId === 'panel-tendencias') cargarTendencias();
-  document.getElementById('pantalla-completa').style.display = 'block';
+  const pc = document.getElementById('pantalla-completa');
+  pc.style.animation = 'none'; void pc.offsetWidth; pc.style.animation = ''; // se reinicia el deslizamiento aunque ya estuviera abierta
+  pc.style.display = 'block';
   document.querySelector('.app-contenido').scrollTop = 0;
   document.getElementById('pantalla-completa').scrollTop = 0;
 }
 
 function cerrarPantallaCompleta() {
   if (typeof ajReset === 'function') ajReset();
+  const estabaAbierta = document.getElementById('pantalla-completa').style.display === 'block';
   document.getElementById('pantalla-completa').style.display = 'none';
+  if (estabaAbierta) { // la sección de abajo vuelve con un pequeño movimiento
+    const sec = [...document.querySelectorAll('.app-seccion')].find((x) => x.style.display !== 'none');
+    if (sec) { sec.classList.remove('mv-vuelve'); void sec.offsetWidth; sec.classList.add('mv-vuelve'); }
+  }
   if (panelAbiertoActualId) {
     const panel = document.getElementById(panelAbiertoActualId);
     if (panel) panel.style.display = 'none';
@@ -2421,11 +2463,11 @@ function renderizarOportunidades(tipo, lista, contenedor, btnTodos) {
 
   contenedor.innerHTML = lista.map((c) => `
     <div class="oportunidad-card" data-sesion="${c.sesionClienteId}">
-      <strong>${c.nombre || 'Cliente sin identificar'}</strong>
+      <strong>${escHtml(c.nombre || 'Cliente sin identificar')}</strong>
       <span>Último contacto: ${new Date(c.ultimaFecha).toLocaleDateString('es-AR')}</span>
       ${c.totalPedidos ? `<span>${c.totalPedidos} pedido(s) hechos antes</span>` : ''}
       ${c.totalTurnos ? `<span>${c.totalTurnos} turno(s) antes</span>` : ''}
-      ${c.ultimoMensaje ? `<span class="mensaje-cliente">"${c.ultimoMensaje}"</span>` : ''}
+      ${c.ultimoMensaje ? `<span class="mensaje-cliente">"${escHtml(c.ultimoMensaje)}"</span>` : ''}
       <button class="btn-recuperar-cliente" data-sesion="${c.sesionClienteId}" data-tipo="${tipo}" ${c.recuperacionPendiente ? 'disabled' : ''}>
         ${c.recuperacionPendiente ? 'Ya preparado ✓' : 'Recuperar'}
       </button>
@@ -2498,8 +2540,8 @@ async function cargarExperiencia() {
     contenedor.innerHTML = data.resenas.map((r) => `
       <div class="resena-card">
         <span class="resena-card-estrellas">${'★'.repeat(r.estrellas)}${'☆'.repeat(5 - r.estrellas)}</span>
-        ${r.nombreCliente ? `<span class="resena-card-nombre">${r.nombreCliente}</span>` : ''}
-        ${r.comentario ? `<p class="resena-card-comentario">"${r.comentario}"</p>` : ''}
+        ${r.nombreCliente ? `<span class="resena-card-nombre">${escHtml(r.nombreCliente)}</span>` : ''}
+        ${r.comentario ? `<p class="resena-card-comentario">"${escHtml(r.comentario)}"</p>` : ''}
         <p class="resena-card-fecha">${new Date(r.createdAt).toLocaleDateString('es-AR')}</p>
       </div>
     `).join('');
@@ -2735,41 +2777,117 @@ document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((
   });
 });
 
+// ---- Pantalla "Clientes destacados": portada con podio + lista (mismo estilo que el ranking de Mi Zona) ----
+let rkCriterioVista = null; // criterio que se está viendo en la portada
+const RK_ICONO = { compras: 'package', dinero: 'card', visitas: 'message', fidelidad: 'history' };
+const RK_COLOR = { compras: 'azul', dinero: 'verde', visitas: 'naranja', fidelidad: 'violeta' };
+const RK_HEX = { compras: '#2350F5', dinero: '#1F9D5C', visitas: '#E0731E', fidelidad: '#7A4FD0' };
+const RK_PODIO = {
+  1: { alto: 112, color: '#F5B83D', aro: 'linear-gradient(135deg,#FFE08A,#F5A623)', av: 70 },
+  2: { alto: 80, color: '#C9D3E3', aro: 'linear-gradient(135deg,#F1F5FA,#A9B6CB)', av: 58 },
+  3: { alto: 62, color: '#E0975F', aro: 'linear-gradient(135deg,#F6C9A2,#C97B4A)', av: 58 },
+};
+
+const rkNombre = (c) => (c && c.nombre) || 'Cliente sin identificar';
+const rkInicial = (c) => (rkNombre(c).trim()[0] || '?').toUpperCase();
+const rkDias = (c) => Math.max(0, Math.floor((Date.now() - new Date(c.valor).getTime()) / 86400000));
+
+// Texto largo para la línea de cada cliente
 function valorRankingTexto(c, criterio) {
   if (!c) return '';
-  if (criterio === 'dinero') return `$${Number(c.valor || 0).toLocaleString('es-AR')}`;
+  if (criterio === 'dinero') return `$${Number(c.valor || 0).toLocaleString('es-AR')} gastados`;
   if (criterio === 'fidelidad') return `Cliente desde ${new Date(c.valor).toLocaleDateString('es-AR')}`;
   return `${c.valor} ${ETIQUETAS_CRITERIO[criterio]}`;
 }
+// Número grande de la derecha
+function rkValorGrande(c, criterio) {
+  if (criterio === 'dinero') return `$${Number(c.valor || 0).toLocaleString('es-AR')}`;
+  if (criterio === 'fidelidad') { const d = rkDias(c); return d < 30 ? `${d} d` : d < 365 ? `${Math.floor(d / 30)} m` : `${(d / 365).toFixed(1).replace('.0', '')} a`; }
+  return String(c.valor);
+}
+const rkMagnitud = (c, criterio) => (criterio === 'fidelidad' ? rkDias(c) : Number(c.valor) || 0);
 
-function htmlPodio(top3, criterio) {
-  const clases = { 1: 'oro', 2: 'plata', 3: 'bronce' };
-  return [1, 2, 3].map((puesto) => {
-    const c = top3[puesto - 1];
-    const nombre = c ? (c.nombre || 'Cliente sin identificar') : '—';
-    const valor = c ? valorRankingTexto(c, criterio) : 'Todavía nadie';
-    return `
-      <div class="podio-puesto" data-orden="${puesto}">
-        <div class="podio-circulo ${clases[puesto]}">
-          ${puesto}
-          <span class="podio-badge">${puesto}°</span>
-        </div>
-        <div class="podio-nombre">${nombre}</div>
-        <div class="podio-valor">${valor}</div>
+function rkPremioChip(criterio, puesto) {
+  const pr = premiosParaMostrar(criterio);
+  const p = pr && pr['top' + puesto];
+  if (!p || (!p.texto && !p.descuentoPorcentaje)) return '';
+  const txt = p.texto || `${p.descuentoPorcentaje}% off`;
+  return `<span class="rk-premio">${ajIcono('gift', 11)}<span>${escHtml(txt)}</span></span>`;
+}
+
+function rkPuesto(c, puesto, criterio) {
+  const st = RK_PODIO[puesto];
+  if (!c) {
+    return `<div class="rk-puesto rk-libre" style="flex:1;min-width:0">
+      <div class="rk-av-libre" style="width:${st.av}px;height:${st.av}px">?</div>
+      <p class="rk-p-nombre" style="color:#8FA3CC">Libre</p>
+      <div class="rk-pedestal" style="height:${st.alto}px;border-color:${st.color}33;background:linear-gradient(180deg,${st.color}22,${st.color}05)"><span style="color:${st.color};font-size:${puesto === 1 ? 38 : 30}px;opacity:.55">${puesto}</span></div></div>`;
+  }
+  return `<div class="rk-puesto" style="flex:1;min-width:0">
+    ${puesto === 1 ? `<span class="rk-corona">${ajIcono('crown', 24).replace('stroke="currentColor"', `stroke="${st.color}" fill="${st.color}"`)}</span>` : ''}
+    <div class="rk-aro" style="width:${st.av + 8}px;height:${st.av + 8}px;background:${st.aro};box-shadow:0 8px 22px ${st.color}66">
+      <div class="rk-av" style="font-size:${st.av * 0.4}px">${escHtml(rkInicial(c))}</div>
+      <span class="rk-medalla" style="background:${st.aro}">${puesto}</span>
+    </div>
+    <p class="rk-p-nombre">${escHtml(rkNombre(c))}</p>
+    <p class="rk-p-valor" style="color:${st.color}">${escHtml(rkValorGrande(c, criterio))} <small>${escHtml(ETIQUETAS_CRITERIO[criterio] === 'cliente desde' ? 'antigüedad' : ETIQUETAS_CRITERIO[criterio])}</small></p>
+    ${rkPremioChip(criterio, puesto)}
+    <div class="rk-pedestal" style="height:${st.alto}px;border-color:${st.color}66;background:linear-gradient(180deg,${st.color}55,${st.color}08)"><span style="color:${st.color};font-size:${puesto === 1 ? 38 : 30}px">${puesto}</span></div></div>`;
+}
+
+function pintarRankingVista() {
+  const cont = document.getElementById('rk-vista');
+  if (!cont) return;
+  if (!rkCriterioVista || !criteriosActivosActual.includes(rkCriterioVista)) rkCriterioVista = criteriosActivosActual[0];
+  const criterio = rkCriterioVista;
+  const top = cacheTop10Ranking[criterio] || [];
+  const resto = top.slice(3);
+  const maxMag = Math.max(1, ...top.map((c) => rkMagnitud(c, criterio)));
+  const lider = top[0];
+
+  const chips = criteriosActivosActual.length > 1
+    ? `<div class="rk-chips">${criteriosActivosActual.map((k) => `<button type="button" class="rk-chip ${k === criterio ? 'act' : ''}" data-rk="${k}" style="--c:${RK_HEX[k]}">${ajIcono(RK_ICONO[k], 14)} ${NOMBRES_CRITERIO[k]}</button>`).join('')}</div>`
+    : '';
+
+  cont.innerHTML = `
+    <div class="rk-portada">
+      <i class="rk-deco a"></i><i class="rk-deco b"></i>
+      <div class="rk-cab">
+        <div class="rk-cab-txt"><h3>Clientes destacados</h3><p>${ajIcono(RK_ICONO[criterio], 12)} Tus mejores clientes por ${escHtml(NOMBRES_CRITERIO[criterio].toLowerCase())}</p></div>
+        <span class="rk-trofeo">${ajIcono('trophy', 20)}</span>
       </div>
-    `;
-  }).join('');
+      <div class="rk-stats">
+        <div>${ajIcono('users', 14)}<span><b>${top.length}</b><small>${top.length === 1 ? 'cliente en el top' : 'clientes en el top'}</small></span></div>
+        <div>${ajIcono('crown', 14)}<span><b>${lider ? escHtml(rkValorGrande(lider, criterio)) : '—'}</b><small>mejor cliente</small></span></div>
+        <div>${ajIcono('sliders', 14)}<span><b>${criteriosActivosActual.length}</b><small>${criteriosActivosActual.length === 1 ? 'criterio activo' : 'criterios activos'}</small></span></div>
+      </div>
+      ${top.length ? `<div class="rk-podio">${rkPuesto(top[1], 2, criterio)}${rkPuesto(top[0], 1, criterio)}${rkPuesto(top[2], 3, criterio)}</div>` : '<div style="height:14px"></div>'}
+    </div>
+    <div class="rk-cuerpo">
+      ${chips}
+      ${top.length ? (resto.length ? `<p class="rk-sec">Del puesto 4 al ${top.length}</p>
+        <div class="rk-lista">${resto.map((c, i) => `
+          <div class="rk-fila">
+            <span class="rk-badge ${i + 4 <= 10 ? 'dest' : ''}">${i + 4}</span>
+            <span class="rk-fav" style="background:${RK_HEX[criterio]}1f;color:${RK_HEX[criterio]}">${escHtml(rkInicial(c))}</span>
+            <span class="rk-fila-txt"><strong>${escHtml(rkNombre(c))}</strong><small>${escHtml(valorRankingTexto(c, criterio))}</small>
+              <span class="rk-barra"><i style="width:${Math.max(6, Math.round((rkMagnitud(c, criterio) / maxMag) * 100))}%;background:linear-gradient(90deg,${RK_HEX[criterio]},${RK_HEX[criterio]}aa)"></i></span></span>
+            <span class="rk-fila-val"><b>${escHtml(rkValorGrande(c, criterio))}</b></span>
+          </div>`).join('')}</div>` : '')
+        : `<div class="rk-vacio"><span>${ajIcono('trophy', 30)}</span><strong>Todavía no hay ranking</strong><p>Cuando tus clientes empiecen a comprar y a escribirle a tu asistente, tus mejores clientes van a aparecer acá.</p></div>`}
+    </div>`;
+  cont.querySelectorAll('[data-rk]').forEach((b) => b.addEventListener('click', () => { rkCriterioVista = b.dataset.rk; pintarRankingVista(); }));
 }
 
 function htmlPremiosPuestos(criterio, premios) {
-  const colores = { 1: '#f59e0b', 2: '#94a3b8', 3: '#b8703f' };
+  const med = { 1: 'linear-gradient(135deg,#FFE08A,#F5A623)', 2: 'linear-gradient(135deg,#F1F5FA,#A9B6CB)', 3: 'linear-gradient(135deg,#F6C9A2,#C97B4A)' };
   return [1, 2, 3].map((puesto) => {
     const premio = (premios && premios['top' + puesto]) || { texto: '', descuentoPorcentaje: 0 };
     return `
       <div class="premio-puesto-fila">
-        <div class="premio-puesto-medalla" style="background:${colores[puesto]}">${puesto}°</div>
+        <div class="premio-puesto-medalla" style="background:${med[puesto]}">${puesto}°</div>
         <div class="premio-puesto-campos">
-          <input type="text" class="premio-texto" data-criterio="${criterio}" data-puesto="${puesto}" placeholder="Ej: Envío gratis, un producto de regalo..." value="${premio.texto || ''}">
+          <input type="text" class="premio-texto" data-criterio="${criterio}" data-puesto="${puesto}" placeholder="Ej: Envío gratis o un regalo" value="${escHtml(premio.texto || '')}">
           <div class="premio-puesto-descuento-wrap">
             <input type="number" class="premio-descuento" data-criterio="${criterio}" data-puesto="${puesto}" min="0" max="100" placeholder="0" value="${premio.descuentoPorcentaje || ''}">
             <span>% de descuento (opcional)</span>
@@ -2780,24 +2898,20 @@ function htmlPremiosPuestos(criterio, premios) {
   }).join('');
 }
 
-function htmlListaResto(resto, criterio) {
-  if (!resto.length) return '';
-  return `<div style="margin-top:14px;">${resto.map((c, i) => {
-    const nombre = c.nombre || 'Cliente sin identificar';
-    return `
-      <div class="ranking-card">
-        <div class="ranking-puesto">${i + 4}</div>
-        <div class="ranking-info">
-          <strong>${nombre}</strong>
-          <span>${valorRankingTexto(c, criterio)}</span>
-        </div>
-      </div>
-    `;
-  }).join('')}</div>`;
+function pintarPremiosRanking() {
+  const cont = document.getElementById('ranking-premios');
+  if (!cont) return;
+  cont.innerHTML = criteriosActivosActual.map((criterio) => `
+    <div class="rk-premio-bloque" data-criterio-bloque="${criterio}">
+      <div class="rk-premio-cab"><span class="rk-premio-ic ic-${RK_COLOR[criterio]}">${ajIcono(RK_ICONO[criterio], 18)}</span><div><strong>${NOMBRES_CRITERIO[criterio]}</strong><small>Premios para el top 3</small></div></div>
+      ${htmlPremiosPuestos(criterio, premiosParaMostrar(criterio))}
+    </div>`).join('');
+  // al escribir, la portada muestra el premio de cada puesto en vivo
+  cont.querySelectorAll('.premio-texto, .premio-descuento').forEach((i) => i.addEventListener('input', () => { capturarPremiosDelDOM(); pintarRankingVista(); }));
 }
 
 async function renderizarBloquesRanking(recargarTodo) {
-  const contenedor = document.getElementById('ranking-por-criterio');
+  const contenedor = document.getElementById('rk-vista');
   try {
     if (recargarTodo || !rankingConfigServidor) {
       contenedor.innerHTML = `<p class="ayuda">Cargando...</p>`;
@@ -2818,19 +2932,8 @@ async function renderizarBloquesRanking(recargarTodo) {
     }
 
     pintarSeleccionCriterios();
-
-    contenedor.innerHTML = criteriosActivosActual.map((criterio) => {
-      const top10 = cacheTop10Ranking[criterio] || [];
-      const premios = premiosParaMostrar(criterio);
-      return `
-        <div class="ranking-bloque-criterio" data-criterio-bloque="${criterio}">
-          <div class="ranking-bloque-titulo">${NOMBRES_CRITERIO[criterio]}</div>
-          <div class="podio-ranking">${htmlPodio(top10.slice(0, 3), criterio)}</div>
-          ${htmlPremiosPuestos(criterio, premios)}
-          ${top10.length ? htmlListaResto(top10.slice(3), criterio) : `<p class="ayuda">Todavía no hay clientes suficientes para este criterio.</p>`}
-        </div>
-      `;
-    }).join('');
+    pintarRankingVista();
+    pintarPremiosRanking();
   } catch (error) {
     contenedor.innerHTML = `<p class="ayuda">No se pudo cargar el ranking.</p>`;
   }
@@ -3111,3 +3214,6 @@ document.addEventListener('click', (e) => {
     if (fila) fila.click();
   }
 });
+
+// Si cambia el color de la app, los gráficos se vuelven a dibujar con el nuevo acento
+window.addEventListener('apariencia-cambio', () => { try { if (typeof renderizarDonut === 'function' && document.getElementById('donut-contenedor')) renderizarDonut(); } catch (e) { /* si todavía no hay datos, no pasa nada */ } });

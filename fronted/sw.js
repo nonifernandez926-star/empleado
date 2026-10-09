@@ -44,3 +44,46 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// ---------- Caché y modo sin conexión ----------
+// Guardamos solo la "estructura" (páginas, estilos, scripts, íconos) para que la app abra rápido y muestre
+// una pantalla clara cuando no hay internet. Los datos (pedidos, chats, etc.) viven en la API, en otro dominio:
+// NUNCA se guardan acá.
+const VERSION = 'v3';
+const CACHE = 'mi-asistente-' + VERSION;
+const PRECACHE = ['/offline.html', '/css/style.css', '/img/icono-192.png', '/img/icono-512.png'];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((claves) => Promise.all(claves.filter((k) => k.startsWith('mi-asistente-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;        // la API y Google no se tocan
+  if (url.pathname === '/sw.js') return;
+
+  // Páginas: primero la red; si no hay conexión, la pantalla "Sin conexión"
+  if (req.mode === 'navigate') {
+    event.respondWith(fetch(req).catch(() => caches.match('/offline.html')));
+    return;
+  }
+  // Estilos, scripts, íconos: devolver lo guardado al instante y actualizarlo en segundo plano
+  if (/\.(css|js|png|jpg|jpeg|svg|webp|ico|woff2?)$/.test(url.pathname)) {
+    event.respondWith(
+      caches.open(CACHE).then((c) => c.match(req).then((guardado) => {
+        const red = fetch(req).then((r) => { if (r && r.ok) c.put(req, r.clone()); return r; }).catch(() => guardado);
+        return guardado || red;
+      }))
+    );
+  }
+});
+
