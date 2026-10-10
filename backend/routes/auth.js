@@ -1,8 +1,11 @@
+const crypto = require('crypto');
 const express = require('express');
 const router = express.Router();
 const { OAuth2Client } = require('google-auth-library');
 const Negocio = require('../models/Negocio');
 const Usuario = require('../models/Usuario');
+const CodigoCorreo = require('../models/CodigoCorreo');
+const { enviarCodigoIngreso } = require('../utils/correo');
 const { generarToken, generarTokenUsuario, verificarToken } = require('../utils/jwt');
 const { hashearContrasena, verificarContrasena } = require('../utils/contrasenas');
 const { permitir, olvidar } = require('../utils/limitador');
@@ -55,7 +58,7 @@ async function respuestaSesion(usuario, extra = {}) {
     token: generarTokenUsuario(usuario),
     usuario: usuarioPublico(usuario),
     // Si falta el usuario o la contraseña, la web pide completarlos antes de entrar (PUT /api/auth/completar)
-    pendiente: { usuario: !usuario.usuario, clave: !usuario.passwordHash },
+    pendiente: { usuario: !usuario.usuario, clave: !usuario.passwordHash && !usuario.correoVerificado },
     tieneNegocio: !!negocio,
     ...extra,
   };
@@ -100,11 +103,92 @@ router.post('/correo', async (req, res) => {
     if (!RE_CORREO.test(email) || email.length > 120) return res.status(400).json({ error: 'Escribí un correo válido.' });
     const usuario = await Usuario.findOne({ email });
     if (!usuario) return res.json({ paso: 'crear' });
-    // "clave": cuenta vieja creada con correo y contraseña. "google": cuenta de Google (entra con Google; Google pide la contraseña del correo en su propia página).
-    res.json({ paso: usuario.proveedor === 'email' && usuario.passwordHash ? 'clave' : 'google' });
+    // Toda cuenta existente entra con un código que se manda a su correo (no hace falta contraseña).
+    res.json({ paso: 'codigo' });
   } catch (e) {
     console.error('Error al revisar el correo:', e.message);
     res.status(500).json({ error: 'No se pudo continuar. Probá de nuevo.' });
+  }
+});
+
+// ---- Ingreso con código enviado al correo ----
+const CODIGO_VIDA_MS = 10 * 60 * 1000;
+const CODIGO_ESPERA_MS = 45 * 1000;
+const CODIGO_MAX_INTENTOS = 5;
+const huellaCodigo = (email, codigo) =>
+  crypto.createHmac('sha256', process.env.JWT_SECRET || 'dev-secret').update(`${email}|${codigo}`).digest('hex');
+
+// POST /api/auth/codigo/enviar { email } -> manda un código de 6 dígitos al correo de una cuenta existente
+router.post('/codigo/enviar', async (req, res) => {
+  try {
+    const email = normalizarCorreo(req.body?.email);
+    if (!RE_CORREO.test(email) || email.length > 120) return res.status(400).json({ error: 'Escribí un correo válido.' });
+    if (!permitir(`cod-ip|${ip(req)}`, 20, 60 * 60 * 1000) || !permitir(`cod-mail|${email}`, 6, 60 * 60 * 1000)) {
+      return res.status(429).json({ error: 'Pediste muchos códigos. Probá de nuevo en un rato.' });
+    }
+    const usuario = await Usuario.findOne({ email });
+    if (!usuario) return res.json({ paso: 'crear' });
+    const previo = await CodigoCorreo.findOne({ email });
+    if (previo && Date.now() - previo.creado.getTime() < CODIGO_ESPERA_MS) {
+      return res.json({ ok: true, espera: Math.ceil((CODIGO_ESPERA_MS - (Date.now() - previo.creado.getTime())) / 1000) });
+    }
+    const codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    await CodigoCorreo.findOneAndUpdate(
+      { email },
+      { email, hash: huellaCodigo(email, codigo), intentos: 0, creado: new Date(), expira: new Date(Date.now() + CODIGO_VIDA_MS) },
+      { upsert: true }
+    );
+    try {
+      await enviarCodigoIngreso(email, codigo);
+    } catch (e) {
+      await CodigoCorreo.deleteOne({ email });
+      console.error('No se pudo enviar el código:', e.message);
+      return res.status(503).json({ error: 'No pudimos enviar el correo ahora. Probá de nuevo en unos minutos.' });
+    }
+    res.json({ ok: true, espera: CODIGO_ESPERA_MS / 1000 });
+  } catch (e) {
+    console.error('Error al enviar el código:', e.message);
+    res.status(500).json({ error: 'No se pudo enviar el código. Probá de nuevo.' });
+  }
+});
+
+// POST /api/auth/codigo/verificar { email, codigo } -> si el código es correcto inicia sesión
+router.post('/codigo/verificar', async (req, res) => {
+  try {
+    const email = normalizarCorreo(req.body?.email);
+    const codigo = String(req.body?.codigo || '').replace(/\D/g, '');
+    if (!RE_CORREO.test(email) || codigo.length !== 6) return res.status(400).json({ error: 'Escribí el código de 6 números.' });
+    if (!permitir(`cod-ver|${ip(req)}`, 40, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos. Esperá unos minutos.' });
+    const reg = await CodigoCorreo.findOne({ email });
+    if (!reg || reg.expira.getTime() < Date.now()) return res.status(400).json({ error: 'El código venció. Pedí uno nuevo.', codigo: 'codigo_vencido' });
+    if (reg.intentos >= CODIGO_MAX_INTENTOS) {
+      await CodigoCorreo.deleteOne({ email });
+      return res.status(400).json({ error: 'Demasiados intentos con este código. Pedí uno nuevo.', codigo: 'codigo_vencido' });
+    }
+    if (!crypto.timingSafeEqual(Buffer.from(reg.hash, 'hex'), Buffer.from(huellaCodigo(email, codigo), 'hex'))) {
+      await CodigoCorreo.updateOne({ email }, { $inc: { intentos: 1 } });
+      return res.status(401).json({ error: 'El código no es correcto.' });
+    }
+    // un código sirve una sola vez: se borra antes de abrir la sesión
+    const borrado = await CodigoCorreo.findOneAndDelete({ email, hash: reg.hash });
+    if (!borrado) return res.status(400).json({ error: 'El código ya se usó. Pedí uno nuevo.', codigo: 'codigo_vencido' });
+    const usuario = await Usuario.findOne({ email });
+    if (!usuario) return res.status(404).json({ error: 'cuenta_inexistente', mensaje: 'No encontramos una cuenta con ese correo.' });
+
+    if (usuario.proveedor === 'email' && !usuario.correoVerificado) {
+      // Cuenta vieja creada con correo SIN verificar: cualquiera pudo crearla con el correo de otra persona.
+      // Ahora quien tiene el correo lo demostró: se borra la contraseña vieja y se cierran las sesiones anteriores.
+      usuario.passwordHash = '';
+      usuario.tokenVersion = (usuario.tokenVersion || 0) + 1;
+    }
+    if (!usuario.correoVerificado) { usuario.correoVerificado = true; }
+    await usuario.save();
+    await anotarAcceso(usuario, 'inicio_sesion', req, 'codigo');
+    const r = await respuestaSesion(usuario, { yaExistia: true });
+    res.json(r);
+  } catch (e) {
+    console.error('Error al verificar el código:', e.message);
+    res.status(500).json({ error: 'No se pudo verificar el código. Probá de nuevo.' });
   }
 });
 
@@ -196,7 +280,7 @@ router.get('/me', async (req, res) => {
     const usuario = await Usuario.findById(p.uid);
     if (!usuario || (p.v || 0) !== (usuario.tokenVersion || 0)) return res.status(401).json({ error: 'Sesión inválida o vencida' });
     const negocio = await Negocio.findOne({ usuarioId: usuario._id }).select('_id');
-    res.json({ usuario: usuarioPublico(usuario), pendiente: { usuario: !usuario.usuario, clave: !usuario.passwordHash }, tieneNegocio: !!negocio });
+    res.json({ usuario: usuarioPublico(usuario), pendiente: { usuario: !usuario.usuario, clave: !usuario.passwordHash && !usuario.correoVerificado }, tieneNegocio: !!negocio });
   } catch (e) {
     res.status(500).json({ error: 'No se pudo leer la sesión.' });
   }

@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+
+const coordenadasValidas = (u) => !!u && Number.isFinite(Number(u.lat)) && Number.isFinite(Number(u.lng)) && Math.abs(Number(u.lat)) <= 90 && Math.abs(Number(u.lng)) <= 180;
 const multer = require('multer');
 const Negocio = require('../models/Negocio');
 const { RUBROS } = require('../data/rubros');
@@ -24,7 +26,7 @@ function validarSubrubro(subrubroId) {
 // para que el dueño pueda iniciar sesión con Google en el futuro.
 router.post('/', async (req, res) => {
   try {
-    const { subrubroId, formData, horarios, personalidad, googleIdToken, atencionSoloEnHorario, tipoOperacion, profesionales, configTurnos } = req.body;
+    const { subrubroId, formData, ubicacion, horarios, personalidad, googleIdToken, atencionSoloEnHorario, tipoOperacion, profesionales, configTurnos } = req.body;
 
     const match = validarSubrubro(subrubroId);
     if (!match) return res.status(400).json({ error: 'Subrubro inválido' });
@@ -101,6 +103,7 @@ router.post('/', async (req, res) => {
       profesionales: tipoOperacionFinal === 'turnos' ? (profesionales || []) : [],
       configTurnos: tipoOperacionFinal === 'turnos' ? (configTurnos || {}) : undefined,
       formData: formData || {},
+      ...(coordenadasValidas(ubicacion) ? { ubicacion: { lat: Number(ubicacion.lat), lng: Number(ubicacion.lng) } } : {}),
       horarios: horarios || [],
       personalidad: personalidad || {},
       atencionSoloEnHorario: !!atencionSoloEnHorario,
@@ -169,9 +172,11 @@ router.get('/mi-negocio', requiereAdmin, async (req, res) => {
 // PUT /api/negocios/mi-negocio -> actualiza info, horarios o personalidad
 router.put('/mi-negocio', requiereAdmin, async (req, res) => {
   try {
-    const { formData, horarios, personalidad, disponibilidadHoy, atencionSoloEnHorario, tipoOperacion, profesionales, configTurnos, modoVendedor, memoriaActiva, permisos, zonasDelivery } = req.body;
+    const { formData, ubicacion, horarios, personalidad, disponibilidadHoy, atencionSoloEnHorario, tipoOperacion, profesionales, configTurnos, modoVendedor, memoriaActiva, permisos, zonasDelivery } = req.body;
 
     if (formData) req.negocio.formData = { ...req.negocio.formData, ...formData };
+    if (coordenadasValidas(ubicacion)) req.negocio.ubicacion = { lat: Number(ubicacion.lat), lng: Number(ubicacion.lng) };
+    else if (ubicacion === null) req.negocio.ubicacion = undefined; // escribió otra dirección a mano: las coordenadas viejas ya no valen
     if (horarios) req.negocio.horarios = horarios;
     if (personalidad) req.negocio.personalidad = { ...req.negocio.personalidad.toObject(), ...personalidad };
     if (disponibilidadHoy !== undefined) req.negocio.disponibilidadHoy = disponibilidadHoy;

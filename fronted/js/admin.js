@@ -2264,9 +2264,12 @@ function etiquetaLegible(clave) {
   return clave.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase());
 }
 
+let ubicacionEdicion = undefined; // cambió en el mapa: { lat, lng }; null = se borró (escribió otra dirección a mano)
+
 function renderizarCamposEdicion() {
   const contenedor = document.getElementById('campos-edicion');
   contenedor.innerHTML = '';
+  ubicacionEdicion = undefined;
 
   Object.entries(negocioActual.formData || {}).forEach(([clave, valor]) => {
     const valorTexto = Array.isArray(valor) ? valor.join(', ') : (valor ?? '');
@@ -2275,6 +2278,21 @@ function renderizarCamposEdicion() {
       <label>${etiquetaLegible(clave)}</label>
       <textarea data-campo="${clave}">${valorTexto}</textarea>
     `;
+    if (clave === 'direccion' && window.MapaUbicacion) {
+      wrapper.insertAdjacentHTML('beforeend', `<button type="button" style="margin-top:8px;width:100%;padding:11px;border-radius:12px;border:1.5px solid #2f6df0;background:#fff;color:#2f6df0;font-weight:700;font-size:14px;cursor:pointer;">📍 ${negocioActual.ubicacion?.lat != null ? 'Cambiar ubicación en el mapa' : 'Elegir en el mapa'}</button>`);
+      const area = wrapper.querySelector('textarea');
+      area.addEventListener('input', () => { ubicacionEdicion = null; });
+      wrapper.querySelector('button').addEventListener('click', async (e) => {
+        const loc = contenedor.querySelector('[data-campo="localidad"]');
+        const vigente = ubicacionEdicion !== undefined ? ubicacionEdicion : (negocioActual.ubicacion || null);
+        const r = await MapaUbicacion.abrir({ direccion: area.value, localidad: loc ? loc.value : '', ...(vigente && vigente.lat != null ? vigente : {}) });
+        if (!r) return;
+        area.value = r.direccion || 'Ubicación marcada en el mapa';
+        if (loc && !loc.value.trim() && r.localidad) loc.value = r.localidad;
+        ubicacionEdicion = { lat: r.lat, lng: r.lng };
+        e.target.textContent = '📍 Cambiar ubicación en el mapa';
+      });
+    }
     contenedor.appendChild(wrapper);
   });
 }
@@ -2412,13 +2430,14 @@ document.getElementById('btn-guardar-info').addEventListener('click', async () =
     const res = await fetch(`${API_URL}/negocios/mi-negocio`, {
       method: 'PUT',
       headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ formData, horarios, atencionSoloEnHorario }),
+      body: JSON.stringify({ formData, horarios, atencionSoloEnHorario, ...(ubicacionEdicion !== undefined ? { ubicacion: ubicacionEdicion } : {}) }),
     });
     if (!res.ok) throw new Error('Error al guardar');
 
     negocioActual.formData = { ...negocioActual.formData, ...formData };
     negocioActual.horarios = horarios;
     negocioActual.atencionSoloEnHorario = atencionSoloEnHorario;
+    if (ubicacionEdicion !== undefined) negocioActual.ubicacion = ubicacionEdicion || undefined;
     document.getElementById('nombre-negocio-panel').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
     document.getElementById('drawer-nombre-negocio').textContent = negocioActual.formData?.nombreNegocio || 'Mi negocio';
 

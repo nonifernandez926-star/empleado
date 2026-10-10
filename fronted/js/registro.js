@@ -4,6 +4,7 @@ let categoriasData = [];
 let categoriaSeleccionada = null;
 let subrubroSeleccionado = null;
 let pasoActual = 1;
+let ubicacionElegida = null; // { lat, lng } elegida en el mapa (se guarda con el negocio)
 
 // Muestra un único paso a la vez (los otros quedan completamente ocultos, sin poder
 // hacer scroll hacia ellos) y hace que la flecha de "volver" de arriba retroceda un
@@ -271,6 +272,21 @@ function renderizarCampos(campos) {
     }
 
     wrapper.innerHTML = `<label>${campo.label}${etiquetaOpcional}</label>${inputHtml}`;
+    if (campo.id === 'direccion' && window.MapaUbicacion) {
+      wrapper.insertAdjacentHTML('beforeend', '<button type="button" id="btn-mapa-direccion" style="margin-top:8px;width:100%;padding:11px;border-radius:12px;border:1.5px solid #2f6df0;background:#fff;color:#2f6df0;font-weight:700;font-size:14px;cursor:pointer;">📍 Elegir en el mapa</button>');
+      wrapper.querySelector('#btn-mapa-direccion').addEventListener('click', async () => {
+        const campoDir = document.getElementById('campo-direccion');
+        const campoLoc = document.getElementById('campo-localidad');
+        const r = await MapaUbicacion.abrir({ direccion: campoDir.value, localidad: campoLoc ? campoLoc.value : '', ...(ubicacionElegida || {}) });
+        if (!r) return;
+        campoDir.value = r.direccion || 'Ubicación marcada en el mapa';
+        if (campoLoc && !campoLoc.value.trim() && r.localidad) campoLoc.value = r.localidad;
+        ubicacionElegida = { lat: r.lat, lng: r.lng };
+        wrapper.querySelector('#btn-mapa-direccion').textContent = '📍 Cambiar ubicación en el mapa';
+      });
+      // si después escribe otra dirección a mano, las coordenadas del mapa dejan de valer
+      wrapper.querySelector('#campo-direccion').addEventListener('input', () => { ubicacionElegida = null; });
+    }
     contenedor.appendChild(wrapper);
   });
 }
@@ -370,6 +386,7 @@ document.getElementById('form-negocio').addEventListener('submit', async (e) => 
     subrubroId: subrubroSeleccionado,
     tipoOperacion: tipoOperacionSeleccionado,
     formData: recolectarFormData(definicion.campos),
+    ...(ubicacionElegida ? { ubicacion: ubicacionElegida } : {}),
     horarios: recolectarHorarios(),
     personalidad: {
       estilo: document.getElementById('personalidad-estilo').value,

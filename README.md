@@ -454,3 +454,11 @@ Rutas privadas `/api/integracion/*`, protegidas con `INTEGRACION_KEY` (la misma 
 
 ## Publicación en Google Play
 Mirá `INFORME-REVISION.md` (qué se corrigió y qué falta) y la carpeta `play-store/`. Las páginas `privacidad.html`, `terminos.html` y `eliminar-cuenta.html` se generan con `node scripts/generar-legales.js` a partir de `frontend/js/legal.js`.
+
+## Entrar con código al correo + elegir la ubicación en el mapa
+
+- **Entrar con el correo:** al escribir un correo en el acceso, se manda un código de 6 números a ese correo y se entra con él (sin contraseña). Solo para cuentas existentes; crear cuenta sigue siendo "Registrarme" (Google). Rutas: `POST /api/auth/codigo/enviar` y `POST /api/auth/codigo/verificar`.
+- **Configurar el envío (una sola vez):** Render gratis no permite SMTP, se envía por API con **Brevo** (gratis, sin dominio): creá cuenta en brevo.com → Remitentes (verificá tu correo) → SMTP y API → API Keys, y cargá en Render `BREVO_API_KEY` y `CORREO_REMITENTE` (ej.: `Mi Asistente <tu-correo@gmail.com>`).
+- **Cuentas viejas de correo sin verificar:** al entrar por primera vez con un código se les borra la contraseña vieja y se cierran sus sesiones.
+- **Mapa para la dirección:** en el registro y en "Editar mi negocio", el campo Dirección tiene el botón **Elegir en el mapa** (pin que se arrastra + Confirmar). Escribe la dirección sola, completa la localidad si estaba vacía y guarda las coordenadas en `negocio.ubicacion`. Leaflet se carga desde unpkg la primera vez. `netlify.toml` ahora permite la ubicación del dispositivo (`geolocation=(self)`).
+- **Sin Brevo (más simple):** se puede enviar desde tu propio Gmail con un script de Google gratis. Abrí `backend/correo-apps-script.gs` y seguí los 4 pasos de los comentarios; después cargá en Render `APPS_SCRIPT_URL` y `APPS_SCRIPT_CLAVE`. Gmail gratis permite unos 100 correos por día. Si está cargado, tiene prioridad sobre Brevo.

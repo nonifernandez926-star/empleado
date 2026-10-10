@@ -1,0 +1,20 @@
+{
+  "packageId": "app.miasistente.twa",
+  "host": "TU-DOMINIO-DE-NETLIFY.netlify.app",
+  "name": "Mi Asistente",
+  "launcherName": "Mi Asistente",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#1638c9",
+  "navigationColor": "#050b2a",
+  "backgroundColor": "#050b2a",
+  "startUrl": "/index.html?origen=app",
+  "iconUrl": "https://TU-DOMINIO-DE-NETLIFY.netlify.app/img/icono-512.png",
+  "maskableIconUrl": "https://TU-DOMINIO-DE-NETLIFY.netlify.app/img/icono-maskable-512.png",
+  "appVersionName": "1.1.0",
+  "appVersion": "2",
+  "enableNotifications": true,
+  "webManifestUrl": "https://TU-DOMINIO-DE-NETLIFY.netlify.app/manifest.json",
+  "fallbackType": "customtabs",
+  "signingKey": { "path": "./android.keystore", "alias": "mi-asistente" }
+}

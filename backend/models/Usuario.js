@@ -10,6 +10,8 @@ const usuarioSchema = new mongoose.Schema(
     usuario: { type: String, lowercase: true, trim: true },
     proveedor: { type: String, enum: ['google', 'email'], default: 'google' },
     passwordHash: { type: String, default: '' },
+    // true cuando la persona demostró que el correo es suyo (con Google o con un código enviado a ese correo)
+    correoVerificado: { type: Boolean, default: false },
     // Sube al cambiar la contraseña o cerrar sesión en todos los dispositivos: los tokens viejos dejan de servir.
     tokenVersion: { type: Number, default: 0 },
   },

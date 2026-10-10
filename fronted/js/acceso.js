@@ -2,7 +2,7 @@
 //  - "Acceder con Google": se elige la cuenta de Google y se entra al panel.
 //  - "Registrarme" (texto azul): abre directo la lista de cuentas de Google; después se crea el usuario y, por último, la contraseña.
 //  - Con usuario y contraseña: se escribe el usuario, después la contraseña.
-//  - Con el correo: es lo mismo que "Acceder con Google", pero escribiendo el correo en vez de elegir la cuenta.
+//  - Con el correo: se manda un código de 6 números a ese correo y se entra con él (sin contraseña).
 //  - Si ya hay una sesión guardada, entra directo al panel (sin pasar por la portada).
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -103,10 +103,10 @@
   }
 
   // ---------- estado de la hoja ----------
-  // vista: 'login' | 'crear'.  login → paso: 'usuario' | 'clave' | 'google'.  crear → paso: 'usuario' | 'clave'
-  let vista = 'login', paso = 'usuario', ver = false, ocupado = false;
+  // vista: 'login' | 'crear'.  login → paso: 'usuario' | 'clave' | 'codigo'.  crear → paso: 'usuario' | 'clave'
+  let vista = 'login', paso = 'usuario', ver = false, ocupado = false, espera = 0, relojEspera = null;
   let sesion = null; // sesión de Google ya verificada que todavía necesita usuario y/o contraseña: { token, usuario, pendiente }
-  const v = { ident: '', usuario: '', clave: '' };
+  const v = { ident: '', usuario: '', clave: '', codigo: '' };
   let disp = { estado: '', texto: '' }; // estado: '' | 'revisando' | 'libre' | 'ocupado' | 'invalido' | 'error'
   let secuencia = 0, reloj = null;
   const errGoogle = $('ini-error-google'), form = $('ini-form');
@@ -182,7 +182,7 @@
 
   function habilitar() {
     const ok = $('f-ok'); if (!ok) return;
-    if (vista === 'login') ok.disabled = paso === 'clave' ? !v.clave : paso === 'usuario' ? !v.ident.trim() : false;
+    if (vista === 'login') ok.disabled = paso === 'clave' ? !v.clave : paso === 'codigo' ? v.codigo.length !== 6 : paso === 'usuario' ? !v.ident.trim() : false;
     else if (paso === 'usuario') ok.disabled = !(disp.estado === 'libre' || disp.estado === 'error');
     else ok.disabled = !!validarContrasena(v.clave, v.usuario || (sesion && sesion.usuario && sesion.usuario.usuario));
   }
@@ -220,10 +220,14 @@
         ${campoClave('Contraseña', 'current-password')}
         ${msg}
         <button class="ini-enviar" id="f-ok" type="button">Iniciar sesión</button>`;
-    } else if (vista === 'login') { // paso 'google': el correo escrito abre Google con ese correo
+    } else if (vista === 'login') { // paso 'codigo': se mandó un código de 6 números al correo
       form.innerHTML = `<div class="ini-correo-fijo"><span>${esc(v.ident)}</span><button type="button" class="ini-link" id="f-cambiar">Cambiar</button></div>
-        <button class="ini-enviar" id="f-ok" type="button">Continuar con Google</button>
-        <p class="ini-nota" style="text-align:center">Google te va a pedir la contraseña de ese correo en su propia página. Mi Asistente nunca la ve.</p>`;
+        <p class="ini-nota" style="text-align:center">Te mandamos un código de 6 números a tu correo. Revisá también la carpeta de spam.</p>
+        <input id="f-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-label="Código de 6 números" value="${esc(v.codigo)}" style="text-align:center;letter-spacing:.5em;font-size:1.5rem;font-weight:700">
+        ${msg}
+        <button class="ini-enviar" id="f-ok" type="button">${ocupado ? 'Verificando...' : 'Entrar'}</button>
+        <p class="ini-nota" style="text-align:center" id="f-reenviar"></p>`;
+      pintarReenvio();
     } else if (paso === 'usuario') {
       form.innerHTML = `<label class="ini-etq" for="f-usuario">Tu usuario</label>
         <input id="f-usuario" maxlength="20" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ej: maria.lopez" value="${esc(v.usuario)}">
@@ -249,6 +253,7 @@
       'f-ident': (x) => { v.ident = x; },
       'f-usuario': (x) => { v.usuario = x.replace(/\s/g, ''); revisarUsuario(v.usuario); },
       'f-clave': (x) => { v.clave = x; pintarReglas(); },
+      'f-codigo': (x) => { v.codigo = x.replace(/\D/g, '').slice(0, 6); $('f-codigo').value = v.codigo; if (v.codigo.length === 6) setTimeout(enviar, 0); },
     };
     Object.keys(campos).forEach((id) => {
       const el = $(id); if (!el) return;
@@ -263,10 +268,29 @@
 
     if ($('f-cambiar')) $('f-cambiar').onclick = () => {
       if (vista === 'crear') { paso = 'usuario'; v.clave = ''; pintar(); }
-      else { paso = 'usuario'; v.clave = ''; errGoogle.textContent = ''; pintar(); }
+      else { paso = 'usuario'; v.clave = ''; v.codigo = ''; errGoogle.textContent = ''; pintar(); }
     };
     if ($('f-ver')) $('f-ver').onclick = () => { ver = !ver; pintar(error, 'f-clave'); };
     $('f-ok').onclick = enviar;
+  }
+
+  // Pide el código al servidor y arranca la cuenta regresiva para poder reenviarlo
+  async function pedirCodigo(email) {
+    const r = await pedir('/auth/codigo/enviar', { email });
+    if (r.paso !== 'crear') iniciarEspera(r.espera || 45);
+    return r;
+  }
+  function iniciarEspera(seg) {
+    clearInterval(relojEspera); espera = seg;
+    relojEspera = setInterval(() => { espera -= 1; if (espera <= 0) clearInterval(relojEspera); pintarReenvio(); }, 1000);
+  }
+  function pintarReenvio() {
+    const p = $('f-reenviar'); if (!p) return;
+    if (espera > 0) { p.textContent = `Podés pedir otro código en ${espera} s`; return; }
+    p.innerHTML = '<button type="button" class="ini-link" id="f-reenviar-btn">Reenviar código</button>';
+    $('f-reenviar-btn').onclick = async () => {
+      try { await pedirCodigo(v.ident.trim().toLowerCase()); pintarReenvio(); } catch (e) { pintar(e.message, 'f-codigo'); }
+    };
   }
 
   async function enviar() {
@@ -280,14 +304,18 @@
           // con un usuario se pide la contraseña acá; con un correo se revisa qué cuenta es
           if (!ident.includes('@')) { paso = 'clave'; return pintar(); }
           ocupado = true; ok.disabled = true; ok.textContent = 'Un momento...';
-          const r = await pedir('/auth/correo', { email: ident });
+          const r = await pedirCodigo(ident.toLowerCase());
           ocupado = false;
           if (r.paso === 'crear') return pintar('No encontramos una cuenta con ese correo. Tocá “Registrarme” para crearla.');
-          if (r.paso === 'clave') { paso = 'clave'; return pintar(); }
-          paso = 'google'; pintar();
-          return conGoogle('login', ident.toLowerCase(), true); // abre Google con ese correo; si el navegador bloquea la ventana, queda el botón
+          v.codigo = ''; paso = 'codigo'; return pintar(null, 'f-codigo');
         }
-        if (paso === 'google') return conGoogle('login', v.ident.trim().toLowerCase());
+        if (paso === 'codigo') {
+          if (v.codigo.length !== 6) return;
+          ocupado = true; ok.disabled = true; ok.textContent = 'Verificando...';
+          try { entrar(await pedir('/auth/codigo/verificar', { email: v.ident.trim().toLowerCase(), codigo: v.codigo })); }
+          catch (e) { ocupado = false; v.codigo = ''; pintar(e.message, 'f-codigo'); }
+          return;
+        }
         ocupado = true; ok.disabled = true; ok.textContent = 'Un momento...';
         entrar(await pedir('/auth/login', { usuario: v.ident.trim(), password: v.clave }));
         return;

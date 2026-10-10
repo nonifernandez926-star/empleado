@@ -49,6 +49,9 @@ const negocioSchema = new mongoose.Schema({
   // Datos del formulario (comunes + específicos del subrubro), guardados como mapa clave-valor
   formData: { type: mongoose.Schema.Types.Mixed, default: {} },
 
+  // Ubicación exacta elegida en el mapa (opcional; la dirección escrita sigue en formData.direccion)
+  ubicacion: { lat: { type: Number, min: -90, max: 90 }, lng: { type: Number, min: -180, max: 180 } },
+
   // Horarios
   horarios: { type: [horarioDiaSchema], default: [] },
 
