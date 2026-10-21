@@ -462,3 +462,48 @@ Mirá `INFORME-REVISION.md` (qué se corrigió y qué falta) y la carpeta `play-
 - **Cuentas viejas de correo sin verificar:** al entrar por primera vez con un código se les borra la contraseña vieja y se cierran sus sesiones.
 - **Mapa para la dirección:** en el registro y en "Editar mi negocio", el campo Dirección tiene el botón **Elegir en el mapa** (pin que se arrastra + Confirmar). Escribe la dirección sola, completa la localidad si estaba vacía y guarda las coordenadas en `negocio.ubicacion`. Leaflet se carga desde unpkg la primera vez. `netlify.toml` ahora permite la ubicación del dispositivo (`geolocation=(self)`).
 - **Sin Brevo (más simple):** se puede enviar desde tu propio Gmail con un script de Google gratis. Abrí `backend/correo-apps-script.gs` y seguí los 4 pasos de los comentarios; después cargá en Render `APPS_SCRIPT_URL` y `APPS_SCRIPT_CLAVE`. Gmail gratis permite unos 100 correos por día. Si está cargado, tiene prioridad sobre Brevo.
+
+
+---
+
+## Novedades (versión con inventario, rentabilidad, calidad y reclamos)
+
+**Avisos**
+- **Pedidos sin confirmar:** el dueño recibe un recordatorio si un pedido espera (10 min por defecto; se cambia en Ajustes → Notificaciones; insiste hasta 3 veces con más espacio entre avisos y es uno solo por negocio). La pestaña Pedidos muestra un contador y el Inicio tiene "Para revisar hoy".
+- Nuevos avisos: stock bajo o agotado, revisión del asistente y reclamos.
+
+**Chat de los clientes**
+- Diseño nuevo de las respuestas (títulos, productos con precio, ticket del resumen con total, avisos, respuestas rápidas) y del chat.
+- **Fondos personalizables:** 4 libres y 4 que se desbloquean al comprar (1, 3, 5 y 8 compras) para incentivar que vuelvan. Color de mensajes y tamaño de letra a elección. El dueño elige su color de marca, la bienvenida y si los fondos son exclusivos (Herramientas → Chat de tus clientes).
+- **Repetir pedido:** si el cliente ya compró, al entrar ve su último pedido con un botón para repetirlo; el asistente usa los datos guardados, revisa precios y stock de hoy y, si pagó por transferencia, vuelve a pedir el comprobante.
+
+**Inventario inteligente** (Negocio → Inventario)
+- Al tomar un pedido el asistente **aparta** las unidades (y no lo toma si no alcanzan); al **confirmar** se descuentan solas; si pasa el tiempo (90 min por defecto) la reserva vence; si se vuelve a "pendiente" las unidades vuelven.
+- Aviso cuando un producto baja de su mínimo o se agota (una vez por cambio de estado), historial de movimientos y "para reponer".
+- Los productos tienen costo, stock y "avisarme cuando queden" en su formulario.
+
+**Rentabilidad** (Herramientas → Rentabilidad)
+- Vendiste vs. te quedó, con a dónde fue cada peso, ranking de productos por ganancia, punto de equilibrio y qué hacer.
+- Siempre marcado como **estimación** cuando faltan datos (costos de productos, gastos, costo de envío), indicando qué falta y qué tan confiable es.
+- Carga de costos de productos, gastos del negocio, y costos de envío, embalaje y comisión de cobro.
+
+**Calidad del asistente** (Negocio → Calidad del asistente)
+- Revisión periódica (cada semana o día, o a pedido) de las conversaciones: respuestas incorrectas, preguntas sin resolver, dudas que se repiten y reportes de clientes, con puntaje y evolución.
+- Cada caso muestra la conversación y un **atajo para corregirlo** (responder la pregunta, abrir el producto, horarios, etc.). "Preguntas sin responder" ahora vive acá.
+- Antes de analizar se ocultan teléfonos y correos. Usa la variable `CLAUDE_MODEL` (por defecto Haiku).
+
+**Cambios, devoluciones y reclamos** (Herramientas → Atención a tus clientes)
+- Aparece solo si el negocio está en Mi Zona con la misma cuenta. Ver `INTEGRACION-RECLAMOS.md`.
+
+**Turnos (peluquerías, barberías…)**
+- Panel nuevo: resumen del día, línea de tiempo con las acciones de cada estado, por confirmar, próximos e historial, filtro por profesional y bloqueo de horarios en una hoja ordenada.
+- Nueva pantalla **Servicios y equipo** (Negocio → Operación) para editar servicios, duración, profesionales y si los turnos se aprueban a mano o se confirman solos (antes solo se cargaba al registrarse).
+- Formulario de registro de turnos con el mismo diseño.
+
+**Mapa**
+- El selector de ubicación se abre en **vista satélite** (como Mi Zona) con zoom, capas y "mi ubicación".
+
+**Organización de la app**
+- Herramientas: *Llegá a más clientes · Vendé más · Atención a tus clientes · Números del negocio*. Negocio: *Catálogo · Operación · Tu asistente*. "Experiencia" pasó a atención a clientes y "Preguntas frecuentes" se unió a Calidad del asistente.
+
+Variables nuevas (`backend/.env.example`): `MIZONA_WEBHOOK_URL`, `CLAUDE_MODEL`.

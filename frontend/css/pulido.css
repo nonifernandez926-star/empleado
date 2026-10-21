@@ -1,0 +1,63 @@
+/* =====================================================================
+   PULIDO v1 — capa final de refinamiento (se carga ÚLTIMA).
+   No cambia la estructura de ninguna pantalla: mejora contraste, foco, táctil, movimiento
+   y agrega los estilos del aviso de IA y del botón "Reportar" del chat.
+   ===================================================================== */
+:root {
+  --gris-texto-suave: #6b7494;      /* antes #98a1b8: 2,6:1 sobre blanco → ahora 4,8:1 (legible) */
+  --pulido-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; overscroll-behavior-y: none; }
+::selection { background: rgba(35, 80, 245, .22); }
+button, a, [role="button"], summary, label, input, select, textarea { touch-action: manipulation; }
+
+/* ---------- foco visible para teclado y lectores de pantalla ---------- */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid #2350f5; outline-offset: 2px; border-radius: 8px; }
+.ini-hoja :focus-visible, .chat-widget :focus-visible { outline-color: #2350f5; }
+
+/* ---------- campos: 16 px evita el zoom automático en iPhone; textos de ayuda legibles ---------- */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), textarea, select { font-size: max(16px, 1em); }
+input::placeholder, textarea::placeholder { color: #6b7494; opacity: 1; }
+input:disabled, textarea:disabled, select:disabled { cursor: not-allowed; }
+
+/* ---------- botones: respuesta al tocar y tamaño mínimo cómodo (44 px) ---------- */
+.btn, .ini-cta, .ini-google { min-height: 48px; }
+button:not(:disabled):active, .btn:active, a.btn:active { transform: scale(.975); }
+button:disabled, .btn[aria-disabled="true"] { cursor: not-allowed; }
+
+/* ---------- movimiento reducido (accesibilidad) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+
+/* ---------- aviso legal bajo el acceso ---------- */
+.legal-pie { margin: 14px 0 0; text-align: center; font-size: .78rem; line-height: 1.5; color: #6b7494; }
+.legal-pie a { color: #2350f5; font-weight: 600; text-decoration: none; }
+.legal-pie a:hover { text-decoration: underline; }
+
+/* ---------- chat: aviso de IA y botón Reportar ---------- */
+.chat-aviso-ia { margin: 0; padding: 6px 14px; text-align: center; font-size: .72rem; line-height: 1.4; color: #5b6482; background: #f3f5fa; flex-shrink: 0; }
+.chat-aviso-ia a { color: #2350f5; font-weight: 600; text-decoration: none; }
+.msg-reportar { background: none; border: 0; padding: 4px 2px; margin: -4px 0; font: inherit; font-size: inherit; font-weight: 700; color: #6b7494; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; transition: color .18s var(--pulido-ease), text-decoration-color .18s var(--pulido-ease); }
+.msg-reportar:hover { color: #c1443a; text-decoration-color: currentColor; }
+.msg-reportar:disabled { color: #1e8a55; cursor: default; text-decoration: none; }
+
+.rep-fondo { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: flex-end; justify-content: center; background: rgba(8, 14, 40, .5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); animation: rep-fondo .2s ease-out both; }
+.rep-hoja { width: 100%; max-width: 480px; background: #fff; border-radius: 24px 24px 0 0; padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -16px 48px rgba(8, 14, 40, .25); animation: rep-sube .3s var(--pulido-ease) both; font-family: var(--fuente, inherit); }
+.rep-hoja h3 { margin: 0 0 2px; font-size: 1.1rem; letter-spacing: -.02em; color: #0b1437; }
+.rep-hoja p { margin: 0 0 12px; font-size: .9rem; color: #5b6482; }
+.rep-opciones { display: flex; flex-direction: column; gap: 8px; }
+.rep-opciones button { min-height: 48px; text-align: left; padding: 0 16px; font: inherit; font-weight: 600; font-size: .95rem; color: #0b1437; background: #f3f5fa; border: 1px solid #e3e7f1; border-radius: 14px; cursor: pointer; }
+.rep-opciones button:active { background: #e6ecff; }
+.rep-cancelar { width: 100%; min-height: 46px; margin-top: 10px; font: inherit; font-weight: 700; color: #5b6482; background: none; border: 0; cursor: pointer; }
+.rep-estado { min-height: 1.2em; margin: 6px 0 0 !important; text-align: center; font-weight: 600; }
+@keyframes rep-fondo { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rep-sube { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ---------- pantallas amplias: el chat y la landing no se estiran feo ---------- */
+@media (min-width: 900px) { .chat-aviso-ia { font-size: .78rem; } }
+
+/* textos suaves que estaban escritos con colores fijos */
+.ini-o { color: #6b7494; }

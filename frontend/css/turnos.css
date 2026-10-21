@@ -1,0 +1,53 @@
+/* =====================================================================
+   Turnos (peluquerías, barberías, consultorios…): resumen del día, línea de tiempo, pendientes, próximos e historial.
+   ===================================================================== */
+.tn { display: flex; flex-direction: column; gap: 14px; }
+.tn-hero-prox { margin-top: 12px; padding: 11px 12px; border-radius: 14px; background: #ffffff14; border: 1px solid #ffffff1f; display: flex; align-items: center; gap: 11px; }
+.tn-hero-prox > span:first-child { flex: none; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: #ffffff26; color: #fff; }
+.tn-hero-prox strong { display: block; font-size: .92rem; font-weight: 800; color: #fff; } .tn-hero-prox small { display: block; margin-top: 1px; font-size: .78rem; color: #c3d2f0; }
+.tn-barra { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+.tn-barra .aj-btn { margin: 0; }
+.tn-dia { margin: 8px 2px 0; font-size: .8rem; font-weight: 800; color: var(--gris-texto); }
+.tn-lista { display: flex; flex-direction: column; gap: 10px; }
+.tn-item { display: grid; grid-template-columns: 50px 1fr; gap: 10px; animation: mv-sube .3s cubic-bezier(.2, .8, .2, 1) both; }
+.tn-hora { text-align: right; padding-top: 13px; font-size: .95rem; font-weight: 800; letter-spacing: -.02em; color: var(--azul-oscuro); line-height: 1.1; }
+.tn-hora small { display: block; margin-top: 3px; font-size: .68rem; font-weight: 700; color: var(--gris-texto); letter-spacing: 0; }
+.tn-card { position: relative; padding: 12px 12px 12px 15px; border-radius: 16px; background: #fff; border: 1px solid var(--linea); overflow: hidden; box-shadow: 0 3px 12px rgba(11, 20, 55, .04); }
+.tn-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--pc, var(--azul)); }
+.tn-card.pendiente { background: #fffaf0; border-color: #f2dfb0; }
+.tn-card.en_atencion { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(var(--azul-rgb), .1), 0 8px 20px rgba(var(--azul-rgb), .12); }
+.tn-card.hecho { opacity: .6; } .tn-card.cerrado { opacity: .72; background: #f7f8fb; }
+.tn-fila-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.tn-nombre { font-size: .96rem; font-weight: 800; letter-spacing: -.01em; color: var(--azul-oscuro); line-height: 1.25; }
+.tn-meta { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .78rem; color: var(--gris-texto); font-weight: 600; }
+.tn-tel { display: inline-flex; align-items: center; gap: 4px; }
+.tn-acc { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+.tn-btn { flex: 1; min-width: 92px; padding: 10px 12px; border: 0; border-radius: 12px; font: 800 .84rem inherit; cursor: pointer; transition: transform .12s ease, opacity .2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.tn-btn:active { transform: scale(.96); } .tn-btn:disabled { opacity: .5; }
+.tn-btn.ok { background: var(--gradiente-azul); color: #fff; box-shadow: 0 6px 14px rgba(var(--azul-rgb), .24); }
+.tn-btn.suave { background: #eef1f8; color: var(--azul-oscuro); }
+.tn-btn.mal { background: #fdeaec; color: #c0293a; }
+.tn-btn.chico { flex: none; min-width: 0; padding: 8px 12px; font-size: .76rem; }
+.tn-prog { height: 7px; margin-top: 11px; border-radius: 5px; background: #e6ebf5; overflow: hidden; } .tn-prog i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--azul), var(--azul-g1)); transition: width .6s ease; } .tn-prog.pasado i { background: linear-gradient(90deg, #e0731e, #d1343f); }
+.tn-vivo { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: .72rem; font-weight: 800; background: #e4f5ec; color: #157a46; }
+.tn-vivo i { width: 7px; height: 7px; border-radius: 50%; background: #1f9d5c; box-shadow: 0 0 0 3px #1f9d5c33; animation: ch-pulso 2.2s ease-in-out infinite; }
+.tn-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 14px; background: #fff7e6; border: 1px solid #f2dfb0; font-size: .82rem; line-height: 1.45; color: #7a4a00; }
+.tn-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; } .tn-chips::-webkit-scrollbar { display: none; }
+.tn-chips .an-chip { flex: none; display: inline-flex; align-items: center; gap: 7px; } .tn-chips .an-chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--pc); }
+/* Hoja inferior (bloquear horario, opciones) */
+.tn-hoja-fondo { position: fixed; inset: 0; z-index: 180; background: rgba(8, 14, 36, .45); opacity: 0; pointer-events: none; transition: opacity .25s ease; backdrop-filter: blur(2px); }
+.tn-hoja-fondo.abierta { opacity: 1; pointer-events: auto; }
+.tn-hoja { position: fixed; left: 50%; bottom: 0; z-index: 181; width: 100%; max-width: 560px; max-height: 88dvh; overflow-y: auto; transform: translate(-50%, 105%); transition: transform .38s cubic-bezier(.2, .9, .25, 1); background: #fff; border-radius: 28px 28px 0 0; padding: 10px 18px max(20px, env(safe-area-inset-bottom)); box-shadow: 0 -16px 50px rgba(8, 14, 36, .3); }
+.tn-hoja.abierta { transform: translate(-50%, 0); }
+.tn-hoja .asa { width: 44px; height: 5px; border-radius: 3px; background: #d4daea; margin: 0 auto 14px; }
+.tn-hoja h2 { margin: 0 0 4px; font-size: 1.25rem; font-weight: 800; letter-spacing: -.025em; color: var(--azul-oscuro); }
+.tn-hoja .sub { margin: 0 0 14px; font-size: .84rem; line-height: 1.45; color: var(--gris-texto); }
+.tn-hoja .an-form input[type=date], .tn-hoja .an-form input[type=time] { width: 100%; min-height: 46px; }
+.tn-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tn-fila-op { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px; margin-top: 10px; border-radius: 16px; border: 1px solid var(--linea); background: #fff; font-family: inherit; text-align: left; cursor: pointer; }
+.tn-fila-op:active { transform: scale(.985); } .tn-fila-op strong { display: block; font-size: .9rem; color: var(--azul-oscuro); } .tn-fila-op small { display: block; margin-top: 2px; font-size: .76rem; color: var(--gris-texto); }
+.tn-fila-op.peligro strong { color: #c0293a; }
+#turnos-legacy { display: none !important; }
+
+.tn-hoja input[type=date], .tn-hoja input[type=time], .tn-hoja input[type=text] { box-sizing: border-box; border: 1.5px solid var(--linea); border-radius: var(--r-control, 12px); padding: 0 12px; background: #fff; font: 600 .95rem inherit; color: var(--azul-oscuro); outline: none; }
+.tn-hoja input:focus { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(var(--azul-rgb), .14); }
