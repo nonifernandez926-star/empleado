@@ -15,6 +15,8 @@ const clienteSchema = new mongoose.Schema({
     fecha: { type: Date },
     items: [{ producto: String, cantidad: Number }],
     tipoEntrega: { type: String },
+    formaPago: { type: String },
+    total: { type: Number },
   },
 
   totalTurnos: { type: Number, default: 0 },

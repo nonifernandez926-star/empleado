@@ -166,6 +166,42 @@ const negocioSchema = new mongoose.Schema({
     },
   },
 
+  // Inventario: cuánto tiempo se aparta el stock de un pedido sin confirmar y cuándo avisar que algo se agota
+  inventario: {
+    reservaMinutos: { type: Number, default: 90, min: 10, max: 1440 },
+    umbralDefecto: { type: Number, default: 3, min: 0, max: 1000 },
+  },
+  // Costos generales para estimar la ganancia (los costos de cada producto están en el producto)
+  finanzas: {
+    costoEntrega: { type: Number, default: null, min: 0 },   // lo que cuesta cada envío a domicilio
+    costoEmbalaje: { type: Number, default: null, min: 0 },  // bolsa, caja, etc. por pedido
+    comisionPct: { type: Number, default: 0, min: 0, max: 40 }, // % que se lleva el medio de cobro
+    envioCobrado: { type: Boolean, default: false },          // el cliente paga el envío aparte (según las zonas de delivery)
+  },
+  // Control de calidad del asistente: revisión automática de las conversaciones
+  calidad: {
+    auto: { type: Boolean, default: true },
+    frecuencia: { type: String, enum: ['diaria', 'semanal', 'manual'], default: 'semanal' },
+    ultimaEvaluacion: { type: Date },
+    ultimoPuntaje: { type: Number },
+    ultimoResumen: { type: String, default: '' },
+    ultimasRevisadas: { type: Number, default: 0 },
+    usoIA: { type: Boolean, default: true },
+  },
+  // Vínculo con Mi Zona: se marca cuando Mi Zona confirma que esta misma cuenta (mismo correo / Google) tiene su perfil allá
+  miZona: {
+    vinculado: { type: Boolean, default: false },
+    ultimaConexion: { type: Date },
+  },
+  // Cómo se ve el chat de los clientes
+  chat: {
+    colorMarca: { type: String, default: '' },        // #RRGGBB o vacío (usa el azul de Mi Asistente)
+    fondosExclusivos: { type: Boolean, default: true }, // fondos que se desbloquean al comprar más veces
+    bienvenida: { type: String, default: '', maxlength: 160 },
+  },
+  // Cuántos minutos esperar antes de recordarle al dueño que hay un pedido sin confirmar (0 = no recordar)
+  avisoPedidoPendienteMin: { type: Number, default: 10, min: 0, max: 240 },
+
   // Qué avisos recibe el dueño en el celular (pedidos, turnos, reseñas, etc.). Vacío = todos prendidos.
   notificaciones: { type: mongoose.Schema.Types.Mixed, default: {} },
   // Último umbral de vencimiento ya avisado por push, para no repetir el mismo aviso.

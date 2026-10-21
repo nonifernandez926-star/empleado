@@ -182,8 +182,20 @@ router.put('/mi-negocio', requiereAdmin, async (req, res) => {
     if (disponibilidadHoy !== undefined) req.negocio.disponibilidadHoy = disponibilidadHoy;
     if (atencionSoloEnHorario !== undefined) req.negocio.atencionSoloEnHorario = !!atencionSoloEnHorario;
     if (tipoOperacion && ['pedidos', 'turnos'].includes(tipoOperacion)) req.negocio.tipoOperacion = tipoOperacion;
-    if (profesionales) req.negocio.profesionales = profesionales;
-    if (configTurnos) req.negocio.configTurnos = { ...req.negocio.configTurnos.toObject(), ...configTurnos };
+    // Equipo y servicios de un negocio de turnos: se limpian los datos (nombres con largo razonable, duraciones entre 5 min y 8 h)
+    if (Array.isArray(profesionales)) {
+      req.negocio.profesionales = profesionales.filter((p) => p && String(p.nombre || '').trim()).slice(0, 30)
+        .map((p) => ({ nombre: String(p.nombre).trim().slice(0, 40), activo: p.activo !== false }));
+    }
+    if (configTurnos && typeof configTurnos === 'object') {
+      const nuevo = { ...req.negocio.configTurnos.toObject() };
+      if (Array.isArray(configTurnos.motivos)) {
+        nuevo.motivos = configTurnos.motivos.filter((m) => m && String(m.nombre || '').trim()).slice(0, 40)
+          .map((m) => ({ nombre: String(m.nombre).trim().slice(0, 60), duracionMinutos: Math.min(480, Math.max(5, Math.round(Number(m.duracionMinutos) || 30))) }));
+      }
+      if (configTurnos.requiereAprobacionManual !== undefined) nuevo.requiereAprobacionManual = !!configTurnos.requiereAprobacionManual;
+      req.negocio.configTurnos = nuevo;
+    }
     if (modoVendedor && ['suave', 'normal', 'agresivo'].includes(modoVendedor)) req.negocio.modoVendedor = modoVendedor;
     if (memoriaActiva !== undefined) req.negocio.memoriaActiva = !!memoriaActiva;
     if (permisos) req.negocio.permisos = { ...req.negocio.permisos.toObject(), ...permisos };
@@ -212,6 +224,10 @@ router.get('/publico/:codigoPublico', async (req, res) => {
     res.json({
       nombreNegocio: negocio.formData?.nombreNegocio || 'Negocio',
       logoUrl: logo ? logo.url : null,
+      tipoOperacion: negocio.tipoOperacion,
+      colorMarca: (negocio.chat && negocio.chat.colorMarca) || '',
+      fondosExclusivos: !negocio.chat || negocio.chat.fondosExclusivos !== false,
+      bienvenida: (negocio.chat && negocio.chat.bienvenida) || '',
     });
   } catch (error) {
     console.error(error);

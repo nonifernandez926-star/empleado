@@ -7,6 +7,7 @@ const PreguntaFrecuente = require('../models/PreguntaFrecuente');
 const { calcularHorariosDisponibles } = require('./turnos');
 const { calcularTop10 } = require('../routes/ranking');
 const { avisarDueno } = require('./avisos');
+const { reservarPedido, anotarReservas } = require('./inventario');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
@@ -81,6 +82,7 @@ const HERRAMIENTAS_PEDIDOS = [
               producto: { type: 'string', description: 'Nombre del producto o servicio' },
               cantidad: { type: 'number', description: 'Cantidad pedida' },
               precioUnitario: { type: 'number', description: 'Precio unitario, solo si el negocio informa precios y se conoce' },
+              variante: { type: 'string', description: 'Opcion elegida (talle, color, tamano) si el producto tiene opciones con stock. Usar exactamente el nombre de la opcion del catalogo.' },
             },
             required: ['producto', 'cantidad'],
           },
@@ -198,14 +200,19 @@ function construirSystemPrompt(negocio, clienteConocido, productos, premiosDelCl
       if (p.categoria) partes.push('[' + p.categoria + ']');
       if (p.precio !== undefined && p.precio !== null && mostrarPrecios !== false) partes.push('$' + p.precio);
       if (!p.disponibleHoy) partes.push('NO DISPONIBLE HOY');
-      if (p.stock === 0) partes.push('SIN STOCK');
-      else if (typeof p.stock === 'number') partes.push('stock: ' + p.stock);
+      // Stock DISPONIBLE = stock fisico menos lo apartado por pedidos que esperan confirmacion del dueno
+      const umbral = typeof p.stockMinimo === 'number' ? p.stockMinimo : ((negocio.inventario && negocio.inventario.umbralDefecto) || 3);
+      if (typeof p.stock === 'number') {
+        const disp = Math.max(0, p.stock - (p.reservado || 0));
+        if (disp === 0) partes.push('SIN STOCK');
+        else partes.push('stock disponible: ' + disp + (disp <= umbral ? ' (quedan pocas unidades: podes avisarle al cliente, sin presionar)' : ''));
+      }
       if (p.descripcion) partes.push('- ' + p.descripcion);
       if (p.tamanoPorcion) partes.push('(' + p.tamanoPorcion + ')');
       if (p.aptoPara) partes.push('Apto: ' + p.aptoPara);
       if (p.duracionEstimada) partes.push('Duracion: ' + p.duracionEstimada);
       if (p.variantes && p.variantes.length) {
-        partes.push('Variantes: ' + p.variantes.map(function (v) { return v.nombre + (typeof v.stock === 'number' ? ' (stock ' + v.stock + ')' : ''); }).join(', '));
+        partes.push('Variantes: ' + p.variantes.map(function (v) { const disp = typeof v.stock === 'number' ? Math.max(0, v.stock - (v.reservado || 0)) : null; return v.nombre + (disp === null ? '' : disp === 0 ? ' (SIN STOCK)' : ' (stock ' + disp + ')'); }).join(', '));
       }
       if (!p.recomendar) partes.push('[el dueno pidio no recomendar este producto activamente, solo mencionarlo si preguntan puntualmente]');
       prompt += '- ' + partes.join(' ') + '\n';
@@ -252,13 +259,17 @@ function construirSystemPrompt(negocio, clienteConocido, productos, premiosDelCl
     prompt += '\n';
     if (clienteConocido.ultimoPedido && clienteConocido.ultimoPedido.items && clienteConocido.ultimoPedido.items.length) {
       const itemsTexto = clienteConocido.ultimoPedido.items.map(function (i) { return i.cantidad + 'x ' + i.producto; }).join(', ');
-      prompt += 'Su ultimo pedido fue: ' + itemsTexto + ' (' + clienteConocido.ultimoPedido.tipoEntrega + ').\n';
+      prompt += 'Su ultimo pedido fue: ' + itemsTexto + ' (' + clienteConocido.ultimoPedido.tipoEntrega + (clienteConocido.ultimoPedido.formaPago ? ', pago: ' + clienteConocido.ultimoPedido.formaPago : '') + ').\n';
+      if (clienteConocido.telefono) prompt += 'Su telefono guardado: ' + clienteConocido.telefono + '.\n';
     }
     if (clienteConocido.ultimoTurno && clienteConocido.ultimoTurno.motivo) {
       prompt += 'Su ultimo turno fue por "' + clienteConocido.ultimoTurno.motivo + '"' + (clienteConocido.ultimoTurno.profesional ? ' con ' + clienteConocido.ultimoTurno.profesional : '') + '.\n';
     }
     if (clienteConocido.ultimaDireccion) {
       prompt += 'La ultima vez que pidio delivery, la direccion fue: "' + clienteConocido.ultimaDireccion + '". Si vuelve a pedir delivery, podes preguntarle si es la misma direccion en vez de pedirsela de cero - pero confirmala siempre, nunca la des por sentada sin preguntar.\n';
+    }
+    if (clienteConocido.ultimoPedido && clienteConocido.ultimoPedido.items && clienteConocido.ultimoPedido.items.length) {
+      prompt += 'REPETIR PEDIDO: si el cliente te pide "repetir mi ultimo pedido" (el chat tiene un boton que lo manda), NO le vuelvas a preguntar lo que ya sabes. Armale el resumen con los MISMOS productos, cantidades, tipo de entrega, direccion (si era delivery) y forma de pago de su ultimo pedido, pero verifica contra el catalogo de hoy: precios actuales (si cambiaron, avisale), stock disponible y disponibilidad (si algo no esta, decile cual y ofrecele una alternativa). Mostrale el total actualizado y pedile que confirme. Para registrar el pedido usa los datos guardados (nombre y telefono) sin pedirlos de nuevo, salvo que el cliente diga que cambio algo. Si la forma de pago es transferencia, TENES que volver a pedirle el comprobante de esta nueva compra (el anterior no vale): segui los pasos de pago por transferencia como en cualquier pedido nuevo.\n';
     }
     if (premiosDelCliente && premiosDelCliente.length) {
       const ETIQUETAS_CRITERIO_RANKING = { dinero: 'dinero gastado', compras: 'cantidad de compras', visitas: 'visitas', fidelidad: 'fidelidad' };
@@ -365,6 +376,13 @@ function construirSystemPrompt(negocio, clienteConocido, productos, premiosDelCl
     prompt += '4) SOLO cuando el cliente te diga que ya transfirio o que ya mando el comprobante: primero usa la herramienta "registrar_pedido" (recien ahi, no antes), y despues respondele SIEMPRE algo como: "Perfecto, gracias. El negocio va a revisar que la transferencia haya llegado correctamente y va a confirmar tu pedido a la brevedad." NUNCA le digas que el pago ya esta confirmado o verificado vos mismo - esa decision la toma unicamente el dueño del negocio revisando su cuenta bancaria real, vos no podes saber si una transferencia es autentica solo mirando una imagen.\n\n';
   }
 
+  prompt += 'FORMATO DE TUS RESPUESTAS (se muestran en un chat de celular con diseno cuidado, respetalo):\n';
+  prompt += '- Mensajes cortos y claros: 2 a 5 lineas. Un solo tema por mensaje. Si hay mucho para decir, ofrece mandarlo por partes.\n';
+  prompt += '- Para mostrar productos o precios usa una lista, un producto por linea, asi: "- **Nombre del producto** - $1500". Nunca pongas el precio en medio de una frase larga.\n';
+  prompt += '- Usa **negrita** solo para lo importante (nombres de productos, el total, horarios). No uses titulos con # ni tablas.\n';
+  prompt += '- Cuando muestres el resumen de un pedido, una linea por producto con cantidad (por ejemplo "- 2x **Muzzarella** - $9000") y despues una linea que empiece con "Total:" con el monto. Cerra pidiendo la confirmacion con una pregunta corta.\n';
+  prompt += '- Podes usar un emoji suave de vez en cuando (maximo uno por mensaje), nunca varios seguidos.\n';
+  prompt += '- Terminá siempre con un proximo paso claro o una pregunta corta, para que el cliente sepa que hacer.\n\n';
   prompt += 'PERSONALIDAD DEL ASISTENTE:\n' + descripcionPersonalidad(negocio.personalidad) + '\n\n';
   prompt += 'INFORMACION DEL NEGOCIO:\n' + formatearFormData(negocio.formData) + '\n\n';
   prompt += 'HORARIOS DE ATENCION:\n' + formatearHorarios(negocio.horarios) + '\n\n';
@@ -384,11 +402,22 @@ async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
 
   const esTransferencia = /transfer/i.test(input.formaPago || '');
 
+  // Inventario: se apartan las unidades. Si alguna no alcanza, el pedido NO se toma y el asistente le avisa al cliente.
+  let reserva = { estado: 'ninguna', lineas: [] };
+  let itemsFinal = items;
+  if (!negocio.esPruebaActual) {
+    const r = await reservarPedido(negocio, items);
+    if (!r.ok) return { exito: false, error: r.error + ' Contale al cliente lo que hay disponible y ofrecele alternativas; no tomes el pedido hasta que lo confirme de nuevo.' };
+    itemsFinal = r.items;
+    if (r.lineas.length) reserva = { estado: 'activa', venceEn: r.venceEn, lineas: r.lineas };
+  }
+
   const pedido = await Pedido.create({
     negocioId: negocio._id,
     sesionClienteId: sesionClienteId,
     esPrueba: !!negocio.esPruebaActual,
-    items: items,
+    items: itemsFinal,
+    reserva: reserva,
     total: total,
     nombreCliente: input.nombreCliente,
     telefonoCliente: input.telefonoCliente,
@@ -399,6 +428,8 @@ async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
     estado: 'pendiente',
     estadoPago: esTransferencia ? 'esperando_comprobante' : 'no_aplica',
   });
+
+  if (reserva.estado === 'activa') await anotarReservas(negocio._id, pedido);
 
   // Aviso al celular del dueño (no bloquea la respuesta al cliente)
   if (!pedido.esPrueba) {
@@ -425,6 +456,8 @@ async function ejecutarRegistrarPedido(negocio, sesionClienteId, input) {
             fecha: new Date(),
             items: items.map(function (i) { return { producto: i.producto, cantidad: i.cantidad }; }),
             tipoEntrega: input.tipoEntrega,
+            formaPago: input.formaPago,
+            total: total,
           },
           ultimaDireccion: input.direccionEntrega || undefined,
         },
@@ -664,4 +697,4 @@ async function generarRespuesta(negocio, historialMensajes, mensajeNuevo, sesion
   return { textoRespuesta: 'Hubo un problema procesando tu solicitud, por favor intenta de nuevo.', pedidoCreado: pedidoCreado, turnoCreado: turnoCreado, sinRespuesta: false };
 }
 
-module.exports = { generarRespuesta, construirSystemPrompt };
+module.exports = { generarRespuesta, construirSystemPrompt, formatearHorarios, formatearFormData };

@@ -4,6 +4,17 @@ const itemPedidoSchema = new mongoose.Schema({
   producto: { type: String, required: true },
   cantidad: { type: Number, required: true, min: 1 },
   precioUnitario: { type: Number }, // opcional: solo si el negocio muestra precios
+  productoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Producto' }, // se completa si el nombre coincide con un producto del catálogo
+  variante: { type: String }, // ej: "Talle 42" (si el producto tiene variantes con stock)
+}, { _id: false });
+
+// Unidades apartadas mientras el pedido espera confirmación.
+const reservaSchema = new mongoose.Schema({
+  // activa: stock apartado | confirmada: ya se descontó del stock | liberada: se devolvió (venció o se revirtió) | ninguna: no había stock controlado
+  estado: { type: String, enum: ['ninguna', 'activa', 'confirmada', 'liberada'], default: 'ninguna' },
+  venceEn: { type: Date },
+  motivoLiberacion: { type: String, enum: ['', 'vencio', 'revertido', 'eliminado'], default: '' },
+  lineas: [{ productoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Producto' }, variante: { type: String, default: '' }, cantidad: { type: Number, min: 1 }, _id: false }],
 }, { _id: false });
 
 const pedidoSchema = new mongoose.Schema({
@@ -49,6 +60,16 @@ const pedidoSchema = new mongoose.Schema({
     enum: ['pendiente', 'confirmado', 'en_preparacion', 'listo', 'entregado'],
     default: 'pendiente',
   },
+
+  reserva: { type: reservaSchema, default: () => ({}) },
+  stockDescontado: { type: Boolean, default: false }, // ya se restaron las unidades del inventario (una sola vez)
+  sinStockAlConfirmar: { type: Boolean, default: false }, // al confirmar no alcanzaba el stock: el dueño debe revisar
+
+  // Recordatorios al dueño mientras el pedido sigue sin confirmar
+  recordatorios: { type: Number, default: 0 },
+  ultimoRecordatorio: { type: Date },
 }, { timestamps: true });
+
+pedidoSchema.index({ negocioId: 1, estado: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Pedido', pedidoSchema);

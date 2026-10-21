@@ -28,6 +28,14 @@ const productoSchema = new mongoose.Schema({
 
   // null/undefined = no se trackea stock para este producto (siempre "disponible" salvo que se marque lo contrario)
   stock: { type: Number, default: null },
+  // Unidades apartadas por pedidos que todavía esperan confirmación (stock disponible = stock - reservado)
+  reservado: { type: Number, default: 0, min: 0 },
+  // Cuando quedan estas unidades o menos, se avisa que se está por agotar (vacío = usa el valor general del negocio)
+  stockMinimo: { type: Number, default: null },
+  // Último estado avisado, para no repetir el mismo aviso: 'ok' | 'bajo' | 'agotado'
+  alertaStock: { type: String, enum: ['ok', 'bajo', 'agotado'], default: 'ok' },
+  // Lo que le cuesta a este negocio cada unidad (para estimar la ganancia real). Opcional.
+  costo: { type: Number, default: null, min: 0 },
 
   // Variantes libres con su propio stock. El dueño elige el nombre segun lo que corresponda a SU
   // producto (ej: "Talle 42", "Color rojo" para ropa/calzado; "Chico"/"Grande" para comida; etc.)
@@ -35,6 +43,7 @@ const productoSchema = new mongoose.Schema({
   variantes: [{
     nombre: { type: String, required: true },
     stock: { type: Number, default: null },
+    reservado: { type: Number, default: 0, min: 0 },
   }],
 
   disponibleHoy: { type: Boolean, default: true }, // el dueño lo puede apagar para hoy sin borrar el producto

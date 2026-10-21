@@ -4,8 +4,22 @@ const multer = require('multer');
 const Producto = require('../models/Producto');
 const { requiereAdmin } = require('../middleware/auth');
 const { storage, cloudinary } = require('../config/cloudinary');
+const MovimientoStock = require('../models/MovimientoStock');
+const { revisarAlertaStock } = require('../utils/inventario');
 
 const upload = multer({ storage });
+
+// Números opcionales que llegan del formulario: '' o inválido = sin dato (null); nunca negativos
+const numOpcional = (v) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) || Number(v) < 0 ? null : Number(v));
+
+// Al editar las variantes se conservan las unidades apartadas (reservado) de cada una
+function variantesLimpias(nuevas, previas = []) {
+  return (Array.isArray(nuevas) ? nuevas : []).filter((v) => v && String(v.nombre || '').trim()).map((v) => {
+    const nombre = String(v.nombre).trim().slice(0, 40);
+    const vieja = previas.find((x) => x.nombre === nombre);
+    return { nombre, stock: numOpcional(v.stock), reservado: vieja ? vieja.reservado || 0 : 0 };
+  });
+}
 
 // GET /api/productos -> lista el catalogo del negocio autenticado (para el panel)
 router.get('/', requiereAdmin, async (req, res) => {
@@ -22,7 +36,7 @@ router.get('/', requiereAdmin, async (req, res) => {
 router.post('/', requiereAdmin, async (req, res) => {
   try {
     const {
-      nombre, descripcion, categoria, precio, stock, variantes, disponibleHoy, recomendar,
+      nombre, descripcion, categoria, precio, stock, variantes, disponibleHoy, recomendar, costo, stockMinimo,
       tipoProducto, tamanoPorcion, ingredientesPrincipales, aptoPara, duracionEstimada, queIncluye,
     } = req.body;
     if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
@@ -33,8 +47,10 @@ router.post('/', requiereAdmin, async (req, res) => {
       descripcion: descripcion || '',
       categoria: categoria || '',
       precio: precio !== undefined && precio !== '' ? Number(precio) : undefined,
-      stock: stock !== undefined && stock !== '' ? Number(stock) : null,
-      variantes: Array.isArray(variantes) ? variantes : [],
+      stock: numOpcional(stock),
+      costo: numOpcional(costo),
+      stockMinimo: numOpcional(stockMinimo),
+      variantes: variantesLimpias(variantes),
       disponibleHoy: disponibleHoy !== undefined ? !!disponibleHoy : true,
       recomendar: recomendar !== undefined ? !!recomendar : true,
       tipoProducto: tipoProducto || 'general',
@@ -59,15 +75,24 @@ router.put('/:id', requiereAdmin, async (req, res) => {
     const producto = await Producto.findOne({ _id: req.params.id, negocioId: req.negocio._id });
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
+    const stockAntes = producto.stock;
     const campos = [
-      'nombre', 'descripcion', 'categoria', 'precio', 'stock', 'variantes', 'disponibleHoy', 'recomendar',
+      'nombre', 'descripcion', 'categoria', 'precio', 'stock', 'variantes', 'disponibleHoy', 'recomendar', 'costo', 'stockMinimo',
       'tipoProducto', 'tamanoPorcion', 'ingredientesPrincipales', 'aptoPara', 'duracionEstimada', 'queIncluye',
     ];
     campos.forEach((campo) => {
-      if (req.body[campo] !== undefined) producto[campo] = req.body[campo];
+      if (req.body[campo] === undefined) return;
+      if (campo === 'stock' || campo === 'costo' || campo === 'stockMinimo') producto[campo] = numOpcional(req.body[campo]);
+      else if (campo === 'variantes') producto.variantes = variantesLimpias(req.body.variantes, producto.variantes);
+      else producto[campo] = req.body[campo];
     });
 
     await producto.save();
+    // Si cambió el stock a mano, queda en el historial y se reinicia el aviso de "por agotarse"
+    if (producto.stock !== stockAntes && (typeof producto.stock === 'number' || typeof stockAntes === 'number')) {
+      await MovimientoStock.create({ negocioId: producto.negocioId, productoId: producto._id, productoNombre: producto.nombre, tipo: 'ajuste', cantidad: (producto.stock || 0) - (stockAntes || 0), stockResultante: producto.stock, nota: 'Editado en el producto' }).catch(() => {});
+    }
+    await revisarAlertaStock(producto, { silencioso: true });
     res.json(producto);
   } catch (error) {
     console.error(error);

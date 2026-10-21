@@ -8,6 +8,8 @@ const RecuperacionPendiente = require('../models/RecuperacionPendiente');
 const PreguntaFrecuente = require('../models/PreguntaFrecuente');
 const { generarRespuesta } = require('../utils/claude');
 const { requiereAdmin } = require('../middleware/auth');
+const Pedido = require('../models/Pedido');
+const { permitir } = require('../utils/limitador');
 
 const DIAS_ORDEN = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
 
@@ -200,6 +202,36 @@ router.post('/:codigoPublico', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al generar la respuesta del asistente' });
+  }
+});
+
+// GET /api/chat/:codigoPublico/cliente?sesion=...
+// Lo usa el chat al abrirse: cuántas compras lleva esta persona (desbloquea fondos exclusivos) y su último pedido,
+// para ofrecerle "Repetir mi último pedido". El último pedido solo se devuelve si el negocio tiene la memoria de clientes prendida.
+router.get('/:codigoPublico/cliente', async (req, res) => {
+  try {
+    if (!permitir(`chat-cliente|${req.ip}`, 60, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiadas consultas.' });
+    const sesion = String(req.query.sesion || '').slice(0, 120);
+    if (!sesion) return res.json({ pedidos: 0, ultimoPedido: null });
+    const negocio = await Negocio.findOne({ codigoPublico: req.params.codigoPublico, activo: true }).select('_id memoriaActiva tipoOperacion');
+    if (!negocio) return res.status(404).json({ error: 'No encontrado' });
+    const filtro = { negocioId: negocio._id, sesionClienteId: sesion, esPrueba: { $ne: true } };
+    const pedidos = await Pedido.countDocuments(filtro);
+    let ultimoPedido = null;
+    if (negocio.tipoOperacion !== 'turnos' && negocio.memoriaActiva !== false && pedidos > 0) {
+      const p = await Pedido.findOne(filtro).sort({ createdAt: -1 }).lean();
+      if (p && p.items && p.items.length) {
+        ultimoPedido = {
+          fecha: p.createdAt, tipoEntrega: p.tipoEntrega, formaPago: p.formaPago, total: p.total ?? null,
+          direccion: p.tipoEntrega === 'delivery' ? p.direccionEntrega || '' : '',
+          items: p.items.map((i) => ({ producto: i.producto, cantidad: i.cantidad, variante: i.variante || '' })),
+        };
+      }
+    }
+    res.json({ pedidos, ultimoPedido });
+  } catch (error) {
+    console.error('Error en /chat/cliente:', error.message);
+    res.status(500).json({ error: 'No se pudo consultar' });
   }
 });
 

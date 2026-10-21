@@ -212,6 +212,7 @@ router.put('/usuario', async (req, res) => {
     if (nuevo === usuario.usuario) return res.json({ usuario: nuevo });
     if (await Usuario.exists({ usuario: nuevo, _id: { $ne: usuario._id } })) return res.status(409).json({ error: MSG_USUARIO_EN_USO, codigo: 'usuario_en_uso' });
     usuario.usuario = nuevo;
+    usuario.nombre = nuevo; // la cuenta se identifica solo por el usuario
     await usuario.save();
     await registrar(usuario, 'cambio_usuario', req);
     res.json({ usuario: nuevo });

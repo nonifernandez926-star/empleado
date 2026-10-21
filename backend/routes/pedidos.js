@@ -4,6 +4,7 @@ const router = express.Router();
 const multer = require('multer');
 const Pedido = require('../models/Pedido');
 const { requiereAdmin } = require('../middleware/auth');
+const { confirmarStock, revertirStock, liberarReserva } = require('../utils/inventario');
 const { storage } = require('../config/cloudinary');
 
 const upload = multer({ storage });
@@ -92,10 +93,14 @@ router.put('/:id/estado', requiereAdmin, async (req, res) => {
     const pedido = await Pedido.findOne({ _id: req.params.id, negocioId: req.negocio._id });
     if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
 
+    const anterior = pedido.estado;
     pedido.estado = estado;
+    // Inventario: confirmar descuenta las unidades apartadas; volver a "pendiente" las devuelve al stock
+    if (anterior === 'pendiente' && estado !== 'pendiente') await confirmarStock(pedido);
+    else if (anterior !== 'pendiente' && estado === 'pendiente') await revertirStock(pedido);
     await pedido.save();
 
-    res.json({ mensaje: 'Estado actualizado', pedido });
+    res.json({ mensaje: 'Estado actualizado', pedido, sinStock: !!pedido.sinStockAlConfirmar });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Error al actualizar el pedido' });
@@ -105,8 +110,10 @@ router.put('/:id/estado', requiereAdmin, async (req, res) => {
 // DELETE /api/pedidos/:id -> elimina un pedido (pensado para usar una vez entregado, para no acumular basura)
 router.delete('/:id', requiereAdmin, async (req, res) => {
   try {
-    const pedido = await Pedido.findOneAndDelete({ _id: req.params.id, negocioId: req.negocio._id });
+    const pedido = await Pedido.findOne({ _id: req.params.id, negocioId: req.negocio._id });
     if (!pedido) return res.status(404).json({ error: 'Pedido no encontrado' });
+    await liberarReserva(pedido, 'eliminado'); // si todavía tenía unidades apartadas, vuelven a estar disponibles
+    await Pedido.deleteOne({ _id: pedido._id });
     res.json({ mensaje: 'Pedido eliminado' });
   } catch (error) {
     console.error(error);

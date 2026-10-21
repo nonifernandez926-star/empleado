@@ -233,7 +233,8 @@ router.put('/completar', async (req, res) => {
     }
     if (!usuario.usuario) usuario.usuario = nuevoUsuario;
     if (hash) usuario.passwordHash = hash;
-    if (!usuario.nombre) usuario.nombre = nuevoUsuario;
+    if (!usuario.usuario || !usuario.nombre) usuario.nombre = nuevoUsuario; // la cuenta se identifica solo por el usuario
+    if (nuevoUsuario) usuario.nombre = nuevoUsuario;
     await usuario.save();
     await anotarAcceso(usuario, 'cambio_usuario', req, 'google');
     res.json(await respuestaSesion(usuario, { yaExistia: true }));

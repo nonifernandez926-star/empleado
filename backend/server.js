@@ -26,7 +26,15 @@ const agendaRoutes = require('./routes/agenda');
 const cuentaRoutes = require('./routes/cuenta');
 const soporteRoutes = require('./routes/soporte');
 const reportesRoutes = require('./routes/reportes');
-const { revisarVencimientos } = require('./utils/avisos');
+const inventarioRoutes = require('./routes/inventario');
+const rentabilidadRoutes = require('./routes/rentabilidad');
+const calidadRoutes = require('./routes/calidad');
+const reclamosRoutes = require('./routes/reclamos');
+const operacionRoutes = require('./routes/operacion');
+const atencionRoutes = require('./routes/atencion');
+const { expirarReservas } = require('./utils/inventario');
+const { revisarCalidadProgramada } = require('./utils/calidad');
+const { revisarVencimientos, revisarPedidosPendientes } = require('./utils/avisos');
 
 const app = express();
 
@@ -89,6 +97,12 @@ app.use('/api/agenda', agendaRoutes);
 app.use('/api/cuenta', cuentaRoutes);
 app.use('/api/soporte', soporteRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/inventario', inventarioRoutes);
+app.use('/api/rentabilidad', rentabilidadRoutes);
+app.use('/api/calidad', calidadRoutes);
+app.use('/api/reclamos', reclamosRoutes);
+app.use('/api/operacion', operacionRoutes);
+app.use('/api/atencion', atencionRoutes);
 
 // Cualquier ruta /api que no existe responde JSON (no una página HTML de error)
 app.use('/api', (req, res) => res.status(404).json({ error: 'No encontrado' }));
@@ -108,4 +122,11 @@ connectDB().then(() => {
   // Avisos de vencimiento de suscripción al celular del dueño (7, 3 y 1 día antes, y al vencer): una sola vez por umbral
   setTimeout(revisarVencimientos, 60 * 1000);
   setInterval(revisarVencimientos, 6 * 60 * 60 * 1000).unref();
+  // Pedidos sin confirmar: recordatorio al dueño (cada 2 minutos se ve a quién le toca) y reservas de stock vencidas
+  setTimeout(revisarPedidosPendientes, 2 * 60 * 1000);
+  setInterval(revisarPedidosPendientes, 2 * 60 * 1000).unref();
+  setInterval(expirarReservas, 5 * 60 * 1000).unref();
+  // Control de calidad: revisión periódica de las conversaciones (cada 3 horas se ve a quién le toca)
+  setTimeout(revisarCalidadProgramada, 5 * 60 * 1000);
+  setInterval(revisarCalidadProgramada, 3 * 60 * 60 * 1000).unref();
 });
