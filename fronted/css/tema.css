@@ -1,0 +1,117 @@
+/* =====================================================================
+   Tema y movimiento. Se carga al final.
+   1) El color de acento (y las opciones de Apariencia) llegan a los lugares donde más aportan:
+      cabeceras, botones, enfoque de campos, controles, gráficos y números clave. No se pinta todo.
+   2) Pequeños movimientos al abrir, volver y cambiar de pantalla.
+   ===================================================================== */
+
+/* ---------- Cuánto color se usa (Apariencia → Intensidad del color) ---------- */
+:root {
+  --gradiente-azul: linear-gradient(135deg, var(--azul-g1) 0%, var(--azul-g2) 100%);
+  --mezcla-a: 55%; --mezcla-b: 100%; --mezcla-drawer: 40%; --fondo-mezcla: 2%;
+  --r-tarjeta: 18px; --r-control: 12px; --r-hero: 24px;
+  accent-color: var(--azul);
+}
+html[data-nivel="sutil"] { --mezcla-a: 12%; --mezcla-b: 34%; --mezcla-drawer: 12%; --fondo-mezcla: 0%; }
+html[data-nivel="intenso"] { --mezcla-a: 100%; --mezcla-b: 100%; --mezcla-drawer: 90%; --fondo-mezcla: 6%; }
+
+/* Cabeceras: barra de arriba, portada del inicio, agenda y menú lateral toman el color de la marca */
+.app-topbar { background: linear-gradient(135deg, color-mix(in srgb, var(--azul-g2) var(--mezcla-a), #0b1437) 0%, color-mix(in srgb, var(--azul) var(--mezcla-b), #0b1437) 68%, color-mix(in srgb, var(--azul-g1) var(--mezcla-b), #0b1437) 130%); box-shadow: 0 10px 28px rgba(var(--azul-rgb), .24); transition: background .35s ease; }
+.inicio-hero, .ag-hero { background: linear-gradient(135deg, #0b1437 0%, color-mix(in srgb, var(--azul-g2) var(--mezcla-a), #0b1437) 55%, color-mix(in srgb, var(--azul-g1) var(--mezcla-b), #0b1437) 135%); box-shadow: 0 14px 30px rgba(var(--azul-rgb), .24); }
+.drawer-perfil { background: linear-gradient(160deg, #0b1437 0%, color-mix(in srgb, var(--azul) var(--mezcla-drawer), #0b1437) 130%); }
+
+/* Fondo general: una pizca del color en el nivel intenso */
+body { background: color-mix(in srgb, var(--azul) var(--fondo-mezcla), #eef1f8); }
+:root { --gris-claro: color-mix(in srgb, var(--azul) var(--fondo-mezcla), #f3f5fa); }
+
+/* Barra inferior y selección */
+.app-navbar-item.activo .app-navbar-icono { background: color-mix(in srgb, var(--azul) 14%, #fff); }
+.app-navbar-item.activo { color: var(--azul); }
+.accion-pedido-wrap.azul { background: color-mix(in srgb, var(--azul) 12%, #fff); }
+::selection { background: var(--azul); color: #fff; }
+
+/* Botones principales y campos con foco */
+.btn:not(.secundario), .aj-btn-primario { background: var(--gradiente-azul); box-shadow: 0 1px 2px rgba(11, 20, 55, .18), 0 8px 18px rgba(var(--azul-rgb), .26); }
+input:focus, select:focus, textarea:focus { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(var(--azul-rgb), .14); outline: none; }
+.btn.secundario { color: var(--azul); border-color: color-mix(in srgb, var(--azul) 30%, white); }
+
+/* Números clave y detalles */
+.resumen-experiencia-item strong, .total-hoy-card .monto, .ag-hero-num strong { color: var(--azul); }
+.ag-hero-num strong { color: #fff; }
+.cmp-lista b, .tend-titulo { color: inherit; }
+.lista-grupo-cabecera h3 { position: relative; padding-left: 11px; }
+.lista-grupo-cabecera h3::before { content: ''; position: absolute; left: 0; top: .18em; bottom: .18em; width: 3px; border-radius: 3px; background: var(--azul); opacity: .85; }
+.fs-hero-icono { box-shadow: 0 0 0 4px color-mix(in srgb, var(--azul) 8%, transparent); }
+
+/* ---------- Forma de las esquinas ---------- */
+html[data-forma="recta"] { --r-tarjeta: 8px; --r-control: 6px; --r-hero: 12px; --radio: 8px; --radio-chico: 6px; }
+html[data-forma="redondeada"] { --r-tarjeta: 26px; --r-control: 18px; --r-hero: 32px; --radio: 22px; --radio-chico: 16px; }
+.tarjeta, .list-card, .kpi-card, .dash-card, .ia-card, .atencion-card, .aj-caja, .cmp-tarjeta, .fo-card, .promo-card, .oportunidad-card, .fo-logo-aviso, .cmp-lista, .cmp-estado, .fs-hero, .aj-previa { border-radius: var(--r-tarjeta); }
+.inicio-hero, .ag-hero { border-radius: var(--r-hero); }
+.btn, .aj-btn, input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), select, textarea, .filtro-select, .fo-subir, .mf-tile { border-radius: var(--r-control); }
+.app-topbar { border-radius: 0 0 var(--r-hero) var(--r-hero); }
+
+/* ---------- Tipografía ---------- */
+html[data-fuente="sistema"] { --fuente: -apple-system, 'Segoe UI', system-ui, Roboto, sans-serif; }
+html[data-fuente="clasica"] { --fuente-titulo: Georgia, 'Times New Roman', serif; }
+html[data-fuente="clasica"] h1, html[data-fuente="clasica"] h2, html[data-fuente="clasica"] h3, html[data-fuente="clasica"] .mf-titulo,
+html[data-fuente="clasica"] #saludo-nombre, html[data-fuente="clasica"] .ag-hero h2, html[data-fuente="clasica"] .app-topbar-info strong { font-family: var(--fuente-titulo); letter-spacing: -.01em; }
+body, button, input, select, textarea { font-family: var(--fuente, 'Manrope', system-ui, sans-serif); }
+
+/* ---------- Densidad ---------- */
+html[data-densidad="compacta"] .list-row { padding-top: 9px; padding-bottom: 9px; }
+html[data-densidad="compacta"] .list-row-icono { width: 36px; height: 36px; }
+html[data-densidad="compacta"] .tarjeta { padding: 14px; }
+html[data-densidad="compacta"] .lista-grupo, html[data-densidad="compacta"] .aj-grupo { margin-bottom: 12px; }
+html[data-densidad="compacta"] .kpi-card, html[data-densidad="compacta"] .dash-card { padding: 12px 14px; }
+
+/* ---------- Barra inferior: solo íconos ---------- */
+html[data-barra="iconos"] .app-navbar-item > span:not(.app-navbar-icono) { display: none; }
+html[data-barra="iconos"] .app-navbar-item { padding-top: 12px; padding-bottom: 12px; }
+html[data-barra="iconos"] .app-navbar-icono svg { width: 25px; height: 25px; }
+
+/* =====================================================================
+   Movimiento
+   ===================================================================== */
+@keyframes mv-adelante { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+@keyframes mv-atras { from { opacity: 0; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+@keyframes mv-vuelve { from { opacity: .0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes mv-fila { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes mv-sube { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes mv-abre { from { opacity: 0; transform: translateX(32px) scale(.985); } to { opacity: 1; transform: none; } }
+
+/* Abrir una función: entra deslizando desde la derecha; el contenido va un instante después */
+#pantalla-completa { animation: mv-abre .34s cubic-bezier(.2, .85, .25, 1) both; }
+#pantalla-completa-contenido, #pantalla-completa-hero { animation: mv-sube .38s cubic-bezier(.2, .8, .2, 1) .04s both; }
+/* Entrar a una subpantalla / volver al menú */
+#pantalla-completa-contenido.mv-adelante { animation: mv-adelante .3s cubic-bezier(.2, .85, .25, 1) both; }
+#pantalla-completa-contenido.mv-atras { animation: mv-atras .3s cubic-bezier(.2, .85, .25, 1) both; }
+/* Al cerrar una función, la sección de abajo vuelve a su lugar */
+.app-seccion.mv-vuelve { animation: mv-vuelve .26s cubic-bezier(.2, .8, .2, 1) both; }
+
+/* Las filas de un menú aparecen en cascada corta */
+.aj-caja > .list-row, .aj-caja > a.list-row { animation: mv-fila .3s cubic-bezier(.2, .8, .2, 1) both; }
+.aj-caja > :nth-child(2) { animation-delay: .04s; } .aj-caja > :nth-child(3) { animation-delay: .08s; } .aj-caja > :nth-child(4) { animation-delay: .12s; }
+.aj-caja > :nth-child(5) { animation-delay: .16s; } .aj-caja > :nth-child(n+6) { animation-delay: .2s; }
+.list-card-item { animation: mv-fila .3s cubic-bezier(.2, .8, .2, 1) both; }
+.list-card-item:nth-child(2) { animation-delay: .05s; } .list-card-item:nth-child(3) { animation-delay: .1s; } .list-card-item:nth-child(4) { animation-delay: .15s; }
+
+/* Listas que se vuelven a dibujar (pedidos, turnos, fotos, promociones...) */
+#lista-pedidos > *, #lista-turnos > *, .promo-card, .oportunidad-card, .fo-foto { animation: mv-sube .3s cubic-bezier(.2, .8, .2, 1) both; }
+#lista-pedidos > :nth-child(2), #lista-turnos > :nth-child(2), .promo-card:nth-child(2), .oportunidad-card:nth-child(2) { animation-delay: .04s; }
+#lista-pedidos > :nth-child(3), #lista-turnos > :nth-child(3), .promo-card:nth-child(3), .oportunidad-card:nth-child(3) { animation-delay: .08s; }
+#lista-pedidos > :nth-child(n+4), #lista-turnos > :nth-child(n+4), .promo-card:nth-child(n+4), .oportunidad-card:nth-child(n+4) { animation-delay: .12s; }
+
+/* Feedback al tocar */
+.btn, .aj-btn, .fo-subir, .mf-tile, .filtro-op, .app-topbar-btn, .app-topbar-btn-claro, .avatar-circle { transition: transform .15s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease, opacity .2s ease; }
+.btn:active, .aj-btn:active, .app-topbar-btn:active, .app-topbar-btn-claro:active { transform: scale(.96); }
+.avatar-circle:active { transform: scale(.92); }
+.app-navbar-item { transition: color .2s ease, transform .15s ease; }
+.app-navbar-icono { transition: background-color .25s ease, transform .25s cubic-bezier(.3, 1.4, .5, 1); }
+.app-navbar-item.activo .app-navbar-icono { transform: translateY(-1px); }
+.app-topbar-info strong { display: inline-block; animation: mv-sube .3s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  #pantalla-completa, #pantalla-completa-contenido, #pantalla-completa-hero, .aj-caja > *, .list-card-item, #lista-pedidos > *, #lista-turnos > *,
+  .promo-card, .oportunidad-card, .fo-foto, .app-seccion.mv-vuelve, .app-topbar-info strong { animation: none !important; }
+}
