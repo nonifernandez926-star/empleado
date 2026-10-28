@@ -37,7 +37,7 @@ const AYUDA_ARTICULOS = [
 
   // ---- Suscripción
   { tema: 'suscripcion', t: 'Período de prueba', c: ['Al crear tu asistente tenés mensajes de prueba gratis para ver cómo funciona con clientes reales. Cuando se acaban, necesitás un plan para seguir atendiendo.', 'Te avisamos cuando quedan pocos.'] },
-  { tema: 'suscripcion', t: 'Planes y cómo pagar', c: ['En Ajustes → "Plan y facturación" elegís entre los planes de 1, 3, 5 o 6 meses. Pagás con Mercado Pago y la suscripción se activa sola al confirmarse el pago.', 'Cuantos más meses elegís, menos pagás por mes.'] },
+  { tema: 'suscripcion', t: 'Planes y cómo pagar', c: ['En Ajustes → "Plan y facturación" elegís entre los planes de 1, 3 o 6 meses. Pagás con Google Play, desde la app de Mi Asistente que bajaste de la tienda, y la suscripción se activa al confirmarse el pago. Es un pago único por el plazo que elegís: no se renueva solo.', 'Cuantos más meses elegís, menos pagás por mes.'] },
   { tema: 'suscripcion', t: 'Renovar antes de que venza', c: ['Si renovás antes del vencimiento, los meses nuevos se suman al tiempo que te queda: no perdés nada.', 'Te avisamos 7, 3 y 1 día antes, y cuando vence (en el panel y en el celular, si activaste los avisos).'] },
   { tema: 'suscripcion', t: 'Qué pasa si vence', c: ['Si la suscripción vence, tu asistente deja de atender a tus clientes. Tus datos, productos y configuración se conservan: al renovar, vuelve a funcionar como siempre.'] },
 

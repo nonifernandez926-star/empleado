@@ -448,7 +448,7 @@ function mostrarPantallaExito(data) {
   document.getElementById('pantalla-registro').style.display = 'none';
   document.getElementById('exito-probar').href = `chat.html?codigo=${data.codigoPublico}`;
   // El vínculo con Mi Zona se hace solo: la persona ya no ve ni copia ningún código
-  document.getElementById('exito-mizona').href = `${MI_ZONA_URL}?codigo=${data.codigoVinculacion}`;
+  document.getElementById('exito-mizona').href = MI_ZONA_URL;
   const pantalla = document.getElementById('pantalla-exito');
   pantalla.style.display = 'flex';
   window.scrollTo(0, 0);

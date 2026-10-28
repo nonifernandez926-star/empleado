@@ -483,7 +483,7 @@ async function ajPrivacidad(panel) {
   const proveedores = [
     ['sparkles', 'violeta', 'Anthropic (Claude)', 'La inteligencia artificial que redacta las respuestas. Recibe los mensajes del chat y la información de tu negocio necesaria para responder.'],
     ['globe', 'azul', 'Google', 'Inicio de sesión con tu cuenta.'],
-    ['card', 'verde', 'Mercado Pago', 'Cobro de tu suscripción. Nunca vemos los datos de tu tarjeta.'],
+    ['card', 'verde', 'Google Play', 'Cobro de tu suscripción. Nunca vemos los datos de tu tarjeta.'],
     ['image', 'naranja', 'Cloudinary', 'Guarda tus fotos y los comprobantes de pago.'],
     ['shield', 'celeste', 'Alojamiento y base de datos', 'Los servicios donde viven tus datos de forma segura.'],
   ];

@@ -246,9 +246,9 @@ async function mostrarPanel() {
   actualizarEstadoSuscripcionUI();
   esperarConfirmacionPago();
   const linkChat = `${window.location.origin}/chat.html?codigo=${negocioActual.codigoPublico}`;
-  // QR, enlace y "Descargá Mi Zona" (el vínculo con Mi Zona va implícito en el enlace: la persona no ve ni copia ningún código)
+  // QR, enlace y "Descargá Mi Zona" (el vínculo con Mi Zona es por la misma cuenta de Google: la persona no ve ni copia ningún código)
   cmpPreparar(negocioActual, linkChat);
-  document.getElementById('btn-registrar-mizona').href = `${MI_ZONA_URL}?codigo=${negocioActual.codigoVinculacion}`;
+  document.getElementById('btn-registrar-mizona').href = MI_ZONA_URL;
   document.getElementById('aviso-suscripcion-herramientas').style.display = estado === 'activa' ? 'none' : 'block';
   document.getElementById('disponibilidad-hoy').value = negocioActual.disponibilidadHoy || '';
 
@@ -1162,38 +1162,89 @@ async function cargarPlanes() {
         const plan = planes[card.dataset.plan];
         const accion = card.querySelector('.plan-accion');
         accion.innerHTML = `<button class="btn ancho plan-boton" data-plan="${card.dataset.plan}">Obtener ${escHtml(plan.label.toLowerCase())}</button>`;
-        accion.querySelector('.plan-boton').addEventListener('click', (e) => { e.stopPropagation(); iniciarPago(card.dataset.plan); });
+        accion.querySelector('.plan-boton').addEventListener('click', (e) => { e.stopPropagation(); iniciarPago(plan.productoId); });
       });
     });
+
+    // Dentro de la app de Google Play: se muestran los precios reales y se recupera una compra que haya quedado sin activar.
+    // Fuera de la app (navegador común) se puede mirar el plan, pero el pago se hace en la app.
+    const ids = entradas.map(([, p]) => p.productoId);
+    playDisponible().then(async (enPlay) => {
+      window.enAppDePlay = enPlay;
+      if (!enPlay) {
+        document.getElementById('pago-msg').innerHTML = `<p class="ayuda">Podés elegir tu plan desde acá, pero el pago se hace en la app de Mi Asistente de Google Play.</p>`;
+        return;
+      }
+      const precios = await playPrecios(ids);
+      grid.querySelectorAll('.plan-card').forEach((card) => {
+        const real = precios[planes[card.dataset.plan].productoId];
+        const el = card.querySelector('.plan-precio');
+        if (real && el) el.textContent = real;
+      });
+      const pendiente = await playCompraPendiente(ids);
+      if (pendiente) acreditarCompraPlay(pendiente.productId, pendiente.token, async (ok) => { if (ok) await pendiente.consumir(); });
+    }).catch(() => {});
   } catch (error) {
     grid.innerHTML = `<p class="ayuda">No se pudieron cargar los planes.</p>`;
   }
 }
 
-async function iniciarPago(plan) {
+// Pago con Google Play: se abre la hoja de pago de Google, y el SERVIDOR confirma la compra con Google antes de activar nada.
+async function iniciarPago(productoId) {
   const msgDiv = document.getElementById('pago-msg');
-  msgDiv.innerHTML = `<p class="ayuda">Generando link de pago...</p>`;
+  if (!window.enAppDePlay && !(await playDisponible())) {
+    msgDiv.innerHTML = `<div class="error-msg">Para comprar un plan abrí Mi Asistente desde la app de Google Play.</div>`;
+    return;
+  }
+  window.enAppDePlay = true;
+  msgDiv.innerHTML = `<p class="ayuda">Abriendo Google Play...</p>`;
+  let pago;
+  try { pago = await playPagar(productoId); }
+  catch (e) {
+    msgDiv.innerHTML = e.cancelada ? `<p class="ayuda">${escHtml(e.message)}</p>` : `<div class="error-msg">${escHtml(e.message)}</div>`;
+    return;
+  }
+  await acreditarCompraPlay(productoId, pago.token, pago.terminar);
+}
 
+// Manda el comprobante al servidor y, si Google lo confirma, activa el plan. 'terminar(ok)' cierra la compra en Google (la consume).
+async function acreditarCompraPlay(productoId, token, terminar) {
+  const msgDiv = document.getElementById('pago-msg');
+  if (msgDiv) msgDiv.innerHTML = `<p class="ayuda">Confirmando tu compra con Google...</p>`;
   try {
-    const res = await fetch(`${API_URL}/suscripcion/crear-pago`, {
+    const res = await fetch(`${API_URL}/suscripcion/compra`, {
       method: 'POST',
       headers: headersAuth({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ productId: productoId, purchaseToken: token }),
     });
-    const data = await res.json();
-
-    if (!res.ok) {
-      msgDiv.innerHTML = `<div class="error-msg">${data.error || 'No se pudo generar el pago.'}</div>`;
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 202 || !res.ok) {
+      if (terminar) await terminar(false);
+      if (msgDiv) msgDiv.innerHTML = res.status === 202
+        ? `<p class="ayuda">${escHtml(data.error || 'Tu pago está pendiente en Google Play. Cuando se confirme, activamos el plan.')}</p>`
+        : `<div class="error-msg">${escHtml(data.error || 'No se pudo activar el plan. Probá de nuevo.')}</div>`;
       return;
     }
-
-    window.location.href = data.initPoint; // redirige a Mercado Pago a completar el pago
+    if (terminar) await terminar(true);
+    if (msgDiv) msgDiv.innerHTML = '';
+    // Se vuelve a leer el negocio para mostrar la suscripción ya activa
+    const r = await fetch(`${API_URL}/negocios/mi-negocio`, { headers: headersAuth(), cache: 'no-store' });
+    if (r.ok) {
+      negocioActual = await r.json();
+      const estado = negocioActual.suscripcion.estado;
+      const pill = document.getElementById('estado-suscripcion-pill');
+      pill.textContent = estado.toUpperCase();
+      pill.className = `pill-estado ${estado}`;
+      actualizarEstadoSuscripcionUI();
+    }
+    mostrarToast('¡Compra confirmada! Tu suscripción ya está activa.');
   } catch (error) {
-    msgDiv.innerHTML = `<div class="error-msg">Error de conexión, intentá de nuevo.</div>`;
+    if (terminar) await terminar(false);
+    if (msgDiv) msgDiv.innerHTML = `<div class="error-msg">Error de conexión. Si Google te cobró, no se pierde: volvé a abrir "Plan y facturación" y se activa solo.</div>`;
   }
 }
 
-// Al volver de Mercado Pago (?pago=exito|pendiente|fallo en la URL), el webhook puede tardar
+// (Solo para pagos viejos de Mercado Pago que vuelven con ?pago=exito|pendiente|fallo en la URL; los pagos nuevos van por Google Play), el webhook puede tardar
 // unos segundos en llegar. En vez de mostrar el estado viejo, esperamos y consultamos de nuevo
 // hasta ver la suscripción activada (o avisamos si tarda más de lo normal).
 async function esperarConfirmacionPago() {
@@ -1212,7 +1263,7 @@ async function esperarConfirmacionPago() {
   const banner = document.createElement('div');
   banner.className = 'aviso-info';
   banner.id = 'aviso-confirmando-pago';
-  banner.textContent = 'Confirmando tu pago con Mercado Pago...';
+  banner.textContent = 'Confirmando tu pago...';
   document.getElementById('vista-panel').prepend(banner);
 
   const maxIntentos = 10; // 10 x 3s = 30 segundos
