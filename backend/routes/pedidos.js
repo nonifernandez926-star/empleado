@@ -1,5 +1,6 @@
 const express = require('express');
 const { avisarDueno } = require('../utils/avisos');
+const { avisarPedidoActualizado } = require('../utils/miZona');
 const router = express.Router();
 const multer = require('multer');
 const Pedido = require('../models/Pedido');
@@ -99,6 +100,8 @@ router.put('/:id/estado', requiereAdmin, async (req, res) => {
     if (anterior === 'pendiente' && estado !== 'pendiente') await confirmarStock(pedido);
     else if (anterior !== 'pendiente' && estado === 'pendiente') await revertirStock(pedido);
     await pedido.save();
+    // Si el cliente usa Mi Zona, se le avisa del cambio (sin esperar la respuesta ni frenar al dueño)
+    if (anterior !== estado) avisarPedidoActualizado(pedido, req.negocio);
 
     res.json({ mensaje: 'Estado actualizado', pedido, sinStock: !!pedido.sinStockAlConfirmar });
   } catch (error) {

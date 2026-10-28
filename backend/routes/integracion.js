@@ -3,6 +3,13 @@ const crypto = require('crypto');
 const router = express.Router();
 const Negocio = require('../models/Negocio');
 const Conversacion = require('../models/Conversacion');
+const Cliente = require('../models/Cliente');
+const Pedido = require('../models/Pedido');
+const Turno = require('../models/Turno');
+const Resena = require('../models/Resena');
+const RecuperacionPendiente = require('../models/RecuperacionPendiente');
+const PushSuscripcion = require('../models/PushSuscripcion');
+const { cloudinary } = require('../config/cloudinary');
 const Reclamo = require('../models/Reclamo');
 const { avisarDueno } = require('../utils/avisos');
 
@@ -176,6 +183,87 @@ router.post('/reclamos/estado', requiereClaveIntegracion, async (req, res) => {
   } catch (error) {
     console.error('Error en integración /reclamos/estado:', error);
     res.status(500).json({ error: 'No se pudo consultar' });
+  }
+});
+
+// POST /api/integracion/pedidos-cliente   { sesionClienteId }
+// Los pedidos que hizo esa persona (de cualquier negocio) con su estado actual, para la pantalla "Mis pedidos" de Mi Zona.
+// No incluye pedidos de prueba ni datos de contacto: solo lo que el cliente necesita ver.
+router.post('/pedidos-cliente', requiereClaveIntegracion, async (req, res) => {
+  try {
+    const sesionClienteId = String(req.body?.sesionClienteId || '');
+    if (!sesionClienteId) return res.json({ pedidos: [] });
+    const pedidos = await Pedido.find({ sesionClienteId, esPrueba: { $ne: true } }).sort({ createdAt: -1 }).limit(60);
+    const negocios = await Negocio.find({ _id: { $in: pedidos.map((p) => p.negocioId) } }).select('nombre codigoPublico');
+    const porId = {};
+    negocios.forEach((n) => { porId[String(n._id)] = { nombre: n.nombre, codigoPublico: n.codigoPublico }; });
+    res.json({
+      pedidos: pedidos.map((p) => ({
+        id: String(p._id),
+        negocio: porId[String(p.negocioId)] || { nombre: 'Negocio', codigoPublico: '' },
+        estado: p.estado,
+        items: (p.items || []).map((i) => ({ producto: i.producto, cantidad: i.cantidad, precioUnitario: i.precioUnitario })),
+        total: p.total,
+        tipoEntrega: p.tipoEntrega,
+        direccionEntrega: p.direccionEntrega || '',
+        formaPago: p.formaPago,
+        estadoPago: p.estadoPago,
+        pagoVerificado: !!p.pagoVerificado,
+        observaciones: p.observaciones || '',
+        creado: p.createdAt,
+        actualizado: p.updatedAt,
+      })),
+    });
+  } catch (error) {
+    console.error('Error en integración /pedidos-cliente:', error);
+    res.status(500).json({ error: 'No se pudieron traer los pedidos' });
+  }
+});
+
+// POST /api/integracion/borrar-cliente   { sesionClienteId }
+// Mi Zona lo llama cuando una persona elimina su cuenta (Google exige borrar los datos asociados). Se borra todo lo que es de la persona
+// (chats, memoria del cliente, avisos, recuperaciones) y lo que el negocio necesita conservar para su propia gestión (pedidos, turnos y reseñas)
+// queda SIN datos personales: sin nombre, teléfono, dirección ni vínculo con la cuenta. Es repetible: si se llama dos veces, la segunda no encuentra nada.
+router.post('/borrar-cliente', requiereClaveIntegracion, async (req, res) => {
+  try {
+    const sesionClienteId = String(req.body?.sesionClienteId || '');
+    // Solo ids con la forma que genera Mi Zona (evita que un valor vacío o genérico borre de más)
+    if (!/^sesion-[a-f0-9]{16,64}$/i.test(sesionClienteId)) return res.status(400).json({ error: 'Id de cliente inválido' });
+    const anonimo = `eliminado-${crypto.randomBytes(8).toString('hex')}`;
+    const filtro = { sesionClienteId };
+
+    const [conv, cli, rec, push] = await Promise.all([
+      Conversacion.deleteMany(filtro),
+      Cliente.deleteMany(filtro),
+      RecuperacionPendiente.deleteMany(filtro),
+      PushSuscripcion.deleteMany(filtro),
+    ]);
+    // Comprobantes de transferencia (fotos con datos bancarios de la persona): se borran de Cloudinary
+    const conComprobante = await Pedido.find({ ...filtro, 'comprobante.publicId': { $exists: true, $ne: null } }).select('comprobante.publicId');
+    let comprobantes = 0;
+    for (const p of conComprobante) {
+      try { await cloudinary.uploader.destroy(p.comprobante.publicId, { invalidate: true }); comprobantes++; }
+      catch (e) { console.error('No se pudo borrar un comprobante de Cloudinary:', e.message); return res.status(502).json({ error: 'No se pudieron borrar los comprobantes' }); }
+    }
+    if (conComprobante.length) await Pedido.updateMany(filtro, { $unset: { comprobante: '' } });
+    // Registros del negocio: se conservan, pero ya no dicen de quién son
+    const [ped, tur, res_, recl] = await Promise.all([
+      Pedido.updateMany(filtro, { $set: { sesionClienteId: anonimo, nombreCliente: 'Cliente eliminado', telefonoCliente: '', direccionEntrega: '', observaciones: '' } }),
+      Turno.updateMany(filtro, { $set: { sesionClienteId: anonimo, nombreCliente: 'Cliente eliminado', telefonoCliente: '', notas: '' } }),
+      Resena.updateMany(filtro, { $set: { sesionClienteId: anonimo, nombreCliente: '' } }),
+      // Reclamos: el negocio conserva el caso (texto, respuesta), pero sin el vínculo con la cuenta ni el usuario; las fotos se quitan
+      // (Mi Zona ya borró los archivos). Mi Zona manda el mismo sesionClienteId como cliente.ref al crear el reclamo.
+      Reclamo.updateMany({ 'cliente.ref': sesionClienteId }, { $set: { 'cliente.ref': '', 'cliente.usuario': 'Cliente eliminado', fotos: [] } }),
+    ]);
+    res.json({
+      ok: true,
+      borrados: { conversaciones: conv.deletedCount || 0, clientes: cli.deletedCount || 0, recuperaciones: rec.deletedCount || 0, avisos: push.deletedCount || 0 },
+      comprobantesBorrados: comprobantes,
+      anonimizados: { pedidos: ped.modifiedCount || 0, turnos: tur.modifiedCount || 0, resenas: res_.modifiedCount || 0, reclamos: recl.modifiedCount || 0 },
+    });
+  } catch (error) {
+    console.error('Error en integración /borrar-cliente:', error);
+    res.status(500).json({ error: 'No se pudieron borrar los datos' });
   }
 });
 

@@ -16,5 +16,7 @@
   "enableNotifications": true,
   "webManifestUrl": "https://TU-DOMINIO-DE-NETLIFY.netlify.app/manifest.json",
   "fallbackType": "customtabs",
+  "features": { "playBilling": { "enabled": true } },
+  "alphaDependencies": { "enabled": true },
   "signingKey": { "path": "./android.keystore", "alias": "mi-asistente" }
 }

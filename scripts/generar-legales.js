@@ -86,6 +86,8 @@ fs.writeFileSync(path.join(front, 'eliminar-cuenta.html'), pagina({
 <p>La eliminación es inmediata y no se puede deshacer.</p>
 <h2>Si no podés entrar a la app</h2>
 <p>Escribinos a <a href="mailto:${EMAIL}?subject=Eliminar%20mi%20cuenta%20de%20Mi%20Asistente">${EMAIL}</a> desde el correo con el que te registraste, con el asunto “Eliminar mi cuenta”. Verificamos que seas el titular y la borramos en un máximo de 30 días.</p>
+<h2>Si chateaste con negocios desde Mi Zona</h2>
+<p>Al eliminar tu cuenta de Mi Zona, Mi Zona nos pide borrar tus conversaciones con los asistentes de los negocios, tu ficha de cliente y tus avisos. Los pedidos, turnos, calificaciones y reclamos que el negocio necesita para su gestión quedan sin tu nombre, teléfono ni dirección ni vínculo con tu cuenta, y se borran tus comprobantes de transferencia y las fotos de tus reclamos. Si no podés entrar a la app, escribinos al correo de abajo.</p>
 <h2>Qué se borra</h2>
 <p>Tu cuenta, tu negocio, el catálogo de productos, las conversaciones del chat, los pedidos y turnos, las fichas de clientes, las calificaciones, la agenda, las notificaciones y las consultas de soporte.</p>
 <h2>Qué puede conservarse</h2>

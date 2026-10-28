@@ -4,7 +4,7 @@ Los clientes hacen el reclamo **en Mi Zona**. Mi Asistente recibe el reclamo, el
 *Herramientas → Atención a tus clientes → Cambios y reclamos*, decide si lo acepta o lo rechaza y **responde con un mensaje obligatorio**.
 Esa respuesta vuelve a Mi Zona para que la persona la vea.
 
-> Esta parte de Mi Asistente ya está lista y probada. **Mi Zona todavía tiene que enviar los reclamos y mostrar las respuestas**
+> Esta parte de Mi Asistente está lista. **Mi Zona ya envía los reclamos y muestra las respuestas desde su Fase 17**
 > (esa app no se modificó). Abajo está todo lo que necesita.
 
 ## Cuándo aparece la función en Mi Asistente

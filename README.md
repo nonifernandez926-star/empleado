@@ -507,3 +507,9 @@ Mirá `INFORME-REVISION.md` (qué se corrigió y qué falta) y la carpeta `play-
 - Herramientas: *Llegá a más clientes · Vendé más · Atención a tus clientes · Números del negocio*. Negocio: *Catálogo · Operación · Tu asistente*. "Experiencia" pasó a atención a clientes y "Preguntas frecuentes" se unió a Calidad del asistente.
 
 Variables nuevas (`backend/.env.example`): `MIZONA_WEBHOOK_URL`, `CLAUDE_MODEL`.
+
+---
+
+## Cobro actual (Fase 13, 27/10/2026)
+
+Las suscripciones se cobran con **Google Play Billing** (pago único por 1, 3 o 6 meses), no con Mercado Pago: lo de Mercado Pago que figura más arriba quedó solo para acreditar pagos viejos. Qué configurar y cómo probarlo: `play-store/GUIA-PLAY-STORE.md` (paso 9) y `backend/.env.example`. Detalle de lo que cambió: `INFORME-REVISION.md`, sección Fase 13.
