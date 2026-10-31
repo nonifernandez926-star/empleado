@@ -13,23 +13,34 @@
   // ---------- Gráfico de ventas y ganancia ----------
   function grafico(serie) {
     if (!serie || !serie.length) return '';
-    const W = 320, H = 150, top = 8, bot = 22, h = H - top - bot;
+    const W = 340, H = 252, PL = 46, PR = 10, PT = 14, BASE = 218;
+    const corto = (v) => (v < 0 ? '-' + fmtCorto(-v) : fmtCorto(v));
     const maxV = Math.max(1, ...serie.map((s) => s.ventas));
     const minG = Math.min(0, ...serie.map((s) => s.ganancia));
-    const rango = maxV - minG || 1;
-    const y = (v) => top + ((maxV - v) / rango) * h;
+    const paso = escalaBonita(maxV - minG, false).paso;
+    const topV = paso * Math.ceil(maxV / paso);
+    const botV = minG < 0 ? -paso * Math.ceil(-minG / paso) : 0;
+    const y = (v) => PT + ((topV - v) / (topV - botV)) * (BASE - PT);
     const y0 = y(0);
-    const n = serie.length, paso = (W - 16) / n, bw = Math.max(3, Math.min(13, paso * 0.34));
-    const etiqueta = (s) => { const f = new Date(s.desde); return f.toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' }); };
+    const n = serie.length, pasoX = (W - PL - PR) / n, bw = Math.max(3, Math.min(14, pasoX * 0.34));
+    const rx = Math.min(4, bw / 2);
+    const etiqueta = (s) => new Date(s.desde).toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
+    const marcas = new Set(n <= 5 ? serie.map((_, i) => i) : [0, Math.round((n - 1) / 4), Math.round((n - 1) / 2), Math.round(((n - 1) * 3) / 4), n - 1]);
+    const ticks = []; for (let t = botV; t <= topV + 1e-6; t += paso) ticks.push(t);
+    const grilla = ticks.map((t) => `<line x1="${PL}" x2="${W - PR}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="${t === 0 ? '#c9d2e6' : '#e8ecf6'}" ${t === 0 ? '' : 'stroke-dasharray="3 5"'}/><text x="${PL - 8}" y="${(y(t) + 3.5).toFixed(1)}" text-anchor="end" font-size="10" font-weight="600" fill="#7a85a3">${corto(t)}</text>`).join('');
     const barras = serie.map((s, i) => {
-      const cx = 8 + paso * i + paso / 2;
+      const cx = PL + pasoX * i + pasoX / 2;
       const gy = y(s.ganancia);
-      return `<rect x="${(cx - bw - 1).toFixed(1)}" y="${y(s.ventas).toFixed(1)}" width="${bw}" height="${Math.max(1, y0 - y(s.ventas)).toFixed(1)}" rx="3" fill="#b9c8f7"/>
-        <rect x="${(cx + 1).toFixed(1)}" y="${Math.min(gy, y0).toFixed(1)}" width="${bw}" height="${Math.max(1, Math.abs(gy - y0)).toFixed(1)}" rx="3" fill="${s.ganancia >= 0 ? '#1f9d5c' : '#d1343f'}"/>
-        ${(i === 0 || i === n - 1 || i === Math.floor(n / 2)) ? `<text x="${cx.toFixed(1)}" y="${H - 6}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8a94b0">${etiqueta(s)}</text>` : ''}`;
+      return `<rect x="${(cx - bw - 1).toFixed(1)}" y="${y(s.ventas).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, y0 - y(s.ventas)).toFixed(1)}" rx="${rx}" fill="url(#gf-ventas)"/>
+        <rect x="${(cx + 1).toFixed(1)}" y="${Math.min(gy, y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(gy - y0)).toFixed(1)}" rx="${rx}" fill="${s.ganancia >= 0 ? 'url(#gf-gana)' : '#d1343f'}"/>
+        ${marcas.has(i) ? `<text x="${cx.toFixed(1)}" y="${H - 14}" text-anchor="${i === n - 1 && n > 1 ? 'end' : i === 0 && n > 1 ? 'start' : 'middle'}" font-size="10" font-weight="600" fill="#7a85a3">${etiqueta(s)}</text>` : ''}`;
     }).join('');
-    return `<svg class="an-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Ventas y ganancia por período"><line x1="0" x2="${W}" y1="${y0.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#d9e0ef" stroke-width="1"/>${barras}</svg>
-      <div class="an-chart-leyenda"><span><i style="background:#b9c8f7"></i>Ventas</span><span><i style="background:#1f9d5c"></i>Ganancia estimada</span></div>`;
+    return `<svg class="an-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Ventas y ganancia por período">
+      <defs>
+        <linearGradient id="gf-ventas" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9db5fb"/><stop offset="1" stop-color="#cfdbfd"/></linearGradient>
+        <linearGradient id="gf-gana" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2bbd78"/><stop offset="1" stop-color="#16874f"/></linearGradient>
+      </defs>${grilla}${barras}</svg>
+      <div class="an-chart-leyenda"><span><i style="background:#9db5fb"></i>Ventas</span><span><i style="background:#1f9d5c"></i>Ganancia estimada</span></div>`;
   }
 
   // ---------- Pantalla principal ----------

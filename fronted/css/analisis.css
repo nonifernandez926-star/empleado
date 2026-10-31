@@ -60,7 +60,7 @@ html.tema-oscuro .an-hero { filter: invert(1) hue-rotate(180deg); }
 .an-meter { height: 7px; border-radius: 5px; background: #e6ebf5; overflow: hidden; } .an-meter i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--azul), var(--azul-g1)); transition: width .5s ease; }
 
 /* Gráfico de barras */
-.an-chart { width: 100%; height: 150px; display: block; }
+.an-chart { width: 100%; height: auto; display: block; }
 .an-chart-leyenda { display: flex; gap: 14px; margin-top: 8px; font-size: .74rem; font-weight: 700; color: var(--gris-texto); } .an-chart-leyenda i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; }
 
 /* Ideas */

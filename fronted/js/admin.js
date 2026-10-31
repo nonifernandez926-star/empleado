@@ -313,6 +313,36 @@ function fmtCorto(n) {
 }
 function capitalizar(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
 
+// Escala "bonita" para los ejes de los gráficos: pasos redondos (1, 2, 5, 10...) y un tope que siempre cubre el máximo.
+function escalaBonita(max, entero) {
+  max = Math.max(Number(max) || 0, entero ? 1 : 0.0001);
+  const raw = max / 3;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  let paso = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;
+  if (entero) paso = Math.max(1, Math.ceil(paso));
+  const pasos = Math.max(1, Math.ceil(max / paso - 1e-9));
+  return { paso, pasos, top: paso * pasos };
+}
+// Curva suave que pasa por todos los puntos sin "rebotar" por encima ni por debajo de ellos
+function curvaSuave(p) {
+  const n = p.length;
+  if (n < 2) return `M ${p[0].x} ${p[0].y}`;
+  const dx = [], m = [], t = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = p[i + 1].x - p[i].x; m[i] = (p[i + 1].y - p[i].y) / dx[i]; }
+  t[0] = m[0]; t[n - 1] = m[n - 2];
+  for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) { t[i] = 0; t[i + 1] = 0; continue; }
+    const a = t[i] / m[i], b = t[i + 1] / m[i], h = Math.hypot(a, b);
+    if (h > 3) { const k = 3 / h; t[i] = k * a * m[i]; t[i + 1] = k * b * m[i]; }
+  }
+  const f = (v) => v.toFixed(1);
+  let d = `M ${f(p[0].x)} ${f(p[0].y)}`;
+  for (let i = 0; i < n - 1; i++) d += ` C ${f(p[i].x + dx[i] / 3)} ${f(p[i].y + t[i] * dx[i] / 3)}, ${f(p[i + 1].x - dx[i] / 3)} ${f(p[i + 1].y - t[i + 1] * dx[i] / 3)}, ${f(p[i + 1].x)} ${f(p[i + 1].y)}`;
+  return d;
+}
+
 // =====================================================================
 // INICIO: KPIs + gráficos (donut interactivo, barras de la semana, actividad por hora)
 // =====================================================================
@@ -484,7 +514,7 @@ function renderizarDonut() {
   cont._total = total;
   cont.innerHTML = `
     <div class="donut-wrap">
-      <svg viewBox="0 0 200 200" class="donut-svg">${segmentos}</svg>
+      <svg viewBox="0 0 200 200" class="donut-svg"><circle cx="100" cy="100" r="70" fill="none" stroke="#eef1f9" stroke-width="26"/>${segmentos}</svg>
       <div class="donut-centro">
         <strong id="donut-centro-valor">${total}</strong>
         <span id="donut-centro-texto">en total</span>
@@ -513,11 +543,20 @@ function renderizarChartSemana(r) {
   const contenedor = document.getElementById('chart-pedidos-semana');
   const detalle = document.getElementById('chart-semana-detalle');
   const esTurnos = r.tipoOperacion === 'turnos';
-  const serie = semanaModo === 'monto'
+  const esMonto = semanaModo === 'monto';
+  const serie = esMonto
     ? (r.ingresosUltimos7Dias || []).map((d) => ({ etiqueta: d.etiqueta, valor: d.monto }))
     : (r.pedidosUltimos7Dias || []).map((d) => ({ etiqueta: d.etiqueta, valor: d.cantidad }));
 
+  let resumen = document.getElementById('semana-resumen');
+  if (!resumen) {
+    resumen = document.createElement('div');
+    resumen.id = 'semana-resumen'; resumen.className = 'cw-resumen';
+    contenedor.parentNode.insertBefore(resumen, contenedor);
+  }
+
   if (!serie.length) {
+    resumen.innerHTML = '';
     contenedor.innerHTML = `<p class="ayuda">Sin datos todavía.</p>`;
     detalle.textContent = '';
     return;
@@ -526,19 +565,39 @@ function renderizarChartSemana(r) {
   const maximo = Math.max(...serie.map((d) => d.valor), 1);
   const todoCero = serie.every((d) => d.valor === 0);
   const unidad = esTurnos ? 'consultas' : 'pedidos';
+  const fmtV = (v) => (esMonto ? fmtCorto(v) : String(v));
+  const escala = escalaBonita(maximo, !esMonto);
+  const total = serie.reduce((a, d) => a + d.valor, 0);
+  const prom = total / serie.length;
+  const mejor = serie.reduce((m, d) => (d.valor > m.valor ? d : m), serie[0]);
+  const fmtProm = esMonto ? fmtCorto(prom) : (Math.round(prom * 10) / 10).toString().replace('.', ',');
 
-  contenedor.innerHTML = serie.map((d, i) => `
-    <div class="chart-barra-col" data-i="${i}">
-      <div class="chart-barra-valor">${semanaModo === 'monto' ? fmtCorto(d.valor) : d.valor}</div>
-      <div class="chart-barra ${i === serie.length - 1 ? 'hoy' : ''}" style="height:${Math.max((d.valor / maximo) * 100, 3)}%;"></div>
-      <div class="chart-barra-etiqueta">${escHtml(d.etiqueta)}</div>
-    </div>
-  `).join('');
+  resumen.innerHTML = `
+    <div><b>${esMonto ? fmtCorto(total) : total}</b><small>${esMonto ? 'facturados' : unidad} en 7 días</small></div>
+    <div><b>${fmtProm}</b><small>por día</small></div>
+    <div><b>${todoCero ? '—' : escHtml(mejor.etiqueta)}</b><small>mejor día</small></div>`;
+
+  const lineas = Array.from({ length: escala.pasos + 1 }, (_, k) => k * escala.paso)
+    .map((t) => `<div class="cw-linea" style="bottom:${(t / escala.top) * 100}%"><span>${fmtV(t)}</span></div>`).join('');
+  const pct = (v) => (v / escala.top) * 100;
+
+  contenedor.innerHTML = `
+    <div class="cw-plot">
+      ${lineas}
+      ${todoCero ? '' : `<div class="cw-prom" style="bottom:${pct(prom)}%"></div>`}
+      <div class="cw-cols">${serie.map((d, i) => `
+        <div class="chart-barra-col" data-i="${i}" style="--i:${i}">
+          <div class="chart-barra-valor" style="bottom:calc(${pct(d.valor)}% + 6px)">${fmtV(d.valor)}</div>
+          <div class="chart-barra ${i === serie.length - 1 ? 'hoy' : ''} ${d.valor === 0 ? 'cero' : ''}" style="height:${pct(d.valor)}%"></div>
+          <div class="chart-barra-etiqueta">${escHtml(d.etiqueta)}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
 
   const mostrarDetalle = (i) => {
     const d = serie[i];
     contenedor.querySelectorAll('.chart-barra-col').forEach((c) => c.classList.toggle('sel', Number(c.dataset.i) === i));
-    detalle.innerHTML = semanaModo === 'monto'
+    detalle.innerHTML = esMonto
       ? `<strong>${escHtml(d.etiqueta)}</strong> · ${fmtPesos(d.valor)} facturados`
       : `<strong>${escHtml(d.etiqueta)}</strong> · ${d.valor} ${unidad}`;
   };
@@ -547,7 +606,7 @@ function renderizarChartSemana(r) {
   if (todoCero) detalle.innerHTML += ' <span class="dash-nota">(todavía sin movimiento esta semana)</span>';
 }
 
-// ---------- Actividad por hora (área suave) ----------
+// ---------- Actividad por hora (curva suave, tocá o arrastrá para ver cada hora) ----------
 function renderizarChartHoras(r) {
   const cont = document.getElementById('chart-horas');
   const horas = r.actividadPorHora || [];
@@ -557,48 +616,69 @@ function renderizarChartHoras(r) {
     return;
   }
 
-  const W = 320, H = 130, PAD_X = 12, BASE = 104, ALTO = 78;
-  const paso = (W - PAD_X * 2) / 23;
-  const puntos = horas.map((v, i) => ({ x: PAD_X + i * paso, y: BASE - (v / max) * ALTO, v }));
-
-  let linea = `M ${puntos[0].x} ${puntos[0].y}`;
-  for (let i = 1; i < puntos.length; i++) {
-    const p0 = puntos[i - 1], p1 = puntos[i];
-    const cx = (p0.x + p1.x) / 2;
-    linea += ` C ${cx} ${p0.y}, ${cx} ${p1.y}, ${p1.x} ${p1.y}`;
-  }
-  const area = `${linea} L ${puntos[puntos.length - 1].x} ${BASE} L ${puntos[0].x} ${BASE} Z`;
+  const acento = colorAcento();
+  const W = 340, H = 200, PL = 30, PR = 12, PT = 34, BASE = 160;
+  const escala = escalaBonita(max, true);
+  const paso = (W - PL - PR) / 23;
+  const X = (i) => PL + i * paso;
+  const Y = (v) => BASE - (v / escala.top) * (BASE - PT);
+  const puntos = horas.map((v, i) => ({ x: X(i), y: Y(v), v }));
+  const linea = curvaSuave(puntos);
+  const area = `${linea} L ${X(23)} ${BASE} L ${X(0)} ${BASE} Z`;
   const pico = horas.indexOf(max);
-  const etiquetas = [0, 6, 12, 18, 23].map((h) => `<text x="${PAD_X + h * paso}" y="${H - 8}" text-anchor="middle" class="horas-eje">${h}h</text>`).join('');
-  const zonas = puntos.map((p, i) => `<rect class="horas-zona" data-h="${i}" x="${p.x - paso / 2}" y="0" width="${paso}" height="${BASE}" fill="transparent"/>`).join('');
+
+  const grilla = Array.from({ length: escala.pasos + 1 }, (_, k) => k * escala.paso).map((t) => `
+    <line x1="${PL}" x2="${W - PR}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="${t === 0 ? '#d5dcec' : '#e8ecf6'}" ${t === 0 ? '' : 'stroke-dasharray="3 5"'}/>
+    <text x="${PL - 8}" y="${(Y(t) + 3.5).toFixed(1)}" text-anchor="end" class="horas-eje">${t}</text>`).join('');
+  const etiquetas = [0, 3, 6, 9, 12, 15, 18, 21].map((h) => `<text x="${X(h).toFixed(1)}" y="${H - 14}" text-anchor="middle" class="horas-eje">${h}h</text>`).join('');
 
   cont.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="horas-svg">
+    <svg viewBox="0 0 ${W} ${H}" class="horas-svg" role="img" aria-label="Conversaciones por hora del día. Tu horario más activo es de ${pico}:00 a ${pico + 1}:00.">
       <defs>
         <linearGradient id="grad-horas" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${colorAcento()}" stop-opacity="0.35"/>
-          <stop offset="100%" stop-color="${colorAcento()}" stop-opacity="0.02"/>
+          <stop offset="0%" stop-color="${acento}" stop-opacity="0.34"/>
+          <stop offset="100%" stop-color="${acento}" stop-opacity="0.02"/>
         </linearGradient>
       </defs>
-      <line x1="${PAD_X}" x2="${W - PAD_X}" y1="${BASE}" y2="${BASE}" stroke="#e5e9f7"/>
+      ${grilla}
       <path d="${area}" fill="url(#grad-horas)"/>
-      <path d="${linea}" fill="none" stroke="${colorAcento()}" stroke-width="2.5" stroke-linecap="round"/>
-      <circle id="horas-punto" cx="${puntos[pico].x}" cy="${puntos[pico].y}" r="5" fill="#fff" stroke="${colorAcento()}" stroke-width="3"/>
+      <path d="${linea}" fill="none" stroke="${acento}" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <line id="horas-guia" x1="0" x2="0" y1="${PT}" y2="${BASE}" stroke="${acento}" stroke-opacity=".45" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <circle id="horas-halo" r="10" fill="${acento}" fill-opacity=".16"/>
+      <circle id="horas-punto" r="5.5" fill="#fff" stroke="${acento}" stroke-width="3"/>
+      <g id="horas-tip"><rect rx="10" ry="10" height="26" width="84" fill="#0b1437"/><text text-anchor="middle" class="horas-tip-txt" y="17"></text></g>
       ${etiquetas}
-      ${zonas}
     </svg>
     <div id="horas-detalle" class="dash-detalle"></div>
   `;
 
-  const punto = document.getElementById('horas-punto');
+  const svg = cont.querySelector('svg');
+  const guia = document.getElementById('horas-guia'), halo = document.getElementById('horas-halo'), punto = document.getElementById('horas-punto');
+  const tip = document.getElementById('horas-tip'), tipRect = tip.querySelector('rect'), tipTxt = tip.querySelector('text');
   const detalle = document.getElementById('horas-detalle');
   const mostrar = (h) => {
-    punto.setAttribute('cx', puntos[h].x);
-    punto.setAttribute('cy', puntos[h].y);
-    const v = horas[h];
+    const p = puntos[h], v = horas[h];
+    guia.setAttribute('x1', p.x); guia.setAttribute('x2', p.x);
+    guia.setAttribute('y1', p.y);
+    [halo, punto].forEach((c) => { c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); });
+    const txt = `${h}:00 · ${v}`;
+    tipTxt.textContent = txt;
+    const ancho = Math.max(66, txt.length * 7.2 + 20);
+    tipRect.setAttribute('width', ancho);
+    const tx = Math.min(Math.max(p.x - ancho / 2, 2), W - ancho - 2);
+    tipRect.setAttribute('x', 0); tipTxt.setAttribute('x', ancho / 2);
+    tip.setAttribute('transform', `translate(${tx.toFixed(1)} ${Math.max(p.y - 40, 2).toFixed(1)})`);
     detalle.innerHTML = `<strong>${h}:00 a ${h + 1}:00</strong> · ${v} conversación${v === 1 ? '' : 'es'}${h === pico ? ' <span class="dash-nota">(tu horario más activo)</span>' : ''}`;
   };
-  cont.querySelectorAll('.horas-zona').forEach((z) => z.addEventListener('click', () => mostrar(Number(z.dataset.h))));
+  const desdeEvento = (e) => {
+    const rect = svg.getBoundingClientRect();
+    const xv = ((e.clientX - rect.left) / rect.width) * W;
+    mostrar(Math.min(23, Math.max(0, Math.round((xv - PL) / paso))));
+  };
+  let presionado = false;
+  svg.addEventListener('pointerdown', (e) => { presionado = true; desdeEvento(e); });
+  svg.addEventListener('pointermove', (e) => { if (presionado || e.pointerType === 'mouse') desdeEvento(e); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => svg.addEventListener(ev, () => { presionado = false; }));
   mostrar(pico);
 }
 
@@ -2435,6 +2515,7 @@ function abrirPantallaCompleta(panelId, titulo) {
     </div>` : '';
 
   if (typeof ajRenderPanel === 'function') ajRenderPanel(panelId, panel);
+  if (panel.hasAttribute('data-sp-libre')) contenedor.classList.add('aj-libre'); // pantallas con diseño propio: tarjetas sueltas sobre el fondo, sin caja blanca alrededor
   if (typeof spPreparar === 'function') spPreparar(panelId, panel);
   if (window.PANELES_DINAMICOS && window.PANELES_DINAMICOS[panelId]) window.PANELES_DINAMICOS[panelId](panel); // paneles que se dibujan con datos del servidor (inventario, rentabilidad, calidad, reclamos...)
   if (panelId === 'panel-ranking') renderizarBloquesRanking(true);
@@ -2834,9 +2915,14 @@ function premiosParaMostrar(criterio) {
 
 function pintarSeleccionCriterios() {
   document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((e) => {
-    e.classList.toggle('seleccionado', criteriosActivosActual.includes(e.dataset.criterio));
+    const activo = criteriosActivosActual.includes(e.dataset.criterio);
+    e.classList.toggle('seleccionado', activo);
+    e.setAttribute('aria-checked', String(activo));
   });
 }
+document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((el) => {
+  el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+});
 
 document.querySelectorAll('#grid-criterio-ranking .opcion-aprobacion').forEach((el) => {
   el.addEventListener('click', async () => {
@@ -2865,9 +2951,9 @@ const RK_ICONO = { compras: 'package', dinero: 'card', visitas: 'message', fidel
 const RK_COLOR = { compras: 'azul', dinero: 'verde', visitas: 'naranja', fidelidad: 'violeta' };
 const RK_HEX = { compras: '#2350F5', dinero: '#1F9D5C', visitas: '#E0731E', fidelidad: '#7A4FD0' };
 const RK_PODIO = {
-  1: { alto: 112, color: '#F5B83D', aro: 'linear-gradient(135deg,#FFE08A,#F5A623)', av: 70 },
-  2: { alto: 80, color: '#C9D3E3', aro: 'linear-gradient(135deg,#F1F5FA,#A9B6CB)', av: 58 },
-  3: { alto: 62, color: '#E0975F', aro: 'linear-gradient(135deg,#F6C9A2,#C97B4A)', av: 58 },
+  1: { alto: 96, color: '#F5B83D', aro: 'linear-gradient(135deg,#FFE08A,#F5A623)', av: 84 },
+  2: { alto: 70, color: '#C9D3E3', aro: 'linear-gradient(135deg,#F1F5FA,#A9B6CB)', av: 68 },
+  3: { alto: 52, color: '#E0975F', aro: 'linear-gradient(135deg,#F6C9A2,#C97B4A)', av: 68 },
 };
 
 const rkNombre = (c) => (c && c.nombre) || 'Cliente sin identificar';
@@ -2903,18 +2989,18 @@ function rkPuesto(c, puesto, criterio) {
     return `<div class="rk-puesto rk-libre" style="flex:1;min-width:0">
       <div class="rk-av-libre" style="width:${st.av}px;height:${st.av}px">?</div>
       <p class="rk-p-nombre" style="color:#8FA3CC">Libre</p>
-      <div class="rk-pedestal" style="height:${st.alto}px;border-color:${st.color}33;background:linear-gradient(180deg,${st.color}22,${st.color}05)"><span style="color:${st.color};font-size:${puesto === 1 ? 38 : 30}px;opacity:.55">${puesto}</span></div></div>`;
+      <div class="rk-pedestal" style="height:${st.alto}px;border-color:${st.color}33;background:linear-gradient(180deg,${st.color}22,${st.color}05)"><span style="color:${st.color};font-size:${puesto === 1 ? 40 : 32}px;opacity:.55">${puesto}</span></div></div>`;
   }
   return `<div class="rk-puesto" style="flex:1;min-width:0">
-    ${puesto === 1 ? `<span class="rk-corona">${ajIcono('crown', 24).replace('stroke="currentColor"', `stroke="${st.color}" fill="${st.color}"`)}</span>` : ''}
+    ${puesto === 1 ? `<span class="rk-corona">${ajIcono('crown', 28).replace('stroke="currentColor"', `stroke="${st.color}" fill="${st.color}"`)}</span>` : ''}
     <div class="rk-aro" style="width:${st.av + 8}px;height:${st.av + 8}px;background:${st.aro};box-shadow:0 8px 22px ${st.color}66">
       <div class="rk-av" style="font-size:${st.av * 0.4}px">${escHtml(rkInicial(c))}</div>
       <span class="rk-medalla" style="background:${st.aro}">${puesto}</span>
     </div>
     <p class="rk-p-nombre">${escHtml(rkNombre(c))}</p>
-    <p class="rk-p-valor" style="color:${st.color}">${escHtml(rkValorGrande(c, criterio))} <small>${escHtml(ETIQUETAS_CRITERIO[criterio] === 'cliente desde' ? 'antigüedad' : ETIQUETAS_CRITERIO[criterio])}</small></p>
+    <p class="rk-p-valor" style="color:${st.color}">${escHtml(rkValorGrande(c, criterio))}<small>${escHtml(ETIQUETAS_CRITERIO[criterio] === 'cliente desde' ? 'antigüedad' : ETIQUETAS_CRITERIO[criterio])}</small></p>
     ${rkPremioChip(criterio, puesto)}
-    <div class="rk-pedestal" style="height:${st.alto}px;border-color:${st.color}66;background:linear-gradient(180deg,${st.color}55,${st.color}08)"><span style="color:${st.color};font-size:${puesto === 1 ? 38 : 30}px">${puesto}</span></div></div>`;
+    <div class="rk-pedestal" style="height:${st.alto}px;border-color:${st.color}66;background:linear-gradient(180deg,${st.color}55,${st.color}08)"><span style="color:${st.color};font-size:${puesto === 1 ? 40 : 32}px">${puesto}</span></div></div>`;
 }
 
 function pintarRankingVista() {
@@ -2928,26 +3014,16 @@ function pintarRankingVista() {
   const lider = top[0];
 
   const chips = criteriosActivosActual.length > 1
-    ? `<div class="rk-chips">${criteriosActivosActual.map((k) => `<button type="button" class="rk-chip ${k === criterio ? 'act' : ''}" data-rk="${k}" style="--c:${RK_HEX[k]}">${ajIcono(RK_ICONO[k], 14)} ${NOMBRES_CRITERIO[k]}</button>`).join('')}</div>`
+    ? `<div class="rk-chips">${criteriosActivosActual.map((k) => `<button type="button" class="rk-chip ${k === criterio ? 'act' : ''}" data-rk="${k}" style="--c:${RK_HEX[k]}">${ajIcono(RK_ICONO[k], 16)} ${NOMBRES_CRITERIO[k]}</button>`).join('')}</div>`
     : '';
 
-  cont.innerHTML = `
-    <div class="rk-portada">
-      <i class="rk-deco a"></i><i class="rk-deco b"></i>
-      <div class="rk-cab">
-        <div class="rk-cab-txt"><h3>Clientes destacados</h3><p>${ajIcono(RK_ICONO[criterio], 12)} Tus mejores clientes por ${escHtml(NOMBRES_CRITERIO[criterio].toLowerCase())}</p></div>
-        <span class="rk-trofeo">${ajIcono('trophy', 20)}</span>
-      </div>
-      <div class="rk-stats">
-        <div>${ajIcono('users', 14)}<span><b>${top.length}</b><small>${top.length === 1 ? 'cliente en el top' : 'clientes en el top'}</small></span></div>
-        <div>${ajIcono('crown', 14)}<span><b>${lider ? escHtml(rkValorGrande(lider, criterio)) : '—'}</b><small>mejor cliente</small></span></div>
-        <div>${ajIcono('sliders', 14)}<span><b>${criteriosActivosActual.length}</b><small>${criteriosActivosActual.length === 1 ? 'criterio activo' : 'criterios activos'}</small></span></div>
-      </div>
-      ${top.length ? `<div class="rk-podio">${rkPuesto(top[1], 2, criterio)}${rkPuesto(top[0], 1, criterio)}${rkPuesto(top[2], 3, criterio)}</div>` : '<div style="height:14px"></div>'}
-    </div>
-    <div class="rk-cuerpo">
-      ${chips}
-      ${top.length ? (resto.length ? `<p class="rk-sec">Del puesto 4 al ${top.length}</p>
+  const podio = top.length
+    ? `<div class="rk-podio">${rkPuesto(top[1], 2, criterio)}${rkPuesto(top[0], 1, criterio)}${rkPuesto(top[2], 3, criterio)}</div>`
+    : `<div class="rk-podio rk-fantasma">${rkPuesto(null, 2, criterio)}${rkPuesto(null, 1, criterio)}${rkPuesto(null, 3, criterio)}</div>`;
+
+  const lista = resto.length
+    ? `<div class="rk-bloque">
+        <h4 class="rk-sec">Del puesto 4 al ${top.length}</h4>
         <div class="rk-lista">${resto.map((c, i) => `
           <div class="rk-fila">
             <span class="rk-badge ${i + 4 <= 10 ? 'dest' : ''}">${i + 4}</span>
@@ -2955,9 +3031,41 @@ function pintarRankingVista() {
             <span class="rk-fila-txt"><strong>${escHtml(rkNombre(c))}</strong><small>${escHtml(valorRankingTexto(c, criterio))}</small>
               <span class="rk-barra"><i style="width:${Math.max(6, Math.round((rkMagnitud(c, criterio) / maxMag) * 100))}%;background:linear-gradient(90deg,${RK_HEX[criterio]},${RK_HEX[criterio]}aa)"></i></span></span>
             <span class="rk-fila-val"><b>${escHtml(rkValorGrande(c, criterio))}</b></span>
-          </div>`).join('')}</div>` : '')
-        : `<div class="rk-vacio"><span>${ajIcono('trophy', 30)}</span><strong>Todavía no hay ranking</strong><p>Cuando tus clientes empiecen a comprar y a escribirle a tu asistente, tus mejores clientes van a aparecer acá.</p></div>`}
+          </div>`).join('')}</div>
+      </div>`
+    : '';
+
+  const vacio = top.length ? '' : `
+    <div class="rk-vacio">
+      <span>${ajIcono('trophy', 34)}</span>
+      <strong>Todavía no hay ranking</strong>
+      <p>Cuando tus clientes empiecen a comprar y a escribirle a tu asistente, tus mejores clientes van a aparecer acá.</p>
+      <button type="button" class="btn" data-rk-ir="0">${ajIcono('gift', 18)} Elegir premios</button>
     </div>`;
+
+  cont.innerHTML = `
+    <div class="rk-wrap">
+      <div class="rk-portada">
+        <i class="rk-deco a"></i><i class="rk-deco b"></i>
+        <div class="rk-cab">
+          <div class="rk-cab-txt"><h3>Tus mejores clientes</h3><p>${ajIcono(RK_ICONO[criterio], 15)} Ordenados por ${escHtml(NOMBRES_CRITERIO[criterio].toLowerCase())}</p></div>
+          <span class="rk-trofeo">${ajIcono('trophy', 24)}</span>
+        </div>
+        <div class="rk-stats">
+          <div>${ajIcono('users', 18)}<span><b>${top.length}</b><small>${top.length === 1 ? 'cliente en el top' : 'clientes en el top'}</small></span></div>
+          <div>${ajIcono('crown', 18)}<span><b>${lider ? escHtml(rkValorGrande(lider, criterio)) : '—'}</b><small>del puesto 1</small></span></div>
+          <div>${ajIcono('sliders', 18)}<span><b>${criteriosActivosActual.length}</b><small>${criteriosActivosActual.length === 1 ? 'criterio activo' : 'criterios activos'}</small></span></div>
+        </div>
+        ${podio}
+      </div>
+      ${chips}
+      ${lista}
+      ${vacio}
+    </div>`;
+  cont.querySelectorAll('[data-rk-ir]').forEach((b) => b.addEventListener('click', () => {
+    const fila = document.querySelector(`#panel-ranking .sp-fila[data-sp="${b.dataset.rkIr}"]`);
+    if (fila) fila.click();
+  }));
   cont.querySelectorAll('[data-rk]').forEach((b) => b.addEventListener('click', () => { rkCriterioVista = b.dataset.rk; pintarRankingVista(); }));
 }
 
@@ -2967,13 +3075,17 @@ function htmlPremiosPuestos(criterio, premios) {
     const premio = (premios && premios['top' + puesto]) || { texto: '', descuentoPorcentaje: 0 };
     return `
       <div class="premio-puesto-fila">
-        <div class="premio-puesto-medalla" style="background:${med[puesto]}">${puesto}°</div>
+        <div class="premio-puesto-cab">
+          <div class="premio-puesto-medalla" style="background:${med[puesto]}">${puesto}°</div>
+          <strong>Puesto ${puesto}</strong>
+        </div>
         <div class="premio-puesto-campos">
-          <input type="text" class="premio-texto" data-criterio="${criterio}" data-puesto="${puesto}" placeholder="Ej: Envío gratis o un regalo" value="${escHtml(premio.texto || '')}">
-          <div class="premio-puesto-descuento-wrap">
-            <input type="number" class="premio-descuento" data-criterio="${criterio}" data-puesto="${puesto}" min="0" max="100" placeholder="0" value="${premio.descuentoPorcentaje || ''}">
-            <span>% de descuento (opcional)</span>
-          </div>
+          <label class="rk-campo"><span>Premio</span>
+            <input type="text" class="premio-texto" data-criterio="${criterio}" data-puesto="${puesto}" placeholder="Ej: Envío gratis" maxlength="80" value="${escHtml(premio.texto || '')}">
+          </label>
+          <label class="rk-campo"><span>Descuento</span>
+            <span class="rk-pct"><input type="number" inputmode="numeric" class="premio-descuento" data-criterio="${criterio}" data-puesto="${puesto}" min="0" max="100" placeholder="0" value="${premio.descuentoPorcentaje || ''}"><i>%</i></span>
+          </label>
         </div>
       </div>
     `;
@@ -2985,7 +3097,7 @@ function pintarPremiosRanking() {
   if (!cont) return;
   cont.innerHTML = criteriosActivosActual.map((criterio) => `
     <div class="rk-premio-bloque" data-criterio-bloque="${criterio}">
-      <div class="rk-premio-cab"><span class="rk-premio-ic ic-${RK_COLOR[criterio]}">${ajIcono(RK_ICONO[criterio], 18)}</span><div><strong>${NOMBRES_CRITERIO[criterio]}</strong><small>Premios para el top 3</small></div></div>
+      <div class="rk-premio-cab"><span class="rk-premio-ic ic-${RK_COLOR[criterio]}">${ajIcono(RK_ICONO[criterio], 22)}</span><div><strong>${NOMBRES_CRITERIO[criterio]}</strong><small>Premios para los 3 primeros puestos</small></div></div>
       ${htmlPremiosPuestos(criterio, premiosParaMostrar(criterio))}
     </div>`).join('');
   // al escribir, la portada muestra el premio de cada puesto en vivo

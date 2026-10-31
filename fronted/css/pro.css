@@ -1,0 +1,122 @@
+/* =====================================================================
+   PRO — capa final de acabado (se carga DESPUÉS de pulido.css).
+   1) Pantalla completa de borde a borde: sin franjas ni líneas claras a los costados.
+   2) Gráficos con ejes, líneas guía, promedio y animación de entrada.
+   3) Pequeños retoques de espacio para que nada se vea apretado.
+   ===================================================================== */
+
+/* ---------- 1) Sin franjas a los costados ----------
+   El marco de la app estaba limitado a 480 px de ancho. En celulares cuya pantalla mide entre 480 y 540 px
+   (según el zoom de pantalla de cada marca) sobraban unos píxeles a cada lado y se veía una línea clara.
+   Ahora, en pantallas de celular, la app ocupa SIEMPRE todo el ancho; el marco centrado queda solo para tablet y computadora. */
+@media (max-width: 539.98px) {
+  .pantalla, .app-shell, .chat-widget, .exito-pantalla, .ini-acceso { max-width: none; }
+  #pantalla-notificaciones, .rep-hoja, .ch-hoja, .tn-hoja, .aj-hoja, .ag-modal { max-width: none; }
+}
+
+/* Los paneles que entran desde afuera de la pantalla (menú lateral, hojas inferiores) dejaban "asomar" su sombra
+   sobre el borde cuando estaban cerrados: eso era la franja gris del costado izquierdo. Cerrados, no se dibujan. */
+.app-drawer:not(.abierto) { box-shadow: none; visibility: hidden; transition: transform .25s ease, visibility 0s .25s, box-shadow 0s .25s; }
+.app-drawer.abierto { visibility: visible; transition: transform .25s ease, visibility 0s; }
+.ch-hoja:not(.abierta), .tn-hoja:not(.abierta) { box-shadow: none; visibility: hidden; transition: transform .38s cubic-bezier(.2, .9, .25, 1), visibility 0s .38s, box-shadow 0s .38s; }
+.ch-hoja.abierta, .tn-hoja.abierta { visibility: visible; }
+
+/* Pantalla de carga del panel: ocupa todo y respeta las zonas seguras del celular */
+.cargando-panel { width: 100%; min-height: 100dvh; background: #050b2a; }
+#contenedor-login.pantalla { background: #050b2a; }
+html:has(#contenedor-login .cargando-panel) body { background: #050b2a; }
+
+/* ---------- 2) Gráficos ---------- */
+.dash-card { padding: 20px 18px; }
+.dash-card-titulo { margin-bottom: 16px; }
+.dash-card-titulo h2 { font-size: 1.08rem; letter-spacing: -.015em; }
+
+/* Barras de la semana */
+.cw-resumen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 2px 0 20px; }
+.cw-resumen > div { min-width: 0; padding: 13px 12px 12px; border-radius: 16px; background: #f6f8fd; border: 1px solid #edf0f8; }
+.cw-resumen b { display: block; font-size: 1.3rem; font-weight: 800; letter-spacing: -.025em; line-height: 1.1; color: var(--azul-oscuro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cw-resumen small { display: block; margin-top: 5px; font-size: .74rem; font-weight: 600; line-height: 1.25; color: var(--gris-texto); }
+
+.chart-barras { display: block; position: relative; height: 228px; padding: 0; }
+.cw-plot { position: absolute; left: 42px; right: 2px; top: 26px; bottom: 34px; }
+.cw-linea { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed #e3e8f4; }
+.cw-linea:first-child { border-top: 1px solid #d5dcec; }
+.cw-linea > span { position: absolute; right: calc(100% + 9px); top: 0; transform: translateY(-50%); font-size: .72rem; font-weight: 600; color: #7a85a3; white-space: nowrap; }
+.cw-prom { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed color-mix(in srgb, var(--azul) 55%, transparent); z-index: 1; pointer-events: none; }
+.cw-prom b { position: absolute; left: 0; top: -11px; transform: translateY(-100%); padding: 2px 9px; border-radius: 999px; background: var(--azul-suave); color: var(--azul); font-size: .68rem; font-weight: 800; white-space: nowrap; }
+.cw-cols { position: absolute; inset: 0; display: flex; gap: 4px; z-index: 2; }
+.chart-barra-col { position: relative; display: block; flex: 1; height: 100%; cursor: pointer; }
+.chart-barra { position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto; width: 62%; max-width: 40px; min-height: 0; opacity: 1; border-radius: 11px 11px 4px 4px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--azul) 52%, #fff), color-mix(in srgb, var(--azul) 30%, #fff));
+  transform-origin: bottom; animation: cw-crece .7s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 45ms); transition: box-shadow .2s ease; }
+.chart-barra.hoy, .chart-barra-col.sel .chart-barra { background: linear-gradient(180deg, var(--azul-g1, var(--azul)), var(--azul-g2, var(--azul))); box-shadow: 0 10px 20px rgba(var(--azul-rgb), .32); }
+.chart-barra.cero { height: 4px !important; border-radius: 3px; background: #dfe5f3; box-shadow: none; }
+.chart-barra-valor { position: absolute; left: -4px; right: -4px; margin: 0; text-align: center; font-size: .72rem; font-weight: 700; color: #5b6482; z-index: 3; white-space: nowrap; }
+.chart-barra-col.sel .chart-barra-valor { color: var(--azul); }
+.chart-barra-etiqueta { position: absolute; top: 100%; left: 0; right: 0; margin-top: 10px; text-align: center; font-size: .74rem; font-weight: 600; color: var(--gris-texto); }
+.chart-barra-col.sel .chart-barra-etiqueta { color: var(--azul-oscuro); font-weight: 800; }
+@keyframes cw-crece { from { transform: scaleY(0); } to { transform: none; } }
+
+/* Actividad por hora */
+.horas-svg { width: 100%; height: auto; display: block; touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.horas-eje { font-size: 10px; font-weight: 600; fill: #7a85a3; }
+.horas-tip-txt { font-size: 11.5px; font-weight: 800; fill: #fff; }
+#horas-tip { pointer-events: none; filter: drop-shadow(0 4px 8px rgba(11, 20, 55, .28)); }
+.dash-detalle { padding: 13px 16px; border-radius: 14px; font-size: .9rem; }
+
+/* Gráfico circular */
+.donut-wrap { width: 232px; height: 232px; margin: 8px auto 22px; }
+.donut-centro strong { font-size: 2.3rem; letter-spacing: -.03em; }
+.donut-centro span { font-size: .86rem; }
+.donut-centro em { font-size: .72rem; }
+.donut-leyenda { gap: 8px; }
+.donut-fila { padding: 13px 14px; row-gap: 10px; }
+.donut-nombre, .donut-cifra { font-size: .94rem; }
+.donut-pct { font-size: .84rem; }
+.donut-barra { height: 6px; }
+
+/* Gráfico de ventas y ganancia (Rentabilidad) */
+.an-chart { width: 100%; height: auto; display: block; }
+.an-chart-leyenda { gap: 18px; margin-top: 12px; font-size: .78rem; }
+
+/* Tendencias */
+.tend-card { padding: 18px 16px; }
+.tend-titulo { font-size: 1.02rem; letter-spacing: -.01em; }
+.tend-barra-fila { grid-template-columns: 92px minmax(0, 1fr) 38px; gap: 12px; padding: 7px 0; }
+.tend-barra { height: 12px; border-radius: 8px; background: #eef1f8; }
+.tend-barra > span { border-radius: 8px; background: linear-gradient(90deg, color-mix(in srgb, var(--azul) 62%, #fff), var(--azul)); }
+.tend-barra > span.flojo { background: linear-gradient(90deg, #fbc566, #f59e0b); }
+.tend-barra > span.fuerte { background: linear-gradient(90deg, #3ddc97, #16a34a); }
+.tend-barra-fila strong { text-align: right; font-size: .88rem; }
+.tend-fila { padding: 12px 0; }
+
+@media (prefers-reduced-motion: reduce) { .chart-barra { animation: none; } }
+
+/* ---------- 3) Retoques de espacio ---------- */
+/* La barra de "Guardar" se pega de verdad al borde inferior (antes quedaba 40 px más arriba por el relleno de la pantalla) */
+#pantalla-completa:has(#pantalla-completa-contenido.aj-libre) { padding-bottom: 0; }
+#pantalla-completa-contenido.aj-libre { margin-bottom: 0; padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+#pantalla-completa-contenido.aj-libre .sp-pie { margin-bottom: calc(-32px - env(safe-area-inset-bottom, 0px)); }
+
+/* Menú del ranking en pantallas angostas: textos más compactos para que no se partan en 3 líneas */
+@media (max-width: 400px) {
+  #panel-ranking .sp-menu .list-row { padding: 16px 14px; gap: 12px; }
+  #panel-ranking .sp-menu .list-row-icono { width: 42px; height: 42px; }
+  #panel-ranking .sp-menu .list-row-texto strong { font-size: .96rem; }
+  #panel-ranking .sp-menu .list-row-texto span { font-size: .8rem; line-height: 1.35; }
+  #panel-ranking .sp-menu .aj-valor:not(:empty) { padding: 4px 9px; font-size: .72rem; }
+}
+
+/* Tres tarjetas de números siempre en una fila (antes la tercera caía sola abajo en pantallas angostas) */
+.kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 400px) {
+  .kpi-card { padding: 13px 10px; }
+  .kpi-valor { font-size: 1.12rem; letter-spacing: -.04em; }
+  .kpi-etiqueta { font-size: .66rem; line-height: 1.25; }
+  .kpi-icono { width: 30px; height: 30px; margin-bottom: 10px; }
+  .app-navbar-item { font-size: .64rem; padding-left: 2px; padding-right: 2px; }
+}
+/* Título + etiqueta ("Últimos 30 días") en la misma línea, el título se acorta si hace falta */
+.dash-card-titulo { flex-wrap: nowrap; }
+.dash-card-titulo > :first-child { min-width: 0; }
+.dash-card-titulo > :not(:first-child) { flex: none; white-space: nowrap; }

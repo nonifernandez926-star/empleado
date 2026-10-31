@@ -49,7 +49,7 @@ self.addEventListener('notificationclick', (event) => {
 // Guardamos solo la "estructura" (páginas, estilos, scripts, íconos) para que la app abra rápido y muestre
 // una pantalla clara cuando no hay internet. Los datos (pedidos, chats, etc.) viven en la API, en otro dominio:
 // NUNCA se guardan acá.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'mi-asistente-' + VERSION;
 const PRECACHE = ['/offline.html', '/css/style.css', '/img/icono-192.png', '/img/icono-512.png'];
 
